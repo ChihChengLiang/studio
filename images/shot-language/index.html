@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Language of a Shot</title>
+<meta name="description" content="Photographic and cinematographic choices as a vocabulary for 2D and 3D art: shot size, angle, lens, focus, light, composition, time, colour. One three.js scene with three characters, rendered many ways.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Gallery sections are static HTML; their tiles are rendered by the three.js script at the bottom. */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#08090C;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#030407;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#030407;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards b{color:var(--fg);font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;counter-reset:step;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:step;background:var(--surface);border:1px solid var(--line);padding:12px 14px;font-size:13.5px;color:var(--muted);min-width:0}
+.steps li::before{content:counter(step,decimal-leading-zero);display:block;font:500 11px/1 var(--font-mono);color:var(--accent);margin-bottom:6px}
+.steps b{display:block;color:var(--fg);font:600 15px/1.25 var(--font-display);margin-bottom:3px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+table.plain th,table.plain td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td:first-child{font-weight:600;white-space:nowrap}
+table.plain td{color:var(--muted)}
+table.plain td:first-child{color:var(--fg)}
+
+/* Gallery tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 12px}
+.tile{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;margin:0;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;min-width:0}
+.tile canvas{display:block;width:100%;aspect-ratio:3/2;background:var(--stage);border:1px solid var(--line)}
+.tile:hover canvas{border-color:var(--accent)}
+.tile .tn{font:600 13.5px/1.25 var(--font-display);margin:8px 0 0}
+.tile .ts{font:400 11px/1.3 var(--font-mono);color:var(--accent);margin:3px 0 0}
+.tile .td{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.42}
+.status{font:400 12px var(--font-mono);color:var(--muted)}
+
+/* Shot builder */
+.lab{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,1fr);gap:28px;align-items:start}
+.stagecol{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.stage{position:relative;aspect-ratio:3/2;background:var(--stage);border:1px solid var(--line);overflow:hidden}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.labbar{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.controls{display:flex;flex-direction:column;gap:12px;min-width:0}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 4px;min-width:0}
+.group>h3{margin-bottom:2px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0 0 10px}
+.row{display:flex;flex-direction:column;gap:6px;margin:0 0 12px;min-width:0}
+.row.off{opacity:.38}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 8px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.toggle{display:flex;align-items:center;gap:9px;font-size:13.5px;cursor:pointer;margin:0 0 12px}
+.toggle input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#C9CEDB;font-size:14px}
+
+.genres{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.genres>div{background:var(--surface);border:1px solid var(--line);padding:13px 15px;min-width:0}
+.genres h3{margin-bottom:4px}
+.genres p{font-size:13.5px;color:var(--muted)}
+.genres .look{margin-top:6px;font-size:12.5px}
+.genres .look b{color:var(--fg);font-weight:600}
+.foot{font-size:13px;color:var(--muted);max-width:80ch}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lab{grid-template-columns:minmax(0,1fr)}
+  .stagecol{top:0;z-index:5;background:var(--bg);padding:8px 0}
+  .desc{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Images · three.js · a vocabulary</p>
+  <h1>The language of a shot</h1>
+  <p class="lede">Photographers and cinematographers have names for every decision that shapes a picture, and each name carries an intent. This page collects that vocabulary so you can say what you want before you draw or render it. One small street, three characters, one moment, shot about ninety ways. Click any tile to open it in the shot builder.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#why">Why it matters in CG</a></li>
+    <li><a href="#method">How pros decide</a></li>
+    <li><a href="#g-size">Shot size</a></li>
+    <li><a href="#g-angle">Angle</a></li>
+    <li><a href="#g-staging">Staging</a></li>
+    <li><a href="#g-lens">Lens</a></li>
+    <li><a href="#g-focus">Focus</a></li>
+    <li><a href="#g-lightdir">Light direction</a></li>
+    <li><a href="#g-lightq">Light quality</a></li>
+    <li><a href="#g-time">Time of day</a></li>
+    <li><a href="#g-comp">Composition</a></li>
+    <li><a href="#g-shutter">Shutter</a></li>
+    <li><a href="#g-aspect">Aspect</a></li>
+    <li><a href="#g-grade">Grade</a></li>
+    <li><a href="#g-air">Atmosphere</a></li>
+    <li><a href="#builder">Shot builder</a></li>
+    <li><a href="#principles">Principles</a></li>
+    <li><a href="#genres">Genres</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="why" aria-labelledby="why-h">
+  <header><p class="eyebrow">The starting question</p><h2 id="why-h">If there is no real camera, do light and lens still matter?</h2></header>
+  <div class="prose">
+    <p><b>They matter more.</b> A photographer standing in a street is handed perspective, light and weather and chooses among them. In a drawing or a render nothing is handed to you. The height of the horizon, how fast things shrink into the distance, where the light comes from, how soft the shadows are and how blurred the background is are all decided, either by you or by a default.</p>
+    <p><b>Defaults are choices too.</b> <code>new PerspectiveCamera(50)</code> in three.js is a 50° vertical field of view, roughly a 26 mm wide-angle lens on a full-frame camera. No lights means flat ambient. No grade means untreated video. That is a large part of why first renders look alike: they share the same unexamined camera.</p>
+    <p><b>In 2D the lens is still there, under different names.</b> The table translates. Use the photographic word to state the intent, then pick the 2D or 3D technique that delivers it.</p>
+  </div>
+  <div class="tablewrap">
+    <table class="plain">
+      <thead><tr><th>Photographic choice</th><th>In a 2D drawing or painting</th><th>In a 3D scene</th></tr></thead>
+      <tbody>
+        <tr><td>Camera height</td><td>Height of the horizon line; how much of the ground plane you see</td><td><code>camera.position.y</code> and pitch</td></tr>
+        <tr><td>Focal length</td><td>Spacing of the vanishing points: close together means wide-angle distortion, far apart means flat telephoto</td><td><code>camera.setFocalLength()</code> / field of view</td></tr>
+        <tr><td>Camera distance</td><td>How strongly near things are foreshortened (a fist thrust toward the viewer)</td><td>Dolly the camera; hold framing with the lens</td></tr>
+        <tr><td>Depth of field</td><td>Lost and found edges, detail falloff, softened background shapes</td><td>Depth-based blur pass</td></tr>
+        <tr><td>Key light direction</td><td>Where the terminator (light-to-shadow edge) runs across the form</td><td>Directional, spot or area light position</td></tr>
+        <tr><td>Hard vs soft light</td><td>Sharp cast-shadow edges vs wide, gradual terminators</td><td>Shadow softness, light size, area lights</td></tr>
+        <tr><td>Exposure, key</td><td>Overall value range: high-key (mostly light) or low-key (mostly dark)</td><td>Tone mapping exposure, light ratios</td></tr>
+        <tr><td>Haze</td><td>Atmospheric perspective: far things lighter, cooler, lower in contrast</td><td><code>scene.fog</code></td></tr>
+        <tr><td>Shutter speed</td><td>Speed lines, smears, multiple limbs</td><td>Motion blur (accumulated sub-frames)</td></tr>
+        <tr><td>Grade</td><td>A limited palette, a colour wash, glazing</td><td>Post-process colour grade or LUT</td></tr>
+        <tr><td>Aspect ratio</td><td>Canvas proportions</td><td>Render size</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="demo" id="method" aria-labelledby="method-h">
+  <header><p class="eyebrow">Method</p><h2 id="method-h">How professionals work through a shot</h2>
+  <p class="lede">Cinematographers, storyboard artists and art directors make decisions in roughly this order. The story question comes first, then the camera, light and colour that serve it. Asking "what is this shot about?" before "what lens?" is most of the craft.</p></header>
+  <ol class="steps">
+    <li><b>The beat</b>What changes in this moment? One idea per shot.</li>
+    <li><b>Whose moment</b>Pick the subject and the point of view: are we with Mira, with Otto, or watching both?</li>
+    <li><b>Shot size</b>How close emotionally. Wide for context, close for feeling.</li>
+    <li><b>Angle and height</b>The power relationship between viewer and subject.</li>
+    <li><b>Lens and distance</b>How the space feels: stretched and immersive, or compressed and observed.</li>
+    <li><b>Focus</b>What is allowed to be sharp, and therefore important.</li>
+    <li><b>Light</b>A motivated source, its direction, hardness and contrast ratio.</li>
+    <li><b>Composition</b>Placement, lines, layers, negative space, the edges of the frame.</li>
+    <li><b>Colour and finish</b>Palette, grade, aspect ratio, grain. The "look" comes last.</li>
+  </ol>
+  <div class="cards">
+    <div><h3>Work from references</h3><p>A <b>lookbook</b> or mood board of frames from films, paintings and photographs that already have the feeling. Art directors talk in references ("lit like a Hopper, framed like Ozu") because it is faster than describing light from scratch.</p></div>
+    <div><h3>Plan with a shot list</h3><p>A <b>storyboard</b> and a <b>shot list</b> written in this vocabulary: "MCU Mira, 85 mm, eye level, key camera-left, golden hour." The same words make good prompts and art-direction notes.</p></div>
+    <div><h3>Think in sequences</h3><p>A single frame rarely stands alone. Pros vary shot size from wide to close, keep screen direction consistent, and plan a <b>colour script</b> (Pixar's term) so palette shifts with the story.</p></div>
+    <div><h3>Meet the cast</h3><p><b>Mira</b> (1.55 m, red coat: the one saturated accent), <b>Otto</b> (2.05 m, dark coat and hat), <b>Pip</b> (a kid in a yellow raincoat, running) and a few passers-by at the gate of a small town: a lamp-lined street, a stone arch, trees and distant hills. The beat: <b>Mira meets Otto under the streetlamp.</b></p></div>
+  </div>
+</section>
+
+<section class="demo" id="g-size" aria-labelledby="g-size-h">
+  <header><p class="eyebrow">Gallery 1 · Camera</p><h2 id="g-size-h">Shot size: how close are we?</h2>
+  <p class="lede">Shot size is emotional distance. Every step closer trades context for feeling. The names are standard across film, comics and storyboards.</p></header>
+  <div class="tiles" id="t-size"></div>
+  <p class="note"><b>Principle:</b> size in frame equals importance. Cutting closer is how a scene intensifies. Jumping straight from ELS to CU is a jolt, which is sometimes exactly the point.</p>
+</section>
+
+<section class="demo" id="g-angle" aria-labelledby="g-angle-h">
+  <header><p class="eyebrow">Gallery 2 · Camera</p><h2 id="g-angle-h">Height and angle: who has the power?</h2>
+  <p class="lede">Where the camera stands vertically decides whether the viewer looks up to, down on or across at a character. It also decides how much ground and how much sky end up in the frame.</p></header>
+  <div class="tiles" id="t-angle"></div>
+  <p class="note"><b>Principle:</b> looking up confers power and looking down takes it away. Eye level is the neutral contract with the audience. Anything else is a statement, so use it when the story means it.</p>
+</section>
+
+<section class="demo" id="g-staging" aria-labelledby="g-staging-h">
+  <header><p class="eyebrow">Gallery 3 · Camera</p><h2 id="g-staging-h">Staging two people: relationship shots</h2>
+  <p class="lede">With two characters, the camera takes sides. Who faces us, who is nearer the lens, whose shoulder we stand behind: each choice tells the audience whose story this is.</p></header>
+  <div class="tiles" id="t-staging"></div>
+  <p class="note"><b>Principle:</b> the <b>180° rule</b>. Keep the camera on one side of the line between two characters, so Mira always looks right and Otto always looks left. Crossing the line flips screen direction and confuses the space, unless the confusion is the point.</p>
+</section>
+
+<section class="demo" id="g-lens" aria-labelledby="g-lens-h">
+  <header><p class="eyebrow">Gallery 4 · Lens</p><h2 id="g-lens-h">Focal length: the same framing, a different world</h2>
+  <p class="lede">Each tile frames Mira at the same size. Only the lens changes, so the camera has to move closer or farther to keep her that size. <b>Perspective comes from distance; the lens just crops.</b> Watch the background shrink with a wide lens and swell with a long one.</p></header>
+  <div class="tiles" id="t-lens"></div>
+  <p class="note"><b>Try it:</b> open any tile in the shot builder and drag the focal length. Framing is held, so the camera dollies while it zooms. That is the dolly zoom from Hitchcock's <i>Vertigo</i> and Spielberg's <i>Jaws</i>: the subject stays put while the world warps around them.</p>
+</section>
+
+<section class="demo" id="g-focus" aria-labelledby="g-focus-h">
+  <header><p class="eyebrow">Gallery 5 · Lens</p><h2 id="g-focus-h">Depth of field: what gets to be sharp</h2>
+  <p class="lede">A wide aperture (small f-number) gives shallow focus, and a narrow one gives deep focus. Sharpness is a pointer: the eye goes to the sharpest thing in the frame first.</p></header>
+  <div class="tiles" id="t-focus"></div>
+  <p class="note"><b>Small number, big hole.</b> The f-number is a ratio: focal length ÷ aperture diameter. On an 85 mm lens, f/1.4 is an opening of about 61 mm and f/11 only about 8 mm. Each full stop (1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22) halves the light, so f/11 lets in about 1/64 as much as f/1.4.</p>
+  <p class="note"><b>"Shallow" is about the sharp zone, not the blur.</b> Picture the in-focus region as a slab of space at the focus distance. Shallow depth of field means a thin slab, so more of the scene in front and behind falls outside it and blurs. Deep depth of field means a thick slab that holds nearly everything. Three things make it shallower: a smaller f-number, a closer subject, and a longer lens.</p>
+  <p class="note"><b>Principle:</b> shallow focus isolates and prettifies, but it also removes the world, and with it the context. Deep focus (Gregg Toland in <i>Citizen Kane</i>) lets action happen in several planes at once and trusts the viewer to look around.</p>
+</section>
+
+<section class="demo" id="g-lightdir" aria-labelledby="g-lightdir-h">
+  <header><p class="eyebrow">Gallery 6 · Light</p><h2 id="g-lightdir-h">Key light direction: where the shadow falls</h2>
+  <p class="lede">A studio close-up of Mira with one key light and a weak fill. Direction is described from the camera's point of view: front, three-quarter, side, back, below, above.</p></header>
+  <div class="tiles" id="t-lightdir"></div>
+  <p class="note"><b>Principle:</b> the side the shadow falls on is the side the audience reads as hidden. Front light reveals, side light sculpts, back light separates, and light from below disturbs because it never happens in nature.</p>
+</section>
+
+<section class="demo" id="g-lightq" aria-labelledby="g-lightq-h">
+  <header><p class="eyebrow">Gallery 7 · Light</p><h2 id="g-lightq-h">Quality, contrast and colour of light</h2>
+  <p class="lede">The same face, now changing how big the source is (hard or soft), how much fill lifts the shadows (the key-to-fill ratio), and the colour temperature of each light.</p></header>
+  <div class="tiles" id="t-lightq"></div>
+  <p class="note"><b>Principle:</b> soft light is kind and hard light is honest. <b>High key</b> (bright, low contrast) reads as open. <b>Low key</b> (dark, high contrast) reads as drama. Temperature contrast between a warm key and a cool fill adds depth without adding brightness.</p>
+</section>
+
+<section class="demo" id="g-time" aria-labelledby="g-time-h">
+  <header><p class="eyebrow">Gallery 8 · Light</p><h2 id="g-time-h">Time of day and motivated light</h2>
+  <p class="lede">Outdoors the sun or a lamp is the key. <b>Motivated light</b> means every light appears to come from something in the world, so stylised light still feels believable.</p></header>
+  <div class="tiles" id="t-time"></div>
+  <p class="note"><b>Principle:</b> a <b>practical</b> is a light that appears in the frame (the streetlamp, the windows). Practicals let you light a night scene with intent while the audience believes it is lit by the street.</p>
+</section>
+
+<section class="demo" id="g-comp" aria-labelledby="g-comp-h">
+  <header><p class="eyebrow">Gallery 9 · Frame</p><h2 id="g-comp-h">Composition: arranging attention</h2>
+  <p class="lede">Placement, lines, frames, layers and empty space. Guide overlays show the structure each tile is built on.</p></header>
+  <div class="tiles" id="t-comp"></div>
+  <p class="note"><b>Principle:</b> the rule of thirds is a starting habit, not a law. What matters is whether the arrangement agrees with the beat: centred for confrontation and formality, off-centre for movement and story, cramped for unease, empty for loneliness.</p>
+</section>
+
+<section class="demo" id="g-shutter" aria-labelledby="g-shutter-h">
+  <header><p class="eyebrow">Gallery 10 · Time</p><h2 id="g-shutter-h">Shutter: freezing or smearing time</h2>
+  <p class="lede">Pip runs across the street at 5 m/s. Each blurred tile averages 18 sub-frames over a 1/15 s exposure, the way a real shutter integrates light.</p></header>
+  <div class="tiles" id="t-shutter"></div>
+  <p class="note"><b>Principle:</b> blur is how a still image shows time. Cartier-Bresson's <b>decisive moment</b> freezes the peak of an action. A long exposure turns a crowd into ghosts and leaves only what stood still.</p>
+</section>
+
+<section class="demo" id="g-aspect" aria-labelledby="g-aspect-h">
+  <header><p class="eyebrow">Gallery 11 · Frame</p><h2 id="g-aspect-h">Aspect ratio: the shape of the canvas</h2>
+  <p class="lede">The proportions of the frame decide what can sit side by side. Each tile is letterboxed inside the same 3:2 box so the shapes compare directly.</p></header>
+  <div class="tiles" id="t-aspect"></div>
+</section>
+
+<section class="demo" id="g-grade" aria-labelledby="g-grade-h">
+  <header><p class="eyebrow">Gallery 12 · Finish</p><h2 id="g-grade-h">Colour grade: the same light, a different memory</h2>
+  <p class="lede">The grade is applied after tone mapping, like a film stock or a LUT. It cannot fix lighting, but it sets the emotional temperature of everything at once.</p></header>
+  <div class="tiles" id="t-grade"></div>
+  <p class="note"><b>Principle:</b> restraint makes colour meaningful. Mira's red coat is the only saturated thing on this street, so in every grade that keeps colour, she is where the eye lands.</p>
+</section>
+
+<section class="demo" id="g-air" aria-labelledby="g-air-h">
+  <header><p class="eyebrow">Gallery 13 · Air</p><h2 id="g-air-h">Atmosphere: depth you can breathe</h2>
+  <p class="lede">Haze lightens, cools and flattens things in proportion to their distance. Painters call it atmospheric or aerial perspective. It separates the planes of a picture without any lighting change.</p></header>
+  <div class="tiles" id="t-air"></div>
+</section>
+
+<section class="demo" id="builder" aria-labelledby="builder-h">
+  <header><p class="eyebrow">Build your own</p><h2 id="builder-h">Shot builder</h2>
+  <p class="lede">Every tile above is a set of these choices. Click a tile to load it here, then change one thing at a time. The line under the frame says the shot in words: copy it into a shot list, an art-direction note or a prompt.</p></header>
+  <div class="lab">
+    <div class="stagecol">
+      <div class="stage" id="stage"><canvas id="stagecv" aria-label="Rendered shot"></canvas></div>
+      <p class="desc" id="desc" aria-live="polite"></p>
+      <div class="labbar">
+        <button type="button" class="btn" id="copy">Copy description</button>
+        <button type="button" class="btn" id="reset">Reset</button>
+        <button type="button" class="btn" id="back" hidden>Back to the tile</button>
+      </div>
+    </div>
+    <div class="controls" id="controls"></div>
+  </div>
+</section>
+
+<section class="demo" id="principles" aria-labelledby="principles-h">
+  <header><p class="eyebrow">General principles</p><h2 id="principles-h">The ideas underneath every choice</h2>
+  <p class="lede">The galleries are vocabulary. These are the grammar: the reasons the vocabulary works, which carry over to any medium or style.</p></header>
+  <div class="cards">
+    <div><h3>1 · Attention is the currency</h3><p>The eye goes first to <b>faces and eyes</b>, then to the <b>strongest value contrast</b>, the <b>sharpest</b> area, the <b>most saturated</b> colour, the <b>isolated</b> element, and anything implying motion. Every tool on this page moves attention. When all of them point at the same subject the frame reads instantly. When they disagree you get tension, or confusion.</p></div>
+    <div><h3>2 · Size and distance are intimacy</h3><p>Bigger in frame means more important. Closer means more emotional, farther means more context, fate or loneliness. The camera's distance is the audience's relationship to the character.</p></div>
+    <div><h3>3 · Height is power</h3><p>Looking up makes a figure dominant. Looking down makes it vulnerable. Level means equal. Small shifts (5–10°) work below conscious notice, which is usually what you want.</p></div>
+    <div><h3>4 · Stability vs tension</h3><p>Horizontals and verticals calm the frame and symmetry formalises it. Diagonals add energy, a tilted horizon adds anxiety, and a cramped edge (short-siding, tight headroom) is claustrophobic. Space ahead of a gaze or motion gives relief.</p></div>
+    <div><h3>5 · Separation</h3><p>The subject must separate from what is behind it by at least one of: <b>value</b> (light against dark), <b>colour</b> (hue, saturation, temperature), <b>focus</b>, an <b>edge light</b>, or <b>atmosphere</b>. To check, squint until the image blurs and see whether the subject still reads.</p></div>
+    <div><h3>6 · Light needs a motive</h3><p>Audiences accept extreme stylisation as long as the light seems to come from somewhere: a window, a lamp, a screen, the sun. Decide the source first, then exaggerate it. Unmotivated light is what makes CG look like CG.</p></div>
+    <div><h3>7 · Contrast sets the mood</h3><p>The ratio between lit and shadowed sides is an emotional dial. At 1:1 everything is visible and nothing is hidden. At 16:1 half the story is in the dark. Hard edges feel truthful and tense; soft edges feel gentle and flattering.</p></div>
+    <div><h3>8 · Colour means through restraint</h3><p>A muted world with one accent (Mira's coat) directs the eye better than a rainbow. Use warm vs cool for depth (warm advances, cool recedes), and give each act or mood its own palette.</p></div>
+    <div><h3>9 · Build depth in planes</h3><p>Foreground, middle ground, background. Depth comes from overlap, diminishing size, converging lines, focus falloff, value falloff and atmospheric perspective. Stack several and even a flat illustration feels deep.</p></div>
+    <div><h3>10 · Simplify</h3><p>Everything in the frame costs attention. Ask what you can remove: a prop, a light, a colour, a second subject. Pros are defined less by what they add than by what they leave out.</p></div>
+    <div><h3>11 · Shots mean in sequence</h3><p>The <b>Kuleshov effect</b>: the same neutral face reads as hungry, grieving or loving depending on the shot cut next to it. In comics, storyboards and games, design shots as a progression: establish, approach, reveal, react.</p></div>
+    <div><h3>12 · Break rules on purpose</h3><p>Every rule here is a default that serves clarity. Breaking one is a signal: a centred face for confrontation, a crossed 180° line for disorientation, a blown-out exposure for memory or heat. Break it once and clearly, so it reads as a choice.</p></div>
+  </div>
+</section>
+
+<section class="demo" id="genres" aria-labelledby="genres-h">
+  <header><p class="eyebrow">Inspiration</p><h2 id="genres-h">Genres as bundles of choices</h2>
+  <p class="lede">A genre or a personal style is a consistent set of the choices above. The sketches below re-dress the same street. The list after them names more traditions worth studying, with the choices that define each.</p></header>
+  <div class="tiles" id="t-genre"></div>
+  <div class="genres">
+    <div><h3>Film noir</h3><p>Hard low-key light, venetian-blind shadows, wet streets, low angles, Dutch tilts, black and white.</p><p class="look"><b>Look at:</b> <i>The Third Man</i> (1949), <i>Double Indemnity</i> (1944).</p></div>
+    <div><h3>Western</h3><p>Extreme long shots of landscape, scope ratio, low horizons, hard sun, then extreme close-ups on eyes in a standoff.</p><p class="look"><b>Look at:</b> Sergio Leone's <i>Once Upon a Time in the West</i>, John Ford's <i>The Searchers</i>.</p></div>
+    <div><h3>Horror</h3><p>Negative space where something could appear, wide lenses close to faces, under-light, darkness that hides more than it shows, slow push-ins.</p><p class="look"><b>Look at:</b> <i>The Shining</i> (1980), <i>Hereditary</i> (2018).</p></div>
+    <div><h3>Romance and melodrama</h3><p>Soft backlight, shallow focus, warm grade, close two-shots, frames within frames that trap lovers apart.</p><p class="look"><b>Look at:</b> Wong Kar-wai's <i>In the Mood for Love</i> (shot by Christopher Doyle and Mark Lee Ping-bing).</p></div>
+    <div><h3>Symmetric tableau</h3><p>Centred, planimetric framing (camera square to a wall), flat even light, curated pastel palettes, characters arranged like a diorama.</p><p class="look"><b>Look at:</b> Wes Anderson's <i>The Grand Budapest Hotel</i>; Kubrick's one-point corridors.</p></div>
+    <div><h3>Street and documentary</h3><p>28–35 mm at eye level, available light, deep focus, grain, the decisive moment, layered city scenes.</p><p class="look"><b>Look at:</b> Henri Cartier-Bresson; Saul Leiter (colour, frames through glass and snow); Fan Ho (light and shadow geometry in 1950s–60s Hong Kong).</p></div>
+    <div><h3>Sci-fi epic</h3><p>Tiny figures against huge structures, scope ratio, monochrome palettes, haze and silhouette, symmetrical architecture.</p><p class="look"><b>Look at:</b> <i>Blade Runner 2049</i> (Roger Deakins), <i>Dune</i> (2021, Greig Fraser).</p></div>
+    <div><h3>Neon night</h3><p>Coloured practicals as key lights, magenta and cyan, rain and reflections, shallow-focus bokeh.</p><p class="look"><b>Look at:</b> <i>Blade Runner</i> (1982), <i>Chungking Express</i> (1994).</p></div>
+    <div><h3>Anime and painted backgrounds</h3><p>Big skies with cumulus clouds, low horizons, layered painted planes (the multiplane camera), calm wide shots that hold on the place, lens flares.</p><p class="look"><b>Look at:</b> Studio Ghibli's <i>My Neighbor Totoro</i>; Makoto Shinkai's <i>Your Name</i>.</p></div>
+    <div><h3>Ozu style</h3><p>Low static camera near the height of someone seated on the floor, frontal compositions, "pillow shots" of empty places between scenes.</p><p class="look"><b>Look at:</b> Yasujirō Ozu's <i>Tokyo Story</i> (1953).</p></div>
+    <div><h3>Tenebrism and chiaroscuro</h3><p>One hard source, most of the canvas in near-black, figures emerging from darkness.</p><p class="look"><b>Look at:</b> Caravaggio's <i>The Calling of Saint Matthew</i>; Rembrandt's self-portraits; Georges de La Tour's candlelit scenes.</p></div>
+    <div><h3>Quiet interiors and isolation</h3><p>Soft window light, figures seen from behind, empty rooms, or hard sunlight and the viewer as a voyeur through a window.</p><p class="look"><b>Look at:</b> Vilhelm Hammershøi's interiors; Edward Hopper's <i>Nighthawks</i> and <i>Morning Sun</i>.</p></div>
+    <div><h3>Staged tableau photography</h3><p>Single frames lit like film sets, with every lamp placed; suburban scenes made uncanny.</p><p class="look"><b>Look at:</b> Gregory Crewdson; Jeff Wall; Cindy Sherman's <i>Untitled Film Stills</i>.</p></div>
+    <div><h3>Isometric and game views</h3><p>Orthographic camera, fixed angle near 30–35° down, readable silhouettes, no depth of field, high-key and saturated.</p><p class="look"><b>Look at:</b> <i>Monument Valley</i>; <i>Hades</i>; classic <i>SimCity</i>.</p></div>
+    <div><h3>Fashion and editorial</h3><p>Hard on-camera flash, bold flat colour, wide lenses low on full figures, strong poses, high contrast.</p><p class="look"><b>Look at:</b> Guy Bourdin; Juergen Teller; Tim Walker for the opposite, lavish staging.</p></div>
+    <div><h3>Product and still life</h3><p>Large soft sources, graduated backgrounds, designed specular highlights, perfect focus front to back.</p><p class="look"><b>Look at:</b> Irving Penn's still lifes; the Dutch Golden Age <i>pronkstilleven</i>.</p></div>
+  </div>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary: words to describe a scene</h2></header>
+  <div class="tablewrap">
+    <table class="plain">
+      <thead><tr><th>Term</th><th>What it controls</th><th>Typical intent</th></tr></thead>
+      <tbody>
+        <tr><td>Establishing shot</td><td>A wide opening shot of the location</td><td>Orient the audience before going close</td></tr>
+        <tr><td>Two-shot, single</td><td>Two people in frame, or one</td><td>Relationship vs individual</td></tr>
+        <tr><td>Insert</td><td>A close shot of an object or detail</td><td>A clue, an emphasis, a pause</td></tr>
+        <tr><td>Headroom</td><td>Space between the top of the head and the frame edge</td><td>Too much feels small and lost, none feels pressing</td></tr>
+        <tr><td>Lead room, nose room</td><td>Space in front of a gaze or movement</td><td>Natural flow; removing it creates unease</td></tr>
+        <tr><td>Short side / broad side</td><td>Lighting or placing the side of the face away from or toward the camera</td><td>Short lighting slims and dramatises, broad lighting opens</td></tr>
+        <tr><td>Key, fill, rim (back)</td><td>The main light, the shadow-lifting light, the edge light from behind</td><td>Three-point lighting: shape, contrast, separation</td></tr>
+        <tr><td>Key-to-fill ratio</td><td>How much darker the shadow side is</td><td>Low ratio is open and commercial, high is dramatic</td></tr>
+        <tr><td>High key / low key</td><td>Overall brightness and contrast of the frame</td><td>Optimism vs drama</td></tr>
+        <tr><td>Chiaroscuro</td><td>Strong light-dark modelling of form</td><td>Volume, gravity, theatre</td></tr>
+        <tr><td>Motivated light, practical</td><td>Light that seems to come from (or is) a visible source</td><td>Believability within stylisation</td></tr>
+        <tr><td>Golden hour, blue hour</td><td>The hour around sunrise or sunset, and the twilight after it</td><td>Warm nostalgia; cool melancholy</td></tr>
+        <tr><td>Bokeh</td><td>The look of out-of-focus highlights</td><td>Softness, romance, depth</td></tr>
+        <tr><td>Rack focus, pull focus</td><td>Shifting focus between planes within a shot</td><td>Redirect attention without cutting</td></tr>
+        <tr><td>Compression</td><td>Long-lens flattening of depth (really, camera distance)</td><td>Crowded, observed, stacked</td></tr>
+        <tr><td>Dolly zoom</td><td>Moving the camera while zooming to hold framing</td><td>Vertigo, realisation, dread</td></tr>
+        <tr><td>Pan, tilt</td><td>Rotating the camera horizontally or vertically in place</td><td>Follow, reveal, survey</td></tr>
+        <tr><td>Dolly, truck, crane</td><td>Moving the camera forward, sideways or vertically</td><td>Approach, accompany, rise above</td></tr>
+        <tr><td>Push-in</td><td>Slow move toward a subject</td><td>Growing importance or realisation</td></tr>
+        <tr><td>Handheld</td><td>Unstabilised camera motion</td><td>Urgency, documentary truth, subjectivity</td></tr>
+        <tr><td>Planimetric</td><td>Camera square to a flat backdrop, figures arranged across it</td><td>Formal, deadpan, diagrammatic</td></tr>
+        <tr><td>Atmospheric perspective</td><td>Haze lightening and cooling distant planes</td><td>Depth, scale, air</td></tr>
+        <tr><td>Colour script</td><td>A strip of key frames showing palette over a story</td><td>Plan emotion with colour</td></tr>
+        <tr><td>180° rule</td><td>Keeping the camera on one side of the action line</td><td>Consistent screen direction</td></tr>
+        <tr><td>Kuleshov effect</td><td>Meaning created by juxtaposing shots</td><td>Implying thoughts and reactions</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p class="foot">Rendered live with three.js r170 from a CDN, no build step. Each tile is a scripted shot: a parameter set that positions the camera from shot size and lens (so framing holds when focal length changes), lights the scene relative to the camera, then runs a physically based depth-of-field gather (circle of confusion from focal length, f-number and focus distance on a 36 mm sensor), accumulates sub-frames for motion blur, and applies ACES tone mapping, a colour grade, vignette and grain. The characters are simple primitives; the vocabulary is the point. See also <a href="../../3d/padlock-looks/">One scene, many looks</a> for materials and post-processing.</p>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const UP = V(0, 1, 0);
+const DEG = Math.PI / 180;
+const T3 = 1 / 3;
+const TILE_W = 540, TILE_H = 360;
+const KID_SPEED = 5, KID_Z = -3.2;
+
+/* --------------------------------------------------------- renderer */
+let renderer = null;
+try { renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' }); } catch (e) { renderer = null; }
+if (!renderer) {
+  document.getElementById('stage').insertAdjacentHTML('beforeend', '<p class="nogl">WebGL is not available in this browser, so the shots cannot be rendered.</p>');
+  throw new Error('no webgl');
+}
+renderer.setPixelRatio(1);
+renderer.autoClear = false;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const persp = new THREE.PerspectiveCamera(40, 1.5, 0.05, 2000);
+persp.filmGauge = 36;
+const orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2000);
+
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rand = rng(7);
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0, ...o });
+const mesh = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; };
+
+/* --------------------------------------------------------- set */
+const env = new THREE.Group(); scene.add(env);
+
+const ground = mesh(new THREE.PlaneGeometry(1200, 1200), std('#5f6a4c', { roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; env.add(ground);
+
+function slabTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  x.fillStyle = '#6f675b'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    const v = 176 + rand() * 22 | 0; x.fillStyle = `rgb(${v},${v - 9},${v - 26})`; x.fillRect(i * 64 + 2, j * 64 + 2, 60, 60);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t;
+}
+const slabs = slabTexture(); slabs.repeat.set(1, 240 / 3);
+const path = mesh(new THREE.PlaneGeometry(3, 240), std('#ffffff', { map: slabs, roughness: 0.95 }), 0, 0.006, -60);
+path.rotation.x = -Math.PI / 2; env.add(path);
+const curbMat = std('#cfc6b4');
+for (const s of [-1, 1]) env.add(mesh(new THREE.BoxGeometry(0.18, 0.12, 240), curbMat, s * 1.59, 0.06, -60));
+
+// street lamps in matched pairs; the right-hand one at z = -0.6 is the working key light at night
+const postMat = std('#2b2d33', { roughness: 0.6, metalness: 0.3 });
+const bulbMat = std('#222', { emissive: new THREE.Color('#ffd59a'), emissiveIntensity: 0 });
+const mainBulbMat = bulbMat.clone();
+function makeLamp(x, z, main) {
+  const g = new THREE.Group(); const s = Math.sign(x);
+  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.075, 3.8, 10), postMat, x, 1.9, z));
+  g.add(mesh(new THREE.BoxGeometry(0.85, 0.06, 0.06), postMat, x - s * 0.4, 3.78, z));
+  g.add(mesh(new THREE.CylinderGeometry(0.06, 0.2, 0.16, 12), postMat, x - s * 0.8, 3.72, z));
+  g.add(mesh(new THREE.SphereGeometry(0.08, 12, 8), main ? mainBulbMat : bulbMat, x - s * 0.8, 3.62, z));
+  return g;
+}
+for (let k = -5; k <= 11; k++) for (const x of [-1.95, 1.95]) env.add(makeLamp(x, -0.6 - 9 * k, k === 0 && x > 0));
+const lamp = new THREE.SpotLight(0xffc27a, 0, 0, 0.85, 0.6, 2);
+lamp.position.set(1.15, 3.55, -0.6); lamp.target.position.set(0.1, 0, 0.15);
+lamp.castShadow = true; lamp.shadow.mapSize.set(1024, 1024); lamp.shadow.bias = -0.0004;
+scene.add(lamp, lamp.target);
+
+// trees
+const trunkMat = std('#5a4433'), leafMats = ['#4d6b3a', '#5b7a3f', '#43603a'].map(c => std(c, { flatShading: true }));
+function makeTree(x, z, s) {
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.09 * s, 0.14 * s, 1.8 * s, 7), trunkMat, x, 0.9 * s, z));
+  const m = leafMats[(rand() * 3) | 0];
+  g.add(mesh(new THREE.IcosahedronGeometry(1.15 * s, 1), m, x, 2.5 * s, z));
+  g.add(mesh(new THREE.IcosahedronGeometry(0.8 * s, 1), m, x + 0.5 * s, 2.1 * s, z + 0.3 * s));
+  return g;
+}
+[[-5, -1], [-14, 1], [-24, -1], [-35, 1], [-47, -1], [-62, 1], [-78, -1]].forEach(([z, side]) =>
+  env.add(makeTree(side * (3.4 + rand() * 0.6), z + rand() * 2, 0.9 + rand() * 0.5)));
+// open land in front of the gate, trees kept wide of the camera positions
+[[-18, 14], [-24, 30], [19, 18], [26, 40], [-14, 52], [15, 60]].forEach(([x, z]) => env.add(makeTree(x, z, 1 + rand() * 0.6)));
+
+// buildings with windows that light up at dusk
+const winMats = [];
+function makeBuilding(x, z, w, h, d, color) {
+  const cols = Math.max(2, Math.round(w / 2.2)), rows = Math.max(2, Math.round(h / 3.1));
+  const mk = () => { const c = document.createElement('canvas'); c.width = c.height = 128; return c; };
+  const cm = mk(), ce = mk(), xm = cm.getContext('2d'), xe = ce.getContext('2d');
+  xm.fillStyle = color; xm.fillRect(0, 0, 128, 128); xe.fillStyle = '#000'; xe.fillRect(0, 0, 128, 128);
+  const cw = 128 / cols, rh = 128 / rows;
+  for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+    const wx = i * cw + cw * 0.28, wy = j * rh + rh * 0.25, ww = cw * 0.44, wh = rh * 0.48;
+    xm.fillStyle = '#3a4048'; xm.fillRect(wx, wy, ww, wh);
+    if (rand() < 0.55) { xe.fillStyle = rand() < 0.8 ? '#ffd29a' : '#cfe0ff'; xe.fillRect(wx, wy, ww, wh); }
+  }
+  const tm = new THREE.CanvasTexture(cm), te = new THREE.CanvasTexture(ce);
+  tm.colorSpace = te.colorSpace = THREE.SRGBColorSpace;
+  const side = std('#ffffff', { map: tm, emissive: new THREE.Color('#ffffff'), emissiveMap: te, emissiveIntensity: 0 });
+  winMats.push(side);
+  const roof = std('#55504a');
+  return mesh(new THREE.BoxGeometry(w, h, d), [side, side, roof, roof, side, side], x, h / 2, z);
+}
+const facades = ['#c9b79c', '#b98a6e', '#9aa3a8', '#d4c3a3', '#a7836a', '#8c9488', '#cdb08e', '#b7a58e'];
+for (const s of [-1, 1]) {
+  let z = -9;   // the town starts behind the arch; the meeting spot is at its gate
+  while (z > -140) {
+    const w = 5 + rand() * 6, h = 5 + rand() * 12, d = 7;
+    env.add(makeBuilding(s * (7.5 + d / 2), z - w / 2, w, h, d, facades[(rand() * facades.length) | 0]));
+    z -= w + rand() * 1.5;
+  }
+}
+
+// arch over the path, behind the meeting spot
+const stoneMat = std('#d8cbb4');
+for (const s of [-1, 1]) env.add(mesh(new THREE.BoxGeometry(0.6, 4.1, 0.6), stoneMat, s * 2.5, 2.05, -7));
+env.add(mesh(new THREE.BoxGeometry(5.6, 0.7, 0.7), stoneMat, 0, 4.45, -7));
+
+// bench
+const benchMat = std('#6b4e36');
+env.add(mesh(new THREE.BoxGeometry(0.45, 0.06, 1.6), benchMat, -2.6, 0.45, -2.4));
+env.add(mesh(new THREE.BoxGeometry(0.06, 0.45, 1.6), benchMat, -2.83, 0.7, -2.4));
+for (const dz of [-0.7, 0.7]) env.add(mesh(new THREE.BoxGeometry(0.4, 0.45, 0.06), postMat, -2.6, 0.22, -2.4 + dz));
+
+// distant hills for aerial perspective
+const hillMat = std('#5d6b55', { flatShading: true });
+const hills = new THREE.Group(); env.add(hills);
+[[-260, -300, 120], [-80, -340, 150], [120, -310, 130], [300, -280, 110], [40, -420, 200], [-200, 300, 140], [180, 320, 120]].forEach(([x, z, r]) => {
+  const h = mesh(new THREE.IcosahedronGeometry(r, 2), hillMat, x, -r * 0.3, z); h.scale.y = 0.55; hills.add(h);
+});
+
+// sky dome, follows the camera
+const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
+  uniforms: { top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, sunDir: { value: V(0, 1, 0) }, sunColor: { value: new THREE.Color() }, glow: { value: 0 } },
+  vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform vec3 top, horizon, bottom, sunColor, sunDir; uniform float glow; varying vec3 vDir;
+    void main(){ vec3 d = normalize(vDir); float y = d.y;
+      vec3 c = y > 0.0 ? mix(horizon, top, pow(smoothstep(0.0, 1.0, y), 0.55)) : mix(horizon, bottom, smoothstep(0.0, 0.12, -y));
+      float s = max(dot(d, normalize(sunDir)), 0.0);
+      c += sunColor * glow * (0.5 * pow(s, 6.0) + 0.6 * pow(s, 60.0) + 6.0 * pow(s, 3000.0));
+      gl_FragColor = vec4(c, 1.0); }`
+}));
+sky.renderOrder = -1; sky.frustumCulled = false; scene.add(sky);
+
+/* --------------------------------------------------------- characters */
+function makeCharacter(o) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const s = o.h / 1.7, b = o.build || 1;
+  const coatM = std(o.coat), skinM = std(o.skin || '#e0b18e', { roughness: 0.6 }), legM = std(o.legs || '#2a2c33'), shoeM = std('#1d1d20'), eyeM = std('#16161a', { roughness: 0.3 });
+  const legs = [], arms = [];
+  for (const side of [-1, 1]) {
+    const hip = new THREE.Group(); hip.position.set(side * 0.085 * s * b, 0.8 * s, 0);
+    hip.add(mesh(new THREE.CapsuleGeometry(0.065 * s * b, 0.56 * s, 4, 10), legM, 0, -0.37 * s, 0));
+    const shoe = mesh(new THREE.SphereGeometry(0.075 * s * b, 12, 8), shoeM, 0, -0.765 * s, 0.04 * s); shoe.scale.set(0.9, 0.55, 1.5); hip.add(shoe);
+    body.add(hip); legs.push(hip);
+    const sh = new THREE.Group(); sh.position.set(side * 0.2 * s * b, 1.34 * s, 0); sh.rotation.z = side * 0.12;
+    sh.add(mesh(new THREE.CapsuleGeometry(0.055 * s * b, 0.46 * s, 4, 10), coatM, 0, -0.29 * s, 0));
+    sh.add(mesh(new THREE.SphereGeometry(0.052 * s, 10, 8), skinM, 0, -0.6 * s, 0));
+    body.add(sh); arms.push(sh);
+  }
+  const coat = mesh(new THREE.LatheGeometry([[0, 0.62], [0.21, 0.62], [0.205, 0.8], [0.18, 1.05], [0.2, 1.28], [0.17, 1.38], [0.08, 1.45], [0, 1.46]].map(([r, y]) => new THREE.Vector2(r * s, y * s)), 28), coatM);
+  coat.scale.set(b, 1, 0.82 * b); body.add(coat);
+  body.add(mesh(new THREE.CylinderGeometry(0.05 * s, 0.055 * s, 0.1 * s, 10), skinM, 0, 1.48 * s, 0));
+  body.add(mesh(new THREE.SphereGeometry(0.125 * s, 32, 20), skinM, 0, 1.58 * s, 0));
+  for (const side of [-1, 1]) body.add(mesh(new THREE.SphereGeometry(0.016 * s, 10, 8), eyeM, side * 0.045 * s, 1.6 * s, 0.112 * s));
+  const nose = mesh(new THREE.SphereGeometry(0.022 * s, 10, 8), skinM, 0, 1.565 * s, 0.123 * s); nose.scale.z = 1.4; body.add(nose);
+  if (o.hair) { const h = mesh(new THREE.SphereGeometry(0.137 * s, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.6), std(o.hair, { roughness: 0.7 }), 0, 1.595 * s, -0.008 * s); h.rotation.x = -0.5; body.add(h); }
+  if (o.hat) {
+    const hm = std(o.hat, { roughness: 0.7 });
+    body.add(mesh(new THREE.CylinderGeometry(0.11 * s, 0.122 * s, 0.13 * s, 20), hm, 0, 1.73 * s, 0));
+    body.add(mesh(new THREE.CylinderGeometry(0.2 * s, 0.2 * s, 0.014 * s, 28), hm, 0, 1.672 * s, 0));
+  }
+  if (o.scarf) { const t = mesh(new THREE.TorusGeometry(0.085 * s, 0.034 * s, 8, 20), std(o.scarf), 0, 1.45 * s, 0); t.rotation.x = Math.PI / 2; body.add(t); }
+  if (o.run) {
+    legs[0].rotation.x = 0.75; legs[1].rotation.x = -0.6; arms[0].rotation.x = -0.8; arms[1].rotation.x = 0.7; body.rotation.x = 0.16;
+  }
+  return g;
+}
+const mira = makeCharacter({ h: 1.55, coat: '#c4442e', legs: '#2f2a33', hair: '#2a1d18', scarf: '#e8d6b0' });
+const otto = makeCharacter({ h: 2.05, build: 1.3, coat: '#3d4a5c', legs: '#24262c', hat: '#22242a', skin: '#c99a78' });
+const kid = makeCharacter({ h: 1.15, coat: '#e3b62c', legs: '#3b4a6b', hair: '#e3b62c', run: true, skin: '#d9a982' });
+mira.position.set(-0.75, 0, 0); mira.rotation.y = Math.PI / 2;
+otto.position.set(0.75, 0, 0); otto.rotation.y = -Math.PI / 2;
+kid.position.set(3.2, 0, KID_Z); kid.rotation.y = Math.PI / 2;
+scene.add(mira, otto, kid);
+const crowd = new THREE.Group(); scene.add(crowd);
+[[-0.7, -15, 0.3, '#7d7f86', 1.72], [0.6, -19, 3.0, '#8a7a6a', 1.66], [-0.4, -27, 0.1, '#6b7480', 1.8], [0.9, -33, 2.8, '#9a8f7f', 1.62]].forEach(([x, z, r, c, h]) => {
+  const p = makeCharacter({ h, coat: c, legs: '#3a3a3e', hair: '#3b332e' }); p.position.set(x, 0, z); p.rotation.y = r; crowd.add(p);
+});
+const CH = {
+  mira: { obj: mira, h: 1.55, face: V(1, 0, 0) },
+  otto: { obj: otto, h: 2.05, face: V(-1, 0, 0) },
+  kid: { obj: kid, h: 1.15, face: V(1, 0, 0) }
+};
+for (const k in CH) CH[k].eye = 1.6 * CH[k].h / 1.7;
+
+// foreground leaves for "shooting through" shots; placed relative to the camera
+const leaves = new THREE.Group();
+for (let i = 0; i < 7; i++) {
+  const l = mesh(new THREE.IcosahedronGeometry(0.32 + rand() * 0.2, 0), leafMats[i % 3], (rand() - 0.5) * 0.9, (rand() - 0.5) * 0.7, (rand() - 0.5) * 0.3);
+  l.rotation.set(rand() * 3, rand() * 3, rand() * 3); leaves.add(l);
+}
+scene.add(leaves);
+
+scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+sky.castShadow = sky.receiveShadow = false;
+leaves.traverse(o => { o.castShadow = false; });
+hills.traverse(o => { o.castShadow = false; });
+ground.castShadow = path.castShadow = false;
+
+/* --------------------------------------------------------- lights */
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 3);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
+const fill = new THREE.DirectionalLight(0xffffff, 0), rim = new THREE.DirectionalLight(0xffffff, 0);
+scene.add(key, key.target, fill, fill.target, rim, rim.target);
+const fog = new THREE.FogExp2(0xffffff, 0); scene.fog = fog;
+
+const LIGHTS = {
+  noon:     { name: 'noon sun', sky: ['#3f74c0', '#b4cfe8', '#59614c'], sun: '#fff3e2', sunI: 3.2, el: 68, hemi: ['#c3d7ee', '#6b5a45', 0.9], fog: 0.0035, lamp: 0, win: 0, bulbs: 0, exp: 0.85, soft: 0.1, glow: 0.25 },
+  golden:   { name: 'golden hour', sky: ['#4d6aa8', '#f4b277', '#5a4a3a'], sun: '#ffb067', sunI: 3.4, el: 7, hemi: ['#9fb1d8', '#7a5537', 0.6], fog: 0.006, lamp: 0, win: 0.15, bulbs: 0.4, exp: 1.0, soft: 0.2, glow: 1.3 },
+  blue:     { name: 'blue hour', sky: ['#18254d', '#5a6fa3', '#1a1d28'], sun: '#9fb4ff', sunI: 0, el: -4, hemi: ['#4d64a3', '#1a1e2a', 1.1], fog: 0.01, lamp: 30, win: 2.2, bulbs: 8, exp: 1.6, soft: 0.5, glow: 0.25 },
+  night:    { name: 'night', sky: ['#04060d', '#10172a', '#06070a'], sun: '#8ea9ff', sunI: 0.18, el: 40, hemi: ['#2a3a66', '#0b0c10', 0.12], fog: 0.014, lamp: 42, win: 2.8, bulbs: 12, exp: 1.9, soft: 0.4, glow: 0 },
+  overcast: { name: 'overcast', sky: ['#8b939e', '#c7cacd', '#5b5f5a'], sun: '#e8ecf0', sunI: 0.6, el: 55, hemi: ['#d7dce2', '#5a5b55', 2.1], fog: 0.016, lamp: 0, win: 0, bulbs: 0, exp: 1.0, soft: 1, glow: 0 },
+  studio:   { name: 'studio', exp: 1.0, soft: 0.15 }
+};
+const LAMP_COLORS = { warm: '#ffbf75', cold: '#bcd4ff', cyan: '#4fe0ff', magenta: '#ff4fd0' };
+const BACKDROPS = { dark: '#0d0e12', mid: '#4a4c52', light: '#d9d6cf', warm: '#e7c9a0' };
+const ASPECT = { '4:5': 0.8, '1:1': 1, '3:2': 1.5, '16:9': 16 / 9, '2.39:1': 2.39 };
+const GRADES = {
+  neutral:    {},
+  tealorange: { sat: 1.12, con: 1.08, sh: [-0.035, 0.015, 0.05], hi: [0.05, 0.012, -0.045] },
+  warm:       { sat: 0.88, con: 0.9, lift: [0.07, 0.045, 0.02], gain: [1.05, 1.0, 0.88] },
+  cold:       { sat: 0.55, con: 1.1, lift: [0, 0.012, 0.035], gain: [0.9, 0.98, 1.07] },
+  bleach:     { sat: 0.4, con: 1.35 },
+  pastel:     { sat: 0.85, con: 0.82, lift: [0.09, 0.065, 0.075], gain: [1.02, 0.97, 0.98] },
+  vivid:      { sat: 1.38, con: 1.06 },
+  bw:         { mono: 1, con: 1.15 },
+  noir:       { mono: 1, con: 1.65 }
+};
+
+/* --------------------------------------------------------- shot model */
+const BASE = {
+  subject: 'both', size: 'FS', lens: 35, az: 25, el: 0, roll: 0, placeX: 0, placeY: 0, dist: 0,
+  fstop: 5.6, focus: 'subject', fg: false,
+  light: 'golden', keyAz: 50, keyEl: 35, keyI: 1, soft: null, ratio: 4, rim: 0, keyWarm: 0, fillCool: false, backdrop: 'dark', lampColor: 'warm', ev: 0,
+  shutter: 'freeze', haze: 1, kidX: 3.2,
+  aspect: '3:2', grade: 'neutral', vignette: 0.25, grain: 0.025, guides: 'none', cast: null
+};
+const SPANS = { ECU: 0.17, CU: 0.42, MCU: 0.75, MS: 1.2, LS: 5.5, ELS: 20 };
+function resolve(shot) { const S = { ...BASE, ...shot }; if (S.soft == null) S.soft = LIGHTS[S.light].soft; return S; }
+
+function subjectInfo(sub) {
+  if (sub === 'both') return { pos: V(0, 0, 0), face: V(0, 0, 1), side: V(1, 0, 0), h: 2.05, eye: (CH.mira.eye + CH.otto.eye) / 2, scale: 1 };
+  if (sub === 'scene') return { pos: V(0, 0, -4), face: V(0, 0, 1), side: V(1, 0, 0), h: 2, eye: 1.6, scale: 1 };
+  const c = CH[sub]; return { pos: c.obj.position.clone(), face: c.face, side: V(0, 0, 1), h: c.h, eye: c.eye, scale: c.h / 1.7 };
+}
+
+// Shot size fixes the vertical span at the subject; the lens then decides how far away the camera must stand.
+function frame(S, aspect) {
+  const I = subjectInfo(S.subject);
+  const close = ['ECU', 'CU', 'MCU', 'MS'].includes(S.size);
+  let span = S.size === 'FS' ? I.h * 1.25 : SPANS[S.size] * (close ? I.scale : 1);
+  if (S.subject === 'both' && S.size !== 'LS' && S.size !== 'ELS') span = Math.max(span, 2.6 / aspect);
+  const ortho = !S.lens;
+  let tanH = 1, d;
+  if (!ortho) { persp.aspect = aspect; persp.setFocalLength(S.lens); tanH = Math.tan(persp.fov * DEG / 2); }
+  if (S.dist) { d = S.dist; if (!ortho) span = 2 * d * tanH; } else d = ortho ? 60 : span / (2 * tanH);
+  let cy;
+  if (S.size === 'ECU') cy = I.eye;
+  else if (close) cy = I.eye - span / 6;
+  else if (S.size === 'FS') cy = I.h * 0.5;
+  else cy = span * 0.42;
+  const C = V(I.pos.x, cy, I.pos.z);
+  const az = S.az * DEG, el = Math.min(S.el, 88) * DEG;
+  const dir = I.face.clone().multiplyScalar(Math.cos(az)).addScaledVector(I.side, Math.sin(az))
+    .multiplyScalar(Math.cos(el)).addScaledVector(UP, Math.sin(el)).normalize();
+  const pos = C.clone().addScaledVector(dir, d);
+  if (pos.y < 0.12) pos.y = 0.12;
+  const cam = ortho ? orthoCam : persp;
+  if (ortho) { orthoCam.left = -span / 2 * aspect; orthoCam.right = span / 2 * aspect; orthoCam.top = span / 2; orthoCam.bottom = -span / 2; }
+  cam.position.copy(pos); cam.up.set(0, 1, 0); cam.lookAt(C); cam.rotateZ(S.roll * DEG);
+  cam.updateProjectionMatrix();
+  // placement is a lens shift, so verticals stay vertical
+  const e = cam.projectionMatrix.elements;
+  if (ortho) { e[12] += S.placeX; e[13] += S.placeY; } else { e[8] -= S.placeX; e[9] -= S.placeY; }
+  cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+  cam.updateMatrixWorld();
+  return { cam, C, pos, span, I, tanH, ortho };
+}
+
+function eyePoint(name) { const c = CH[name]; return V(c.obj.position.x, c.eye, c.obj.position.z); }
+
+function setupScene(S, aspect) {
+  const L = LIGHTS[S.light], studio = S.light === 'studio';
+  kid.position.set(S.kidX, 0, KID_Z);
+  const cast = S.cast || (studio ? { mira: ['mira'], otto: ['otto'], both: ['mira', 'otto'], kid: ['kid'], scene: ['mira', 'otto', 'kid', 'crowd'] }[S.subject] : ['mira', 'otto', 'kid', 'crowd']);
+  mira.visible = cast.includes('mira'); otto.visible = cast.includes('otto'); kid.visible = cast.includes('kid'); crowd.visible = cast.includes('crowd');
+  env.visible = sky.visible = !studio;
+
+  const F = frame(S, aspect), cam = F.cam;
+
+  // lights are placed relative to the camera, as a cinematographer would describe them
+  const toCam = F.pos.clone().sub(F.C); toCam.y = 0; if (toCam.lengthSq() < 1e-6) toCam.set(0, 0, 1); toCam.normalize();
+  const left = new THREE.Vector3().crossVectors(UP, toCam.clone().negate()).normalize();
+  const dirFrom = (azD, elD) => { const a = azD * DEG, e = elD * DEG; return toCam.clone().multiplyScalar(Math.cos(a)).addScaledVector(left, Math.sin(a)).multiplyScalar(Math.cos(e)).addScaledVector(UP, Math.sin(e)).normalize(); };
+  const kd = dirFrom(S.keyAz, studio ? S.keyEl : L.el);
+  const tint = (base, w) => new THREE.Color(base).lerp(new THREE.Color(w >= 0 ? '#ffae5e' : '#86aaff'), Math.min(Math.abs(w), 1) * 0.85);
+  const hs = THREE.MathUtils.clamp(F.span * 0.8, 0.6, 40);
+  const center = studio ? F.C.clone() : V(F.C.x, Math.min(F.C.y, 1), F.C.z);
+  const kdist = studio ? 10 : 80;
+  key.position.copy(center).addScaledVector(kd, kdist); key.target.position.copy(center); key.target.updateMatrixWorld();
+  const sc = key.shadow.camera; sc.left = sc.bottom = -hs; sc.right = sc.top = hs; sc.near = 1; sc.far = kdist * 2.5; sc.updateProjectionMatrix();
+  // softness: blur radius in shadow-map texels, trading map resolution for wider penumbrae
+  const pen = studio ? 0.004 + S.soft * 0.05 : (0.01 + S.soft * 0.1) * Math.max(1, hs / 3);
+  let ms = 2048, r = pen * ms / (2 * hs);
+  while (r > 8 && ms > 256) { ms /= 2; r /= 2; }
+  if (key.shadow.mapSize.x !== ms) { key.shadow.mapSize.set(ms, ms); if (key.shadow.map) { key.shadow.map.dispose(); key.shadow.map = null; } }
+  key.shadow.radius = Math.max(1, r);
+  // bias in world units of about one texel, so small features like a nose still cast a shadow
+  const texel = 2 * hs / ms;
+  key.shadow.bias = -1.5 * texel / (sc.far - sc.near); key.shadow.normalBias = texel;
+  rim.position.copy(center).addScaledVector(dirFrom(S.keyAz >= 0 ? -140 : 140, 30), 80); rim.target.position.copy(center); rim.target.updateMatrixWorld();
+  fill.target.position.copy(center); fill.target.updateMatrixWorld();
+
+  let clear = new THREE.Color(0, 0, 0), exposure = L.exp;
+  if (studio) {
+    key.color.copy(tint('#ffffff', S.keyWarm)); key.intensity = 3 * S.keyI;
+    fill.position.copy(center).addScaledVector(dirFrom(S.keyAz >= 0 ? -40 : 40, 12), 80);
+    fill.color.set(S.fillCool ? '#7fa6ff' : '#ffffff'); fill.intensity = 3 / S.ratio;
+    rim.color.set('#ffffff'); rim.intensity = S.rim;
+    hemi.color.set('#ffffff'); hemi.groundColor.set('#222222'); hemi.intensity = S.backdrop === 'light' ? 0.35 : 0.04;
+    lamp.intensity = 0; fog.density = 0;
+    clear = new THREE.Color(BACKDROPS[S.backdrop]);
+  } else {
+    key.color.copy(tint(L.sun, S.keyWarm)); key.intensity = L.el > 0 ? L.sunI * S.keyI : 0;
+    fill.intensity = 0;
+    rim.color.set(L.sun); rim.intensity = S.rim;
+    hemi.color.set(L.hemi[0]); hemi.groundColor.set(L.hemi[1]); hemi.intensity = L.hemi[2];
+    lamp.color.set(LAMP_COLORS[S.lampColor]); lamp.intensity = L.lamp;
+    fog.color.set(L.sky[1]); fog.density = L.fog * S.haze;
+    const u = sky.material.uniforms;
+    u.top.value.set(L.sky[0]); u.horizon.value.set(L.sky[1]); u.bottom.value.set(L.sky[2]);
+    u.sunDir.value.copy(kd); u.sunColor.value.set(L.sun); u.glow.value = L.glow;
+  }
+  key.castShadow = key.intensity > 0;
+  bulbMat.emissiveIntensity = studio ? 0 : L.bulbs;
+  mainBulbMat.emissive.set(LAMP_COLORS[S.lampColor]); mainBulbMat.emissiveIntensity = studio ? 0 : L.bulbs * 1.5;
+  for (const m of winMats) m.emissiveIntensity = studio ? 0 : L.win;
+  exposure *= Math.pow(2, S.ev);
+
+  leaves.visible = S.fg && !F.ortho;
+  if (leaves.visible) {
+    const z = 0.55;
+    leaves.position.copy(cam.localToWorld(V(-F.tanH * aspect * z * 0.72, -F.tanH * z * 0.5, -z)));
+    leaves.quaternion.copy(cam.quaternion); leaves.scale.setScalar(F.tanH * z * 0.9);
+  }
+
+  let fp;
+  if (S.focus === 'far') fp = null;
+  else if (S.focus !== 'subject') fp = eyePoint(S.focus);
+  else if (S.subject === 'both') fp = V(0, F.I.eye, 0);
+  else if (S.subject === 'scene') fp = F.C.clone();
+  else fp = eyePoint(S.subject);
+  const fwd = new THREE.Vector3(); cam.getWorldDirection(fwd);
+  const focusDist = fp ? Math.max(0.2, fp.sub(F.pos).dot(fwd)) : 80;
+  return { cam, camPos: F.pos.clone(), focusDist, clear, exposure, ortho: F.ortho };
+}
+
+/* --------------------------------------------------------- passes */
+const rtOpts = { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
+const sceneRT = new THREE.WebGLRenderTarget(4, 4, rtOpts);
+sceneRT.depthTexture = new THREE.DepthTexture(4, 4);
+const dofRT = new THREE.WebGLRenderTarget(4, 4, { ...rtOpts, depthBuffer: false });
+const accRT = new THREE.WebGLRenderTarget(4, 4, { ...rtOpts, depthBuffer: false });
+function sizeTargets(w, h) { if (sceneRT.width !== w || sceneRT.height !== h) { sceneRT.setSize(w, h); dofRT.setSize(w, h); accRT.setSize(w, h); } }
+
+const quadVS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+// Scatter-as-gather bokeh (after Dennis Gustafsson's single-pass method) with a physical circle of confusion.
+const dofMat = new THREE.ShaderMaterial({
+  uniforms: { tColor: { value: sceneRT.texture }, tDepth: { value: sceneRT.depthTexture }, uNear: { value: 0.05 }, uFar: { value: 2000 }, uFocus: { value: 3 }, uK: { value: 0 }, uLimit: { value: 0 }, uRad: { value: 0.5 }, uTexel: { value: new THREE.Vector2() } },
+  vertexShader: quadVS,
+  fragmentShader: `#include <packing>
+    uniform sampler2D tColor, tDepth; uniform float uNear, uFar, uFocus, uK, uLimit, uRad; uniform vec2 uTexel; varying vec2 vUv;
+    float viewZ(vec2 uv){ return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, uNear, uFar); }
+    float coc(float z){ return min(uK * abs(z - uFocus) / z, uLimit); }
+    void main(){
+      vec3 col = texture2D(tColor, vUv).rgb;
+      if (uLimit < 0.75) { gl_FragColor = vec4(col, 1.0); return; }
+      float cz = viewZ(vUv), cs = coc(cz), tot = 1.0, r = uRad, ang = 0.0;
+      for (int i = 0; i < 420; i++) {
+        if (r >= uLimit) break;
+        ang += 2.39996323;
+        vec2 tc = vUv + vec2(cos(ang), sin(ang)) * uTexel * r;
+        vec3 sc = texture2D(tColor, tc).rgb; float sz = viewZ(tc), ss = coc(sz);
+        if (sz > cz) ss = clamp(ss, 0.0, cs * 2.0);
+        float m = smoothstep(r - 0.5 - 0.5 * uRad, r + 0.5 + 0.5 * uRad, ss);
+        col += mix(col / tot, sc, m); tot += 1.0; r += uRad / r;
+      }
+      gl_FragColor = vec4(col / tot, 1.0);
+    }`,
+  depthTest: false, depthWrite: false
+});
+const accMat = new THREE.ShaderMaterial({
+  uniforms: { tSrc: { value: dofRT.texture }, w: { value: 1 } },
+  vertexShader: quadVS,
+  fragmentShader: `uniform sampler2D tSrc; uniform float w; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(tSrc, vUv).rgb * w, 1.0); }`,
+  blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendEquation: THREE.AddEquation,
+  transparent: true, depthTest: false, depthWrite: false
+});
+const finalMat = new THREE.ShaderMaterial({
+  uniforms: {
+    tSrc: { value: accRT.texture }, uRes: { value: new THREE.Vector2(1, 1) }, uSat: { value: 1 }, uCon: { value: 1 }, uMono: { value: 0 },
+    uLift: { value: new THREE.Vector3() }, uGain: { value: new THREE.Vector3(1, 1, 1) }, uSh: { value: new THREE.Vector3() }, uHi: { value: new THREE.Vector3() },
+    uVig: { value: 0 }, uGrain: { value: 0 }, uSeed: { value: 0 }
+  },
+  vertexShader: quadVS,
+  fragmentShader: `uniform sampler2D tSrc; uniform vec2 uRes; uniform float uSat, uCon, uMono, uVig, uGrain, uSeed; uniform vec3 uLift, uGain, uSh, uHi; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      gl_FragColor = vec4(texture2D(tSrc, vUv).rgb, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      vec3 c = gl_FragColor.rgb;
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      c = mix(c, vec3(l), uMono);
+      c = mix(vec3(l), c, uSat);
+      c = (c - 0.5) * uCon + 0.5;
+      c += uSh * (1.0 - smoothstep(0.0, 0.55, l)) + uHi * smoothstep(0.45, 1.0, l);
+      c = c * uGain; c = c * (1.0 - uLift) + uLift;
+      vec2 q = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0); float r = length(q) / length(vec2(0.5 * uRes.x / uRes.y, 0.5));
+      c *= mix(1.0, 1.0 - smoothstep(0.3, 1.1, r), uVig);
+      c += (hash(vUv * uRes + uSeed) - 0.5) * uGrain;
+      gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+    }`,
+  depthTest: false, depthWrite: false
+});
+const fsq = new FullScreenQuad(dofMat);
+
+function renderShot(S, w, h, draft) {
+  const aspect = w / h;
+  const ss = draft ? 1 : Math.min(2, 2400 / w, 1600 / h);
+  const iw = Math.max(2, Math.round(w * ss)), ih = Math.max(2, Math.round(h * ss));
+  sizeTargets(iw, ih);
+  const view = setupScene(S, aspect), cam = view.cam;
+
+  const u = dofMat.uniforms, cap = 0.03 * ih;
+  u.uNear.value = cam.near; u.uFar.value = cam.far; u.uTexel.value.set(1 / iw, 1 / ih);
+  if (view.ortho) u.uLimit.value = 0;
+  else {
+    const f = S.lens / 1000, Sf = Math.max(view.focusDist, f * 1.5);
+    const K = f * f / (S.fstop * (Sf - f)) / (persp.getFilmHeight() / 1000) * ih;
+    u.uFocus.value = Sf; u.uK.value = K;
+    u.uLimit.value = Math.min(cap, Math.max(K * Math.abs(cam.far - Sf) / cam.far, K * Math.abs(0.45 - Sf) / 0.45));
+  }
+  u.uRad.value = Math.max(0.5, cap * cap / 700);
+
+  const N = S.shutter === 'freeze' ? 1 : (draft ? 6 : 18), T = S.shutter === 'freeze' ? 0 : 1 / 15;
+  renderer.setRenderTarget(accRT); renderer.setClearColor(0x000000, 1); renderer.clear(true, false, false);
+  for (let i = 0; i < N; i++) {
+    const t = N === 1 ? 0 : ((i + 0.5) / N - 0.5) * T;
+    kid.position.x = S.kidX + KID_SPEED * t;
+    if (S.shutter === 'pan') { cam.position.copy(view.camPos); cam.position.x += KID_SPEED * t; cam.updateMatrixWorld(); }
+    sky.position.copy(cam.position);
+    renderer.setRenderTarget(sceneRT); renderer.setClearColor(view.clear, 1); renderer.clear();
+    renderer.render(scene, cam);
+    fsq.material = dofMat; renderer.setRenderTarget(dofRT); fsq.render(renderer);
+    accMat.uniforms.w.value = 1 / N; fsq.material = accMat; renderer.setRenderTarget(accRT); fsq.render(renderer);
+  }
+  kid.position.x = S.kidX;
+
+  const g = { sat: 1, con: 1, mono: 0, lift: [0, 0, 0], gain: [1, 1, 1], sh: [0, 0, 0], hi: [0, 0, 0], ...GRADES[S.grade] };
+  const fu = finalMat.uniforms;
+  fu.uRes.value.set(w, h); fu.uSat.value = g.sat; fu.uCon.value = g.con; fu.uMono.value = g.mono;
+  fu.uLift.value.fromArray(g.lift); fu.uGain.value.fromArray(g.gain); fu.uSh.value.fromArray(g.sh); fu.uHi.value.fromArray(g.hi);
+  fu.uVig.value = S.vignette; fu.uGrain.value = S.grain; fu.uSeed.value = (Math.random() * 100) | 0;
+  renderer.setRenderTarget(null); renderer.setSize(w, h, false);
+  renderer.toneMappingExposure = view.exposure;
+  fsq.material = finalMat; fsq.render(renderer);
+  return renderer.domElement;
+}
+
+function drawGuides(ctx, g, x, y, w, h) {
+  if (!g || g === 'none') return;
+  const segs = [];
+  if (g === 'thirds') for (const f of [T3, 2 * T3]) segs.push([x + w * f, y, x + w * f, y + h], [x, y + h * f, x + w, y + h * f]);
+  if (g === 'center') segs.push([x + w / 2, y, x + w / 2, y + h], [x, y + h / 2, x + w, y + h / 2]);
+  if (g === 'diagonal') segs.push([x, y, x + w, y + h], [x + w, y, x, y + h]);
+  ctx.save();
+  for (const [style, lw] of [['rgba(0,0,0,.35)', 3], ['rgba(255,255,255,.7)', 1.2]]) {
+    ctx.strokeStyle = style; ctx.lineWidth = lw * Math.max(1, w / 540);
+    for (const [a, b, c, d] of segs) { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
+function drawShot(canvas, shot, W, H, draft) {
+  const S = resolve(shot), a = ASPECT[S.aspect];
+  let rw, rh; if (a >= W / H) { rw = W; rh = Math.round(W / a); } else { rh = H; rw = Math.round(H * a); }
+  const src = renderShot(S, rw, rh, draft);
+  if (canvas.width !== W) canvas.width = W; if (canvas.height !== H) canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#08090c'; ctx.fillRect(0, 0, W, H);
+  const x = (W - rw) / 2 | 0, y = (H - rh) / 2 | 0;
+  ctx.drawImage(src, x, y, rw, rh);
+  drawGuides(ctx, S.guides, x, y, rw, rh);
+}
+
+/* --------------------------------------------------------- words */
+const SIZE_NAMES = { ELS: 'Extreme long shot', LS: 'Long shot', FS: 'Full shot', MS: 'Medium shot', MCU: 'Medium close-up', CU: 'Close-up', ECU: 'Extreme close-up' };
+const WHO = { mira: 'Mira', otto: 'Otto', both: 'Mira and Otto', kid: 'Pip', scene: 'the street' };
+function lensClass(mm) { return !mm ? 'orthographic' : mm < 20 ? 'ultra-wide' : mm < 30 ? 'wide' : mm < 45 ? 'normal-wide' : mm < 65 ? 'normal' : mm < 110 ? 'portrait telephoto' : mm < 200 ? 'telephoto' : 'long telephoto'; }
+function elName(v) { return v <= -45 ? "worm's-eye" : v <= -12 ? 'low angle' : v < -4 ? 'slightly low' : v <= 4 ? 'eye level' : v < 12 ? 'slightly high' : v < 50 ? 'high angle' : v < 75 ? 'very high angle' : "overhead (bird's-eye)"; }
+function azName(v) { const a = Math.abs(v); return a < 12 ? 'front' : a < 60 ? 'three-quarter front' : a < 120 ? 'profile' : a < 165 ? 'three-quarter back' : 'from behind'; }
+function keyName(v) {
+  const a = Math.abs(v), side = a < 8 || a > 172 ? '' : v > 0 ? ', camera left' : ', camera right';
+  return (a < 20 ? 'front' : a < 65 ? 'three-quarter' : a < 115 ? 'side' : a < 160 ? 'back three-quarter' : 'backlight') + side;
+}
+function spec(S) { return `${S.size} · ${S.lens ? S.lens + ' mm' : 'ortho'}${S.lens ? ' · f/' + S.fstop : ''} · ${elName(S.el)}`; }
+function describe(S) {
+  const p = [`${SIZE_NAMES[S.size]} of ${WHO[S.subject]}`];
+  p.push(S.subject === 'both' && Math.abs(S.az) < 12 ? 'profile two-shot' : azName(S.az) + ' view');
+  p.push(elName(S.el));
+  if (S.roll) p.push(`Dutch tilt ${Math.abs(S.roll)}°`);
+  p.push(S.lens ? `${S.lens} mm ${lensClass(S.lens)}` : 'orthographic camera');
+  if (S.lens) p.push(`f/${S.fstop}, focus on ${S.focus === 'subject' ? WHO[S.subject] : S.focus === 'far' ? 'the distance' : WHO[S.focus]}`);
+  if (S.fg) p.push('shot through foreground leaves');
+  if (S.placeX) p.push(`subject on the ${S.placeX < 0 ? 'left' : 'right'} third`);
+  if (S.placeY) p.push(`subject ${S.placeY < 0 ? 'low' : 'high'} in frame`);
+  if (S.light === 'studio') {
+    p.push(`studio, ${S.keyI ? keyName(S.keyAz) + ' key' : 'no key'}${S.keyI && S.keyEl > 55 ? ' from above' : S.keyI && S.keyEl < -15 ? ' from below' : ''}, ${S.soft < 0.35 ? 'hard' : 'soft'}, ${S.ratio}:1 ratio, ${S.backdrop} backdrop`);
+    if (S.fillCool) p.push('cool fill');
+  } else {
+    let l = LIGHTS[S.light].name;
+    if (S.light === 'blue' || S.light === 'night') l += `, ${S.lampColor === 'warm' ? 'sodium' : S.lampColor} street-lamp practical`;
+    else l += `, sun ${keyName(S.keyAz)}`;
+    p.push(l);
+  }
+  if (S.keyWarm > 0.1) p.push('warm key'); if (S.keyWarm < -0.1) p.push('cool key');
+  if (S.rim) p.push('rim light');
+  if (S.ev) p.push(`${S.ev > 0 ? '+' : ''}${S.ev} EV`);
+  if (S.shutter !== 'freeze') p.push(S.shutter === 'pan' ? '1/15 s panning with Pip' : '1/15 s, motion blur');
+  if (S.haze >= 3) p.push(S.haze >= 8 ? 'fog' : 'heavy haze'); else if (S.haze === 0) p.push('clear air');
+  p.push(S.aspect);
+  if (S.grade !== 'neutral') p.push({ tealorange: 'teal-orange', warm: 'warm nostalgic', cold: 'cold desaturated', bleach: 'bleach bypass', pastel: 'pastel', vivid: 'vivid', bw: 'black and white', noir: 'high-contrast black and white' }[S.grade] + ' grade');
+  return p.join(' · ');
+}
+
+/* --------------------------------------------------------- galleries */
+const G = {
+  size: { base: { light: 'golden', keyAz: 55, lens: 50, az: 35 }, tiles: [
+    ['Extreme long shot (ELS)', 'The place is the subject and the people are specks. Establishes where we are, or how alone they are in it.', { subject: 'scene', size: 'ELS', lens: 35, az: 20, el: 3 }],
+    ['Long shot (LS)', 'Figures and surroundings in balance. We read posture and the space between them, not faces.', { subject: 'both', size: 'LS', az: 25 }],
+    ['Full shot (FS)', 'Head to toe. Body language, costume and the gap between them carry the scene.', { subject: 'both', size: 'FS', az: 25 }],
+    ['Medium shot (MS)', 'Waist up, the conversational default. Gesture and expression both read.', { subject: 'mira', size: 'MS' }],
+    ['Medium close-up (MCU)', 'Chest up. We are inside her personal space; emotion starts to lead.', { subject: 'mira', size: 'MCU', lens: 70 }],
+    ['Close-up (CU)', 'The face is the whole world. Save it for the beat that matters or it stops meaning anything.', { subject: 'mira', size: 'CU', lens: 85, fstop: 2.8 }],
+    ['Extreme close-up (ECU)', 'A detail made enormous: intensity, obsession, a clue the audience must not miss.', { subject: 'mira', size: 'ECU', lens: 100, fstop: 4 }]
+  ] },
+  angle: { base: { light: 'golden', keyAz: 55 }, tiles: [
+    ['Eye level', 'Neutral and equal. The viewer stands among them as a peer.', { subject: 'both', size: 'FS', az: 25, lens: 35 }],
+    ['Low angle', 'Looking up makes Otto loom: power, threat or heroism.', { subject: 'otto', size: 'MS', az: 35, el: -30, lens: 28 }],
+    ['High angle', 'Looking down shrinks Mira: vulnerable, judged, watched over.', { subject: 'mira', size: 'MS', az: 40, el: 38, lens: 35 }],
+    ["Bird's-eye", 'Straight down turns people into a pattern on a map: fate, choreography, surveillance.', { subject: 'both', size: 'LS', el: 86, az: 0, lens: 24 }],
+    ["Worm's-eye", 'From the ground with a wide lens: monumental, childlike, dreamlike.', { subject: 'both', size: 'FS', el: -55, az: 15, lens: 16 }],
+    ['Dutch tilt', 'The horizon tilts and so does the situation: unease, madness, a world off balance.', { subject: 'both', size: 'FS', az: 25, roll: -15, lens: 24 }]
+  ] },
+  staging: { base: { light: 'golden', keyAz: 55 }, tiles: [
+    ['Two-shot in profile', 'Same size, facing off across the frame. An equal exchange, or a stand-off.', { subject: 'both', size: 'MS', az: 0, lens: 50 }],
+    ['Over the shoulder, on Mira', "Otto's blurred shoulder anchors us at his side, slightly above her. We wait with him for her answer.", { subject: 'mira', size: 'MCU', az: 14, el: 10, lens: 70, fstop: 2.8 }],
+    ['Reverse, on Otto', 'From Mira\'s shoulder and eye height, so we look up at him. Cutting between the two is the grammar of conversation.', { subject: 'otto', size: 'MCU', az: 14, el: -12, lens: 70, fstop: 2.8 }],
+    ['Depth staging', 'Otto near the lens, Mira deeper in the frame. Nearest is biggest, so the power balance is drawn rather than said.', { subject: 'mira', size: 'MS', dist: 3, az: 22, el: 10, lens: 20, placeX: -T3, placeY: -0.15, fstop: 8 }],
+    ['Point of view', "The camera becomes Otto's eyes, looking down from his height. We feel what he feels.", { subject: 'mira', size: 'MCU', az: 0, dist: 1.45, el: 20, lens: 35, cast: ['mira', 'kid', 'crowd'] }],
+    ['Behind the character', 'Her back to us, Otto ahead. We see what she sees and wait with her.', { subject: 'mira', size: 'MS', az: 155, lens: 50 }]
+  ] },
+  lens: { base: { subject: 'mira', size: 'MCU', az: 60, fstop: 16, light: 'golden', keyAz: 40 }, tiles: [
+    ['Ultra-wide, 16 mm', 'The camera almost touches her: the nose swells and the street stretches away. Energetic, comic, unsettling.', { lens: 16 }],
+    ['Wide, 24 mm', 'Close and immersive. The setting stays big around her; we are in the scene.', { lens: 24 }],
+    ['Normal-wide, 35 mm', 'The documentary lens. Natural, present, with a little room around her.', { lens: 35 }],
+    ['Normal, 50 mm', 'Close to how we see when we pay attention. Unremarkable on purpose.', { lens: 50 }],
+    ['Portrait, 85 mm', 'Flattering proportions; the background starts to compress and soften. The classic portrait.', { lens: 85 }],
+    ['Telephoto, 135 mm', 'The street piles up behind her. Distance from the subject feels like observing.', { lens: 135 }],
+    ['Long telephoto, 300 mm', 'Background flattened into a wall: voyeurism, surveillance, a crowd stacked tight.', { lens: 300 }],
+    ['Orthographic', 'No perspective at all: nothing shrinks with distance. Diagrams, isometric games, flat graphic worlds.', { lens: 0, subject: 'both', size: 'FS', az: 35, el: 30 }]
+  ] },
+  focus: { base: { subject: 'mira', size: 'MS', lens: 85, az: 55, light: 'golden', keyAz: 45 }, tiles: [
+    ['f/1.4 on Mira', 'Only she is sharp; the world melts into colour. Attention has nowhere else to go.', { fstop: 1.4 }],
+    ['f/4', 'The street is soft but legible. She is somewhere.', { fstop: 4 }],
+    ['f/11', 'Background details sharpen and start to compete; they can tell their own story.', { fstop: 11 }],
+    ['Deep focus, 24 mm f/16', 'A wide lens and small aperture keep near and far sharp: everything in the frame is evidence.', { lens: 24, fstop: 16 }],
+    ['Rack focus: Otto', 'Focus on the near figure. Otto is the thought, Mira the context.', { size: 'MS', dist: 3, az: 22, el: 10, lens: 35, placeX: -T3, placeY: -0.15, fstop: 1.4, focus: 'otto' }],
+    ['Rack focus: Mira', 'Same frame, focus pulled to her. The meaning shifts without moving the camera.', { size: 'MS', dist: 3, az: 22, el: 10, lens: 35, placeX: -T3, placeY: -0.15, fstop: 1.4, focus: 'mira' }],
+    ['Shooting through', 'Out-of-focus leaves in front: we become a hidden observer and she is pushed deeper into the frame.', { fg: true, fstop: 2 }],
+    ['Bokeh at night', 'Out-of-focus lamps and windows become soft discs. Romance, memory, the city as mood.', { light: 'night', size: 'CU', lens: 200, fstop: 1.4, az: 100, el: -8 }]
+  ] },
+  lightdir: { base: { light: 'studio', subject: 'mira', size: 'CU', lens: 85, az: 30, fstop: 8, backdrop: 'dark', ratio: 8, soft: 0.15, vignette: 0.15 }, tiles: [
+    ['Front light', 'Flat and flattering; the shadows hide behind her. Innocence, beauty, product clarity.', { keyAz: 0, keyEl: 12 }],
+    ['Three-quarter key', 'From 45° to the side and above: the classic sculpted portrait (Rembrandt and loop lighting live here).', { keyAz: -45, keyEl: 40 }],
+    ['Split light', 'Half the face in darkness: duality, secrets, inner conflict.', { keyAz: 90, keyEl: 8 }],
+    ['Back three-quarter', 'Light grazes her edge from behind; the side we see is mostly shadow. Drama and mystery.', { keyAz: 140, keyEl: 25 }],
+    ['Silhouette', 'Only the shape remains, against a lit backdrop: anonymity, a pose turned into a symbol.', { keyI: 0, ratio: 1000, backdrop: 'warm', vignette: 0 }],
+    ['Under light', 'Light from below never happens in daylight, so we read it as wrong: horror, campfire stories, a screen glow.', { keyAz: 15, keyEl: -50 }],
+    ['Top light', 'Light pools on the head and shoulders and leaves the face dim, as in Gordon Willis\'s Godfather: authority, hidden intent.', { keyAz: 10, keyEl: 82 }]
+  ] },
+  lightq: { base: { light: 'studio', subject: 'mira', size: 'CU', lens: 85, az: 30, fstop: 8, keyAz: -50, keyEl: 35, vignette: 0.15 }, tiles: [
+    ['High key', 'Soft light, a bright backdrop, almost no shadow. Open, optimistic, commercial.', { soft: 1, ratio: 1.5, backdrop: 'light', ev: 0.3, keyAz: -25 }],
+    ['Soft low key', 'The same soft source with little fill against a dark ground. Gentle but serious, like window light in a Vermeer.', { soft: 1, ratio: 8 }],
+    ['Hard low key', 'A small hard source, crisp shadow edges, deep blacks. Chiaroscuro, noir, interrogation.', { soft: 0, ratio: 16, keyAz: -70 }],
+    ['Rim separation', 'A bright edge from behind peels her off the dark background.', { rim: 6, ratio: 6, soft: 0.4 }],
+    ['Warm key, cool fill', 'Complementary temperatures: the cheapest way to make a frame feel designed and give it depth.', { keyWarm: 0.9, fillCool: true, ratio: 2, backdrop: 'mid', soft: 0.5 }],
+    ['Cold key', 'Cool, even light reads as clinical, lonely or nocturnal.', { keyWarm: -0.9, ratio: 4, backdrop: 'mid', soft: 0.6 }]
+  ] },
+  time: { base: { subject: 'both', size: 'LS', lens: 35, az: 30, el: 4 }, tiles: [
+    ['Noon', 'Hard light from overhead, short shadows under chins and feet. Honest, hot, unglamorous.', { light: 'noon', keyAz: 30 }],
+    ['Golden hour, front-side', 'Low warm sun, long shadows, glowing faces. Nostalgia, warmth, beauty.', { light: 'golden', keyAz: 60 }],
+    ['Golden hour, backlit', 'Shooting into the sun: rims of light around the figures and glow in the air. Romance, hope, endings.', { light: 'golden', keyAz: 165 }],
+    ['Blue hour', 'Cool sky light with the first warm lamps and windows. Melancholy, the in-between hour.', { light: 'blue' }],
+    ['Night, under the lamp', "The lamp's pool of light becomes a stage; the darkness around it is the unknown.", { light: 'night' }],
+    ['Coloured practical', "Change one light's colour and the genre changes: nightlife, cyberpunk, unreality.", { light: 'night', lampColor: 'magenta' }],
+    ['Overcast', 'The sky becomes one giant softbox. Quiet, sombre, even: good for faces, bad for drama.', { light: 'overcast' }]
+  ] },
+  comp: { base: { light: 'golden', keyAz: -50 }, tiles: [
+    ['Centred symmetry', "The street's vanishing point sits between them. Formal, still, a little uncanny: Kubrick's corridors, Wes Anderson's tableaux.", { subject: 'both', size: 'FS', az: 0, lens: 35, guides: 'center', light: 'overcast' }],
+    ['Lead room', 'Mira on the left third with space ahead of her gaze. It feels natural: she has somewhere to look.', { subject: 'mira', size: 'MS', az: 60, lens: 50, placeX: -T3, guides: 'thirds' }],
+    ['Short-sided', 'The same face pushed against the edge she is looking toward. Cramped, uneasy, as if something is behind her.', { subject: 'mira', size: 'MS', az: 60, lens: 50, placeX: T3, guides: 'thirds' }],
+    ['Frame within a frame', 'The arch is a picture inside the picture. It focuses the eye and makes us observers at a distance.', { subject: 'both', size: 'LS', az: 180, lens: 70, dist: 22 }],
+    ['Leading lines', 'Kerbs, slabs and lamp rows all converge on the pair. The eye is delivered to them.', { subject: 'both', size: 'LS', az: 8, el: 2, lens: 20, guides: 'diagonal' }],
+    ['Negative space', 'A small figure under a big sky: loneliness, freedom, scale.', { subject: 'mira', size: 'LS', az: 90, el: -16, lens: 24, placeX: -T3, cast: ['mira'], light: 'noon', keyAz: 40 }],
+    ['Three planes', 'Leaves in front, the pair in the middle, the street and hills behind. Layers create depth even in a flat image.', { subject: 'both', size: 'FS', lens: 35, az: 30, fg: true, fstop: 4 }],
+    ['High horizon', 'Looking down puts the horizon near the top: the ground and the long shadows become the picture. Grounded, heavy.', { subject: 'both', size: 'LS', el: 35, lens: 35, keyAz: 120 }]
+  ] },
+  shutter: { base: { lens: 50, light: 'golden', keyAz: 60, kidX: 0 }, tiles: [
+    ['Freeze, 1/1000 s', 'Motion stopped mid-stride. Action becomes a pose: decisive, graphic, sport.', { subject: 'kid', size: 'FS', az: -90 }],
+    ['Drag, 1/15 s', 'The pair holds still and stays sharp while Pip streaks past: stillness against flow.', { subject: 'both', size: 'LS', az: 0, shutter: 'drag', kidX: 0.4 }],
+    ['Drag on the runner', 'Keep the camera still and the runner becomes a ghost of speed.', { subject: 'kid', size: 'FS', az: -90, shutter: 'drag' }],
+    ['Pan, 1/15 s', 'Track the runner during a slow exposure. Pip stays sharp while the world smears: pursuit, velocity.', { subject: 'kid', size: 'FS', az: -90, shutter: 'pan', lens: 85 }]
+  ] },
+  aspect: { base: { subject: 'both', size: 'FS', lens: 40, az: 25, light: 'golden', keyAz: 60 }, tiles: [
+    ['4:5 vertical', 'Height and a single column of interest: posters, magazine covers, phone screens.', { aspect: '4:5' }],
+    ['1:1 square', 'Static and centred, with no dominant direction. Medium-format film, early Instagram.', { aspect: '1:1' }],
+    ['3:2', '35 mm still photography. A gentle landscape rectangle.', { aspect: '3:2' }],
+    ['16:9', 'Television and screens. The neutral default for moving images.', { aspect: '16:9' }],
+    ['2.39:1 scope', 'Anamorphic widescreen. Room for landscape and for the distance between people: epic or lonely.', { aspect: '2.39:1', size: 'LS' }]
+  ] },
+  grade: { base: { subject: 'both', size: 'MS', lens: 50, az: 30, light: 'golden', keyAz: 60 }, tiles: [
+    ['Neutral', 'The render as lit, only tone-mapped. A reference, not a look.', { grade: 'neutral' }],
+    ['Teal and orange', 'Skin pushed warm, shadows cool. Blockbuster separation: overused, but effective.', { grade: 'tealorange' }],
+    ['Warm nostalgia', 'Lifted blacks, amber highlights, softened saturation: memory, summers, old film stock.', { grade: 'warm' }],
+    ['Cold and drained', 'A cyan cast and little colour: bleak, procedural, winter.', { grade: 'cold' }],
+    ['Bleach bypass', 'Low saturation, high contrast, silvery skin. War films, grit.', { grade: 'bleach' }],
+    ['Pastel', 'Raised, soft, pink-tinged: whimsy and artifice.', { grade: 'pastel' }],
+    ['Black and white', 'Colour removed so shape, light and texture carry everything. Timeless, documentary.', { grade: 'bw' }],
+    ['Noir contrast', 'Crushed blacks and hard whites. Mood over information.', { grade: 'noir' }]
+  ] },
+  air: { base: { subject: 'both', size: 'LS', lens: 35, az: 10, el: 3, light: 'golden', keyAz: 150 }, tiles: [
+    ['Clear air', 'Every distance has equal contrast; the frame feels flat and busy.', { haze: 0 }],
+    ['Light haze', 'The hills fade a little and depth starts to separate into layers.', { haze: 1 }],
+    ['Thick haze', "Aerial perspective: each plane lighter and closer to the sky than the one before. Painters' oldest depth trick.", { haze: 4 }],
+    ['Fog', 'The world shrinks to the nearest few metres. Mystery, isolation, dreams.', { haze: 12 }]
+  ] },
+  genre: { base: {}, tiles: [
+    ['Film noir', 'Night, one hard practical, a low and tilted camera, crushed black and white.', { subject: 'otto', size: 'MS', el: -18, roll: -8, light: 'night', grade: 'noir', lens: 28, az: -40, ev: 1.8, vignette: 0.5, grain: 0.06 }],
+    ['Western', 'Scope frame, a low horizon, the sun ahead, two small figures facing open land.', { subject: 'both', size: 'LS', aspect: '2.39:1', light: 'golden', keyAz: 170, grade: 'warm', el: -2, az: 150, placeY: -T3, lens: 24 }],
+    ['Horror', 'Wide lens close in, short-sided, cold practical, empty space where something could be.', { subject: 'mira', size: 'MCU', lens: 18, placeX: T3, light: 'night', lampColor: 'cold', grade: 'cold', az: 40, el: -8, vignette: 0.6 }],
+    ['Romance', 'Backlit golden hour, 85 mm at f/1.4, haze, warm grade.', { subject: 'both', size: 'MS', lens: 85, fstop: 1.4, light: 'golden', keyAz: 165, grade: 'warm', haze: 3, az: 0 }],
+    ['Symmetric tableau', 'Centred, frontal, flat overcast light, pastel grade, no vignette.', { subject: 'both', size: 'FS', az: 0, lens: 40, light: 'overcast', grade: 'pastel', vignette: 0 }],
+    ['Street documentary', '35 mm at eye level, deep focus, available light, grainy black and white.', { subject: 'both', size: 'MS', az: 35, lens: 35, fstop: 8, light: 'overcast', grade: 'bw', grain: 0.09, placeX: 0.15 }],
+    ['Sci-fi epic', 'Blue hour, scope, a low camera, haze and a teal-orange grade.', { subject: 'scene', size: 'ELS', aspect: '2.39:1', light: 'blue', grade: 'tealorange', el: -3, lens: 24, haze: 3 }],
+    ['Neon night', 'A magenta practical as key, 85 mm wide open, bokeh behind.', { subject: 'mira', size: 'MCU', light: 'night', lampColor: 'magenta', fstop: 1.4, lens: 85, grade: 'tealorange', az: 70 }],
+    ['Anime sky', 'Low camera, wide lens, big bright sky, vivid colour.', { subject: 'both', size: 'LS', light: 'noon', el: -14, lens: 24, grade: 'vivid', az: 25, placeY: -0.2 }],
+    ['Isometric game', 'Orthographic, about 35° down, noon light, saturated.', { lens: 0, subject: 'both', size: 'LS', az: 45, el: 35, light: 'noon', grade: 'vivid', vignette: 0 }],
+    ['Tenebrism', 'One hard source high to the side, nearly everything else black, warm.', { light: 'studio', subject: 'mira', size: 'MS', lens: 50, az: 30, keyAz: 70, keyEl: 45, soft: 0.1, ratio: 16, backdrop: 'dark', grade: 'warm' }],
+    ['Hopper-like isolation', 'A lone figure, hard raking sun, a quiet street, muted colour.', { subject: 'mira', size: 'LS', cast: ['mira'], light: 'noon', keyAz: 100, az: 110, lens: 35, grade: 'pastel', haze: 0.5 }]
+  ] }
+};
+
+const queue = []; let busy = false;
+function pump() {
+  if (busy || !queue.length) return;
+  busy = true;
+  // setTimeout rather than requestAnimationFrame so tiles keep rendering in a background tab
+  setTimeout(() => { const job = queue.shift(); try { job(); } catch (e) { console.error(e); } busy = false; pump(); }, 0);
+}
+function enqueue(job, front) { if (front) queue.unshift(job); else queue.push(job); pump(); }
+
+let lastTile = null;
+for (const [id, sec] of Object.entries(G)) {
+  const grid = document.getElementById('t-' + id);
+  for (const [name, intent, over] of sec.tiles) {
+    const shot = { ...sec.base, ...over }, S = resolve(shot);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tile';
+    b.setAttribute('aria-label', `${name}. ${intent} Open in the shot builder.`);
+    const cv = document.createElement('canvas'); cv.width = TILE_W; cv.height = TILE_H;
+    b.append(cv);
+    for (const [cls, text] of [['tn', name], ['ts', spec(S)], ['td', intent]]) { const p = document.createElement('p'); p.className = cls; p.textContent = text; b.append(p); }
+    b.addEventListener('click', () => { lastTile = b; loadShot(shot); document.getElementById('back').hidden = false; document.getElementById('builder').scrollIntoView(); });
+    grid.append(b);
+    enqueue(() => drawShot(cv, shot, TILE_W, TILE_H, false));
+  }
+}
+
+/* --------------------------------------------------------- shot builder */
+const FSTOPS = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
+const lensToUI = mm => Math.round(1000 * Math.log(Math.max(mm, 12) / 12) / Math.log(300 / 12));
+const uiToLens = v => Math.round(12 * Math.pow(300 / 12, v / 1000));
+const studioOnly = S => S.light === 'studio';
+const GROUPS = [
+  { title: 'Subject and size', note: 'Who the shot is about, and how close we are to them emotionally.', rows: [
+    { k: 'subject', label: 'Subject', type: 'seg', opts: [['mira', 'Mira'], ['otto', 'Otto'], ['both', 'Both'], ['kid', 'Pip'], ['scene', 'Street']] },
+    { k: 'size', label: 'Shot size', type: 'seg', opts: ['ELS', 'LS', 'FS', 'MS', 'MCU', 'CU', 'ECU'].map(k => [k, k]), fmt: v => SIZE_NAMES[v] },
+    { k: 'placeX', label: 'Horizontal placement', type: 'seg', opts: [[-T3, 'Left third'], [0, 'Centre'], [T3, 'Right third']] },
+    { k: 'placeY', label: 'Vertical placement', type: 'seg', opts: [[T3, 'Higher'], [0, 'Level'], [-T3, 'Lower']] }
+  ] },
+  { title: 'Camera position', note: 'Orbit is measured from the way the subject faces. Angle sets the power relationship.', rows: [
+    { k: 'az', label: 'Orbit', type: 'range', min: -180, max: 180, step: 1, fmt: v => `${v}° · ${azName(v)}` },
+    { k: 'el', label: 'Camera angle', type: 'range', min: -70, max: 88, step: 1, fmt: v => `${v}° · ${elName(v)}` },
+    { k: 'roll', label: 'Dutch tilt', type: 'range', min: -30, max: 30, step: 1, fmt: v => v ? `${v}°` : 'level' }
+  ] },
+  { title: 'Lens and focus', note: 'Framing is held while the focal length changes, so the camera moves: a dolly zoom.', rows: [
+    { k: 'lens', label: 'Focal length', type: 'range', min: 0, max: 1000, step: 1, toUI: lensToUI, fromUI: uiToLens, fmt: v => `${v} mm · ${lensClass(v)}`, when: S => S.lens > 0 },
+    { k: 'ortho', label: 'Orthographic (no perspective)', type: 'toggle', get: S => !S.lens, set: (S, on) => { S.lens = on ? 0 : (S._lens || 50); } },
+    { k: 'fstop', label: 'Aperture', type: 'range', min: 0, max: FSTOPS.length - 1, step: 1, toUI: v => FSTOPS.reduce((bi, f, i) => Math.abs(f - v) < Math.abs(FSTOPS[bi] - v) ? i : bi, 0), fromUI: i => FSTOPS[i], fmt: v => `f/${v}`, when: S => S.lens > 0 },
+    { k: 'focus', label: 'Focus on', type: 'seg', opts: [['subject', 'Subject'], ['mira', 'Mira'], ['otto', 'Otto'], ['kid', 'Pip'], ['far', 'Far']], when: S => S.lens > 0 },
+    { k: 'fg', label: 'Shoot through foreground leaves', type: 'toggle', when: S => S.lens > 0 }
+  ] },
+  { title: 'Light', note: 'Key direction is measured from the camera: 0° lights the side facing you, 180° lights from behind.', rows: [
+    { k: 'light', label: 'Setup', type: 'seg', opts: [['noon', 'Noon'], ['golden', 'Golden'], ['blue', 'Blue hour'], ['night', 'Night'], ['overcast', 'Overcast'], ['studio', 'Studio']], after: S => { S.soft = LIGHTS[S.light].soft; } },
+    { k: 'keyAz', label: 'Key direction', type: 'range', min: -180, max: 180, step: 1, fmt: v => `${v}° · ${keyName(v)}` },
+    { k: 'keyEl', label: 'Key height', type: 'range', min: -60, max: 85, step: 1, fmt: v => `${v}°`, when: studioOnly },
+    { k: 'keyI', label: 'Key strength', type: 'range', min: 0, max: 2, step: 0.05, fmt: v => v.toFixed(2) },
+    { k: 'soft', label: 'Hard to soft', type: 'range', min: 0, max: 1, step: 0.01, fmt: v => v < 0.25 ? 'hard' : v < 0.6 ? 'medium' : 'soft' },
+    { k: 'ratio', label: 'Key : fill', type: 'seg', opts: [[1.5, '1.5:1'], [2, '2:1'], [4, '4:1'], [8, '8:1'], [16, '16:1']], when: studioOnly },
+    { k: 'rim', label: 'Rim light', type: 'range', min: 0, max: 8, step: 0.1, fmt: v => v ? v.toFixed(1) : 'off' },
+    { k: 'keyWarm', label: 'Key colour', type: 'range', min: -1, max: 1, step: 0.05, fmt: v => v > 0.1 ? 'warm' : v < -0.1 ? 'cool' : 'neutral' },
+    { k: 'fillCool', label: 'Cool fill', type: 'toggle', when: studioOnly },
+    { k: 'backdrop', label: 'Backdrop', type: 'seg', opts: [['dark', 'Dark'], ['mid', 'Grey'], ['light', 'Light'], ['warm', 'Warm']], when: studioOnly },
+    { k: 'lampColor', label: 'Street-lamp colour', type: 'seg', opts: [['warm', 'Sodium'], ['cold', 'Cold'], ['cyan', 'Cyan'], ['magenta', 'Magenta']], when: S => S.light === 'blue' || S.light === 'night' },
+    { k: 'ev', label: 'Exposure', type: 'range', min: -2, max: 2, step: 0.1, fmt: v => `${v > 0 ? '+' : ''}${v.toFixed(1)} EV` }
+  ] },
+  { title: 'Time and air', rows: [
+    { k: 'shutter', label: 'Shutter', type: 'seg', opts: [['freeze', '1/1000 freeze'], ['drag', '1/15 drag'], ['pan', '1/15 pan']] },
+    { k: 'kidX', label: "Pip's position", type: 'range', min: -6, max: 6, step: 0.1, fmt: v => `${v.toFixed(1)} m` },
+    { k: 'haze', label: 'Haze', type: 'range', min: 0, max: 12, step: 0.1, fmt: v => v.toFixed(1) + '×', when: S => S.light !== 'studio' }
+  ] },
+  { title: 'Finish', rows: [
+    { k: 'aspect', label: 'Aspect ratio', type: 'seg', opts: Object.keys(ASPECT).map(k => [k, k]) },
+    { k: 'grade', label: 'Grade', type: 'seg', opts: [['neutral', 'Neutral'], ['tealorange', 'Teal-orange'], ['warm', 'Warm'], ['cold', 'Cold'], ['bleach', 'Bleach'], ['pastel', 'Pastel'], ['vivid', 'Vivid'], ['bw', 'B&W'], ['noir', 'Noir']] },
+    { k: 'vignette', label: 'Vignette', type: 'range', min: 0, max: 1, step: 0.01, fmt: v => v.toFixed(2) },
+    { k: 'grain', label: 'Grain', type: 'range', min: 0, max: 0.15, step: 0.005, fmt: v => v.toFixed(3) },
+    { k: 'guides', label: 'Guides', type: 'seg', opts: [['none', 'None'], ['thirds', 'Thirds'], ['center', 'Centre'], ['diagonal', 'Diagonals']] }
+  ] }
+];
+
+const DEFAULT_SHOT = { subject: 'mira', size: 'MCU', lens: 85, az: 50, fstop: 2, light: 'golden', keyAz: 55 };
+let state = resolve(DEFAULT_SHOT);
+const refs = [];
+const controls = document.getElementById('controls');
+for (const grp of GROUPS) {
+  const box = document.createElement('div'); box.className = 'group';
+  box.innerHTML = `<h3>${grp.title}</h3>` + (grp.note ? `<p class="gnote">${grp.note}</p>` : '');
+  for (const r of grp.rows) {
+    const row = document.createElement(r.type === 'toggle' ? 'label' : 'div');
+    if (r.type === 'toggle') {
+      row.className = 'toggle';
+      const inp = document.createElement('input'); inp.type = 'checkbox';
+      inp.addEventListener('change', () => { if (r.set) r.set(state, inp.checked); else state[r.k] = inp.checked; changed(false); });
+      row.append(inp, document.createTextNode(r.label));
+      refs.push({ r, row, sync: () => { inp.checked = r.get ? r.get(state) : !!state[r.k]; } });
+    } else {
+      row.className = 'row';
+      const lab = document.createElement('div'); lab.className = 'lab2';
+      const name = document.createElement('span'); name.textContent = r.label; const out = document.createElement('output');
+      lab.append(name, out); row.append(lab);
+      if (r.type === 'range') {
+        const inp = document.createElement('input'); inp.type = 'range'; inp.min = r.min; inp.max = r.max; inp.step = r.step; inp.setAttribute('aria-label', r.label);
+        inp.addEventListener('input', () => { const v = +inp.value; state[r.k] = r.fromUI ? r.fromUI(v) : v; if (r.k === 'lens') state._lens = state.lens; out.textContent = r.fmt(state[r.k]); changed(true); });
+        inp.addEventListener('change', () => changed(false));
+        row.append(inp);
+        refs.push({ r, row, sync: () => { inp.value = r.toUI ? r.toUI(state[r.k]) : state[r.k]; out.textContent = r.fmt(state[r.k]); } });
+      } else {
+        const seg = document.createElement('div'); seg.className = 'seg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', r.label);
+        const btns = r.opts.map(([v, t]) => {
+          const b = document.createElement('button'); b.type = 'button'; b.textContent = t;
+          b.addEventListener('click', () => { state[r.k] = v; if (r.after) r.after(state); syncAll(); changed(false); });
+          seg.append(b); return [v, b];
+        });
+        row.append(seg);
+        refs.push({ r, row, sync: () => { let hit = null; for (const [v, b] of btns) { const on = String(v) === String(state[r.k]); b.setAttribute('aria-pressed', on); if (on) hit = b.textContent; } out.textContent = r.fmt ? r.fmt(state[r.k]) : (hit || 'custom'); } });
+      }
+    }
+    box.append(row);
+  }
+  controls.append(box);
+}
+function syncAll() {
+  for (const ref of refs) { ref.sync(); const on = !ref.r.when || ref.r.when(state); ref.row.classList.toggle('off', !on); }
+  document.getElementById('desc').textContent = describe(state);
+}
+
+const stagecv = document.getElementById('stagecv');
+let labQueued = false, labDraft = false, fineTimer = 0;
+function renderLab(draft) {
+  labDraft = labQueued ? labDraft && draft : draft;
+  if (labQueued) return;
+  labQueued = true;
+  enqueue(() => {
+    labQueued = false;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = Math.min(1500, Math.round(stagecv.clientWidth * dpr)) || 900;
+    drawShot(stagecv, state, W, Math.round(W * 2 / 3), labDraft);
+  }, true);
+}
+function changed(draft) {
+  document.getElementById('desc').textContent = describe(state);
+  for (const ref of refs) ref.row.classList.toggle('off', !(!ref.r.when || ref.r.when(state)));
+  renderLab(draft);
+  clearTimeout(fineTimer);
+  if (draft) fineTimer = setTimeout(() => renderLab(false), 220);
+}
+function loadShot(shot) { state = resolve(shot); if (state.lens) state._lens = state.lens; syncAll(); renderLab(false); }
+
+document.getElementById('reset').addEventListener('click', () => loadShot(DEFAULT_SHOT));
+document.getElementById('back').addEventListener('click', () => { if (lastTile) { lastTile.scrollIntoView({ block: 'center' }); lastTile.focus({ preventScroll: true }); } });
+document.getElementById('copy').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  try { await navigator.clipboard.writeText(describe(state)); btn.textContent = 'Copied'; } catch (err) { btn.textContent = 'Copy failed'; }
+  setTimeout(() => { btn.textContent = 'Copy description'; }, 1400);
+});
+let resizeTimer = 0;
+new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => renderLab(false), 150); }).observe(stagecv);
+
+loadShot(DEFAULT_SHOT);
+</script>
+</body>
+</html>
