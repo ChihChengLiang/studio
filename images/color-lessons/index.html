@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Lessons from Painters</title>
+<meta name="description" content="What professional artists know about color, as live demos: value structure, relative color, temperature shifts, chroma budget, mother color, perceptual spaces, and a six-pass iteration lab.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding:0 max(16px,env(safe-area-inset-right)) 80px max(16px,env(safe-area-inset-left))}
+.page{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:56px;padding-top:36px}
+.back{font:500 12px var(--font-mono);color:var(--muted);text-decoration:none}
+.back:hover{color:var(--accent)}
+.eyebrow{margin:18px 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0 0 12px;font:600 24px/1.15 var(--font-display);letter-spacing:-.012em}
+h3{margin:0;font:600 16px/1.2 var(--font-display)}
+.lede{margin:14px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+p{margin:0}
+.prose{max-width:66ch;color:var(--muted);display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.prose b{color:var(--fg);font-weight:600}
+.repo{font:400 12.5px/1.5 var(--font-mono);color:var(--muted);border-left:2px solid var(--accent);padding-left:10px;max-width:70ch;margin-top:14px}
+.repo b{color:var(--accent);font-weight:500}
+code{font:.9em var(--font-mono);background:var(--surface);border:1px solid var(--line);padding:1px 5px}
+pre{margin:0;overflow-x:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);font:400 12px/1.55 var(--font-mono)}
+section{border-top:1px solid var(--line);padding-top:32px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* view toolbar */
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left)));padding:10px max(16px,env(safe-area-inset-left));display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .bar-in{max-width:1040px;margin:0 auto;width:100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar-l{font:500 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.bar button{font:500 13px var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.bar .hint{font:400 12px var(--font-mono);color:var(--muted);margin-left:auto}
+.viz{transition:filter .25s}
+body[data-view="gray"] .viz{filter:grayscale(1)}
+body[data-view="squint"] .viz{filter:grayscale(1) blur(5px)}
+
+/* demo panels */
+.demo{background:var(--surface);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:14px}
+.ctls{display:flex;flex-wrap:wrap;gap:8px 22px}
+.ctl{display:flex;align-items:center;gap:8px;font:400 12px var(--font-mono);color:var(--muted)}
+.ctl input[type=range]{width:150px;accent-color:var(--accent)}
+.ctl output{min-width:3.4em;color:var(--fg)}
+.btn{font:500 12px var(--font-mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:5px 10px;cursor:pointer}
+.cap{font:400 12px/1.5 var(--font-mono);color:var(--muted)}
+.cap b{color:var(--fg);font-weight:500}
+canvas{display:block;width:100%;height:auto}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+.strip i{display:block;height:44px}
+.strip.tall i{height:60px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{aspect-ratio:1.3;display:grid;place-items:center}
+.tile i{width:38%;aspect-ratio:1;display:block}
+@media (max-width:700px){.pair,.trio{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
+
+/* lab */
+.lab{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.lab figure{margin:0;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column}
+.lab figcaption{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.lab .n{font:500 11px var(--font-mono);color:var(--accent);letter-spacing:.06em}
+.lab .stat{font:400 11px var(--font-mono);color:var(--fg);border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+@media (max-width:900px){.lab{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.lab{grid-template-columns:1fr}}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;padding:14px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:14px}
+.steps li::before{content:counter(s);display:block;font:500 12px var(--font-mono);color:var(--accent);margin-bottom:4px}
+.steps strong{display:block;color:var(--fg);font:600 15px var(--font-display);margin-bottom:3px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border:1px solid var(--line);color:var(--muted)}
+th{background:var(--surface);color:var(--fg);font:600 13px var(--font-display)}
+td:first-child{color:var(--fg);font:500 12.5px var(--font-mono);white-space:nowrap}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{padding:16px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:14px}
+.card.rec{border-color:var(--accent)}
+.card .tag{font:500 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card h3{color:var(--fg)}
+.scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Viewing mode">
+  <div class="bar-in">
+    <span class="bar-l">View all demos as</span>
+    <button type="button" data-v="color" aria-pressed="true">Color</button>
+    <button type="button" data-v="gray" aria-pressed="false">Grayscale</button>
+    <button type="button" data-v="squint" aria-pressed="false">Squint</button>
+    <span class="hint">the first test any painter runs</span>
+  </div>
+</div>
+
+<div class="page">
+  <header>
+    <a class="back" href="../../">← Studio</a>
+    <p class="eyebrow">Images · color theory in practice</p>
+    <h1>What painters know about color</h1>
+    <p class="lede">Eight ideas that professionals use daily and most programmers never hear about, each with a live demo, followed by a lab that applies them one at a time to a single image. Use the toolbar above: if a picture fails in Grayscale or Squint, color will not rescue it.</p>
+  </header>
+
+  <section id="value">
+    <h2>1 · Value structure beats hue</h2>
+    <div class="prose">
+      <p>Painters design in grayscale first. <b>Value</b> (how light or dark) decides whether a picture reads; hue is seasoning. If the value structure works, nearly any palette works. If it does not, no palette fixes it.</p>
+      <p>Below, both scenes use the same five hues. Left: every layer has the same lightness. Right: lightness steps from pale and distant to dark and near. Both look fine in color. Switch the toolbar to <b>Grayscale</b>.</p>
+    </div>
+    <div class="demo">
+      <div class="ctls" id="c-value"></div>
+      <div class="pair">
+        <figure style="margin:0"><div class="viz"><canvas id="hills0"></canvas></div><p class="cap" style="margin-top:6px"><b>Hue only.</b> Value separation 0.</p></figure>
+        <figure style="margin:0"><div class="viz"><canvas id="hills1"></canvas></div><p class="cap" style="margin-top:6px"><b>Hue + value.</b> Far layers lighter and less saturated: atmospheric perspective.</p></figure>
+      </div>
+    </div>
+    <p class="repo"><b>In your repo</b> · Add a grayscale toggle to every demo page (one CSS filter, as on this page). For sprites, check the silhouette in grayscale at 1× before choosing any color.</p>
+  </section>
+
+  <section id="relative">
+    <h2>2 · Color is relative, never absolute</h2>
+    <div class="prose">
+      <p>A swatch has no fixed appearance; it takes on the opposite of whatever surrounds it (simultaneous contrast, Albers). Painters judge a color by holding it against its real neighbors, not by naming it.</p>
+      <p>Every inner square in this demo is <b>exactly the same color</b>. The hex under each row is the same value for all four.</p>
+    </div>
+    <div class="demo">
+      <div class="ctls" id="c-rel"></div>
+      <div class="viz"><div class="tiles" id="tiles-v"></div></div>
+      <p class="cap" id="cap-v"></p>
+      <div class="viz"><div class="tiles" id="tiles-h"></div></div>
+      <p class="cap" id="cap-h"></p>
+    </div>
+    <p class="repo"><b>In your repo</b> · When picking palette entries for a sprite or brush layer, judge them on the canvas next to their neighbors. Isolated swatches in a picker mislead.</p>
+  </section>
+
+  <section id="temperature">
+    <h2>3 · Shadows shift temperature; they are not darker versions</h2>
+    <div class="prose">
+      <p>Multiplying a color toward black produces dead, muddy shading. Real shadows change <b>hue</b> as well: under warm light they go cooler and keep their saturation; highlights go warmer and lose some. The ramp is dark/cool/saturated → light/warm/desaturated. Pixel artists call these hue-shifted ramps.</p>
+    </div>
+    <div class="demo">
+      <div class="ctls" id="c-temp"></div>
+      <div class="trio">
+        <figure style="margin:0"><div class="viz"><canvas id="sp-mul"></canvas></div><div class="viz strip" id="rp-mul"></div><p class="cap" style="margin-top:6px"><b>Multiply toward black</b></p></figure>
+        <figure style="margin:0"><div class="viz"><canvas id="sp-lonly"></canvas></div><div class="viz strip" id="rp-lonly"></div><p class="cap" style="margin-top:6px"><b>Lightness only</b> (same hue)</p></figure>
+        <figure style="margin:0"><div class="viz"><canvas id="sp-shift"></canvas></div><div class="viz strip" id="rp-shift"></div><p class="cap" style="margin-top:6px"><b>Hue-shifted ramp</b></p></figure>
+      </div>
+    </div>
+    <p class="repo"><b>In your repo</b> · Build the fixed palette in <code>pixel-sprites/render.py</code> as 3–5-step ramps per material with this shift, instead of independent colors. In p5.brush, layer a cool low-opacity glaze in shadow regions.</p>
+  </section>
+
+  <section id="chroma">
+    <h2>4 · Chroma is the scarce resource</h2>
+    <div class="prose">
+      <p>Pros pick a small palette with one dominant key and spend saturation only where the eye should land (roughly 60/30/10). Muted everything with <b>one</b> vivid area makes that area glow; saturated everywhere reads as noise.</p>
+    </div>
+    <div class="demo">
+      <div class="ctls" id="c-chroma"></div>
+      <div class="viz"><canvas id="circles"></canvas></div>
+      <p class="cap">The accent circle is fixed at the same high chroma in every position of the slider.</p>
+    </div>
+    <p class="repo"><b>In your repo</b> · For halftone and dither palettes, give most entries low chroma and reserve one saturated ink. For brush sketches, pick one dominant hue per piece.</p>
+  </section>
+
+  <section id="mother">
+    <h2>5 · Harmony comes from a shared mother color</h2>
+    <div class="prose">
+      <p>Colors mixed from the same few pigments relate automatically. Painters push this by adding a touch of one color to everything (a unifying glaze). The hue wheel does the opposite job: it tells you what clashes, not what belongs together.</p>
+    </div>
+    <div class="demo">
+      <div class="ctls" id="c-mother"></div>
+      <div class="viz strip tall" id="sw-a"></div>
+      <div class="viz strip tall" id="sw-b"></div>
+      <p class="cap" id="cap-m"></p>
+      <div class="pair">
+        <div class="viz"><canvas id="hills2"></canvas></div>
+        <div class="viz"><canvas id="hills3"></canvas></div>
+      </div>
+    </div>
+    <p class="repo"><b>In your repo</b> · A final pass that adds a_b-offset (shown here) to every pixel is a one-line unifier for any sketch or sprite sheet.</p>
+  </section>
+
+  <section id="perceptual">
+    <h2>6 · Think in a perceptual space (OKLCH), not HSL or RGB</h2>
+    <div class="prose">
+      <p>HSL "lightness" is a lie: yellow at 50% is far brighter than blue at 50%. Perceptual models (Munsell for painters, OKLab/OKLCH for code) make equal numbers look equal. That gives even value steps, and gradients without muddy middles.</p>
+    </div>
+    <div class="demo">
+      <p class="cap"><b>Top:</b> twelve hues at HSL 100% / 50%. <b>Bottom:</b> OKLCH L 0.72, C 0.14. Switch to Grayscale: the top row flickers, the bottom is flat.</p>
+      <div class="viz strip tall" id="hsl-row"></div>
+      <div class="viz strip tall" id="ok-row"></div>
+      <div class="ctls" id="c-grad"></div>
+      <div class="viz"><canvas id="g-srgb" style="height:36px"></canvas></div>
+      <p class="cap">sRGB interpolation (CSS default)</p>
+      <div class="viz"><canvas id="g-lab" style="height:36px"></canvas></div>
+      <p class="cap">OKLab interpolation</p>
+      <div class="viz"><canvas id="g-lch" style="height:36px"></canvas></div>
+      <p class="cap">OKLCH interpolation (hue travels the short way round)</p>
+      <canvas id="g-prof" style="height:70px"></canvas>
+      <p class="cap" id="g-leg"></p>
+    </div>
+    <p class="repo"><b>In your repo</b> · Do error diffusion and palette snapping in OKLab (or at least linear light), not gamma-encoded RGB. Distance in RGB picks the wrong "nearest" color.</p>
+  </section>
+
+  <section id="grays">
+    <h2>7 · Chromatic grays</h2>
+    <div class="prose">
+      <p>Painters rarely use neutral gray. They mix near-complements to get a gray that leans warm or cool, and the lean follows the light. Pure desaturation looks lifeless beside it.</p>
+    </div>
+    <div class="demo">
+      <div class="viz strip tall" id="gr-n"></div>
+      <p class="cap"><b>Neutral</b> C = 0</p>
+      <div class="viz strip tall" id="gr-c"></div>
+      <p class="cap"><b>Chromatic</b>: cool bias in the darks, warm bias in the lights, C ≤ 0.03. Same lightness steps; in Grayscale mode they are identical.</p>
+    </div>
+    <p class="repo"><b>In your repo</b> · Backgrounds and paper tones for p5.brush sketches: use a tinted off-white, not <code>#ffffff</code> or <code>#808080</code>.</p>
+  </section>
+
+  <section id="edges">
+    <h2>8 · Edges are a contrast budget</h2>
+    <div class="prose">
+      <p>Hard, soft and <i>lost</i> edges are chosen on purpose. The focal area gets the sharpest edges and strongest value contrast; everything else is softened or dissolved into its surroundings. There is no separate edge demo here: it is pass 6 of the lab below, where the dark side of the ball is allowed to melt into the wall while the contact point stays crisp.</p>
+    </div>
+  </section>
+
+  <section id="lab-section">
+    <h2>Iteration lab: one still life, six passes</h2>
+    <div class="prose">
+      <p>The same scene (a ball on a table, key light from the upper left) rendered with cumulative changes. Each pass fixes <b>one</b> problem, in the order painters debug: value → temperature → chroma → harmony → edges. Hue was already acceptable at pass 1; it was almost never the problem.</p>
+      <p>Run the toolbar's <b>Grayscale</b> and <b>Squint</b> on this section. The "loud area" number is the share of pixels with OKLCH chroma above 0.10; "value range" is the lightness gap between the 5th and 95th percentile pixel.</p>
+    </div>
+    <div class="lab" id="lab"></div>
+  </section>
+
+  <section id="process">
+    <h2>The debug ladder</h2>
+    <p class="prose">When a piece feels wrong, change one variable at a time, in this order. Hue is last for a reason.</p>
+    <ol class="steps">
+      <li><strong>Value</strong>Squint or grayscale. Is there a clear light, mid, and dark? Is the focal point the highest contrast?</li>
+      <li><strong>Edges and focus</strong>Is detail and sharpness spent only where the eye should go?</li>
+      <li><strong>Temperature</strong>Do lights and shadows differ in warmth, or is everything one temperature?</li>
+      <li><strong>Chroma</strong>Is saturation concentrated, or spread evenly? Mute everything, then restore one thing.</li>
+      <li><strong>Hue</strong>Only now: swap or nudge hues. Prefer a shared mother tint to a new palette.</li>
+    </ol>
+    <div class="prose" style="margin-top:18px">
+      <p><b>Other habits worth copying.</b> Make small, fast thumbnails (3 values) before committing. Do palette-only color studies separate from the drawing. Compare against the reference by flipping or placing side by side; the error is invisible until you reset your eye. Sample colors from the reference rather than naming them: shadows in photos are rarely black, skies rarely pure blue. View it small. Step away.</p>
+    </div>
+  </section>
+
+  <section id="apply">
+    <h2>Applying this to the studio projects</h2>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Project</th><th>What to take from this page</th></tr></thead>
+      <tbody>
+        <tr><td>halftone-dithering</td><td>Dither in linear light or OKLab, not gamma RGB. Check the tone curve in grayscale. For color halftones use a small palette with hue-shifted ramps and one saturated ink.</td></tr>
+        <tr><td>p5-brush-gallery</td><td>Limit each sketch to one dominant hue and a few related pigments. Glaze layers with a shared warm or cool mother tint. Use a tinted paper color. Spend edge sharpness on the focal area.</td></tr>
+        <tr><td>pixel-sprites</td><td>Silhouette in grayscale first. Build palette ramps from hue shifts. Extract the palette from the reference (tiger painting, heron photo) in OKLab and compare side by side.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>Good examples to iterate on next</h2>
+    <p class="prose">The ideal exercise is small, has a reference to compare against, and has a number you can watch. In order of recommendation:</p>
+    <div class="cards">
+      <div class="card rec"><span class="tag">Recommended</span><h3>Re-color one sprite (fox or tiger)</h3><p>Start from <code>render.py</code>'s fixed palette and the matching reference image. Passes: silhouette in grayscale, value ramps per material, hue shifts, palette cut to 12–16 colors, mother tint. Metric: mean OKLab distance between your palette and the reference's. Smallest loop, directly reuses existing files.</p></div>
+      <div class="card"><span class="tag">Alternative</span><h3>Dither a photo with a painted palette</h3><p>Same source image, four renderings: RGB nearest, linear-light, OKLab, OKLab with a hue-shifted 5-color palette. Shows the perceptual-space and ramp lessons at once; the metric is visible tone error.</p></div>
+      <div class="card"><span class="tag">Alternative</span><h3>p5.brush layered landscape</h3><p>Section 1's hills, but with watercolor fills, glazing, and a lost-edge treatment on the far ridge. Best for edges and the mother color; hardest to measure.</p></div>
+    </div>
+  </section>
+
+  <section id="code">
+    <h2>The helper code on this page</h2>
+    <p class="prose">These are the actual functions used by every demo above (rendered from the running script). Copy them into a shared module if you want them in other pages.</p>
+    <pre><code id="src"></code></pre>
+  </section>
+</div>
+
+<script>
+/* ---------- color math: OKLab / OKLCH <-> sRGB (Björn Ottosson) ---------- */
+const rad = Math.PI / 180;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+
+function lab2lin(L, a, b) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+}
+function lin2lab(r, g, b) {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+const enc = x => x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+const dec = x => x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+const inGamut = v => v[0] >= -1e-4 && v[0] <= 1.0001 && v[1] >= -1e-4 && v[1] <= 1.0001 && v[2] >= -1e-4 && v[2] <= 1.0001;
+
+/* OKLab -> sRGB 0..255; out-of-gamut colors lose chroma (not hue or lightness) */
+function lab2rgb(L, a, b) {
+  L = clamp(L, 0, 1);
+  let v = lab2lin(L, a, b);
+  if (!inGamut(v)) {
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 10; i++) {
+      const m = (lo + hi) / 2;
+      if (inGamut(lab2lin(L, a * m, b * m))) lo = m; else hi = m;
+    }
+    v = lab2lin(L, a * lo, b * lo);
+  }
+  return v.map(x => Math.round(255 * clamp(enc(Math.max(0, x)), 0, 1)));
+}
+const lch2lab = (L, C, H) => [L, C * Math.cos(H * rad), C * Math.sin(H * rad)];
+const lch2rgb = (L, C, H) => { const l = lch2lab(L, C, H); return lab2rgb(l[0], l[1], l[2]); };
+const rgb2lab = (r, g, b) => lin2lab(dec(r / 255), dec(g / 255), dec(b / 255));
+const css = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+const hex = c => '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+/* signed hue offset (degrees) that moves hue H toward `target`, capped at `amt` */
+const hueDelta = (H, target, amt) => clamp(((target - H + 540) % 360) - 180, -amt, amt);
+/* add a small fixed a/b offset ("mother color") to a lab color */
+const tintLab = (lab, amt, H, C0) => [lab[0], lab[1] + amt * C0 * Math.cos(H * rad), lab[2] + amt * C0 * Math.sin(H * rad)];
+
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- ui helpers ---------- */
+function ctl(host, label, min, max, step, val, cb, fmt) {
+  const w = document.createElement('label'); w.className = 'ctl';
+  const s = document.createElement('span'); s.textContent = label;
+  const i = document.createElement('input'); i.type = 'range'; i.min = min; i.max = max; i.step = step; i.value = val;
+  const o = document.createElement('output');
+  const upd = () => { o.textContent = fmt ? fmt(+i.value) : i.value; };
+  i.addEventListener('input', () => { upd(); cb(+i.value); });
+  upd(); w.append(s, i, o); host.append(w); return i;
+}
+function btn(host, label, cb) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = label;
+  b.addEventListener('click', cb); host.append(b); return b;
+}
+function fillStrip(el, colors) {
+  el.textContent = '';
+  colors.forEach(c => { const i = document.createElement('i'); i.style.background = css(c); el.append(i); });
+}
+const $ = id => document.getElementById(id);
+
+/* view toolbar */
+document.querySelectorAll('.bar button').forEach(b => b.addEventListener('click', () => {
+  document.body.dataset.view = b.dataset.v;
+  document.querySelectorAll('.bar button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+document.body.dataset.view = 'color';
+
+/* ---------- 1 & 5: hills ---------- */
+const HILL_H = [285, 320, 15, 75, 150];
+const HILL_L = [.84, .74, .62, .48, .32];
+const HILL_C = [.05, .07, .09, .11, .12];
+function ridge(i, x) {
+  const s = i * 7.3;
+  return Math.sin(x * .012 + s) * 18 + Math.sin(x * .031 + s * 2.1) * 9 + Math.sin(x * .07 + s * .7) * 4;
+}
+function drawHills(cv, sep, tint, tintH) {
+  const w = cv.width = 480, h = cv.height = 200, c = cv.getContext('2d');
+  const T = lab => { const t = tintLab(lab, tint || 0, tintH || 60, .06); return css(lab2rgb(t[0], t[1], t[2])); };
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, T(lch2lab(.86, .05, 70)));
+  g.addColorStop(1, T(lch2lab(.95, .04, 80)));
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 5; i++) {
+    const L = lerp(.62, HILL_L[i], sep), C = lerp(.10, HILL_C[i], sep);
+    c.fillStyle = T(lch2lab(L, C, HILL_H[i]));
+    c.beginPath(); c.moveTo(0, h);
+    const base = 70 + i * 28;
+    for (let x = 0; x <= w; x += 4) c.lineTo(x, base - ridge(i, x));
+    c.lineTo(w, h); c.closePath(); c.fill();
+  }
+}
+const vhost = $('c-value');
+ctl(vhost, 'value separation (right)', 0, 1, .01, .9, v => drawHills($('hills1'), v), v => v.toFixed(2));
+drawHills($('hills0'), 0); drawHills($('hills1'), .9);
+
+/* ---------- 2: relative color ---------- */
+(function () {
+  const patch = lch2rgb(.62, 0, 0);
+  function row(host, bgs) {
+    host.textContent = '';
+    bgs.forEach(b => { const d = document.createElement('div'); d.className = 'tile'; d.style.background = css(b); const i = document.createElement('i'); i.style.background = css(patch); d.append(i); host.append(d); });
+  }
+  row($('tiles-v'), [.2, .4, .62, .85].map(L => lch2rgb(L, 0, 0)));
+  $('cap-v').innerHTML = `Row 1: neutral backgrounds from dark to light. Inner square is <b>${hex(patch)}</b> in all four.`;
+  let H0 = 30;
+  function hues() { row($('tiles-h'), [0, 90, 180, 270].map(o => lch2rgb(.62, .13, H0 + o))); $('cap-h').innerHTML = `Row 2: backgrounds at equal lightness, different hue. Inner square is still <b>${hex(patch)}</b>, and looks tinted toward the opposite of its surround.`; }
+  ctl($('c-rel'), 'background hue offset', 0, 360, 1, H0, v => { H0 = v; hues(); }, v => v + '°');
+  hues();
+})();
+
+/* ---------- 3: temperature ---------- */
+(function () {
+  const RAMPS = {
+    mul: (lam, H) => lch2rgb(.62, .19, H).map(v => Math.round(v * (.08 + .92 * lam))),
+    lonly: (lam, H) => lch2rgb(lerp(.2, .93, Math.pow(lam, .85)), .17, H),
+    shift: (lam, H, sh) => {
+      const t = Math.pow(lam, .85);
+      const Hc = H + lerp(hueDelta(H, 265, sh), hueDelta(H, 70, sh), t);
+      return lch2rgb(lerp(.22, .93, t), lerp(.16, .10, t) + .07 * 4 * t * (1 - t), Hc);
+    }
+  };
+  function sphere(cv, fn) {
+    const N = cv.width = cv.height = 150, ctx = cv.getContext('2d'), img = ctx.createImageData(N, N), D = img.data;
+    const bg = lch2rgb(.9, .012, 80), R = N * .4;
+    let lx = -.5, ly = -.58, lz = .64; const ln = Math.hypot(lx, ly, lz); lx /= ln; ly /= ln; lz /= ln;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const dx = x + .5 - N / 2, dy = y + .5 - N / 2, d = Math.hypot(dx, dy);
+      let r = bg;
+      const a = clamp(R - d + .5, 0, 1);
+      if (a > 0) {
+        const nx = dx / R, ny = dy / R, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+        const s = fn(Math.max(0, nx * lx + ny * ly + nz * lz));
+        r = [lerp(bg[0], s[0], a), lerp(bg[1], s[1], a), lerp(bg[2], s[2], a)];
+      }
+      const o = (y * N + x) * 4; D[o] = r[0]; D[o + 1] = r[1]; D[o + 2] = r[2]; D[o + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  let H = 29, SH = 40;
+  function draw() {
+    ['mul', 'lonly', 'shift'].forEach(k => {
+      sphere($('sp-' + k), lam => RAMPS[k](lam, H, SH));
+      fillStrip($('rp-' + k), Array.from({ length: 9 }, (_, i) => RAMPS[k](i / 8, H, SH)));
+    });
+  }
+  ctl($('c-temp'), 'base hue', 0, 360, 1, H, v => { H = v; draw(); }, v => v + '°');
+  ctl($('c-temp'), 'hue shift', 0, 90, 1, SH, v => { SH = v; draw(); }, v => v + '°');
+  draw();
+})();
+
+/* ---------- 4: chroma budget ---------- */
+(function () {
+  const cv = $('circles');
+  const r = rng(11), items = [];
+  for (let i = 0; i < 36; i++) items.push({ x: r() * 480, y: r() * 220, rad: 12 + r() * 26, L: .45 + r() * .35, H: r() * 360 });
+  function draw(cOthers) {
+    cv.width = 480; cv.height = 220; const c = cv.getContext('2d');
+    c.fillStyle = css(lch2rgb(.94, .012, 80)); c.fillRect(0, 0, 480, 220);
+    items.forEach(it => { c.fillStyle = css(lch2rgb(it.L, cOthers, it.H)); c.beginPath(); c.arc(it.x, it.y, it.rad, 0, 7); c.fill(); });
+    c.fillStyle = css(lch2rgb(.62, .21, 30)); c.beginPath(); c.arc(350, 108, 40, 0, 7); c.fill();
+  }
+  ctl($('c-chroma'), 'chroma of everything else', 0, .2, .005, .16, draw, v => v.toFixed(3));
+  btn($('c-chroma'), 'everything loud', () => { document.querySelector('#c-chroma input').value = .16; document.querySelector('#c-chroma output').textContent = '0.160'; draw(.16); });
+  btn($('c-chroma'), 'one loud thing', () => { document.querySelector('#c-chroma input').value = .03; document.querySelector('#c-chroma output').textContent = '0.030'; draw(.03); });
+  draw(.16);
+})();
+
+/* ---------- 5: mother color ---------- */
+(function () {
+  const base = [[.62, 20], [.78, 95], [.68, 150], [.64, 215], [.55, 275], [.60, 330]];
+  let amt = .7, H = 60;
+  const hueOf = lab => (Math.atan2(lab[2], lab[1]) / rad + 360) % 360;
+  const dist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  function draw() {
+    const A = base.map(([L, h]) => lch2lab(L, .14, h));
+    const B = A.map(l => tintLab(l, amt, H, .07));
+    fillStrip($('sw-a'), A.map(l => lab2rgb(l[0], l[1], l[2])));
+    fillStrip($('sw-b'), B.map(l => lab2rgb(l[0], l[1], l[2])));
+    const m = ls => ls.reduce((s, l) => s + dist(hueOf(l), H), 0) / ls.length;
+    $('cap-m').innerHTML = `Top: independent colors, mean hue distance from the mother hue <b>${m(A).toFixed(0)}°</b>. Bottom: with the tint, <b>${m(B).toFixed(0)}°</b>.`;
+    drawHills($('hills2'), .9, 0, H); drawHills($('hills3'), .9, amt, H);
+  }
+  ctl($('c-mother'), 'tint amount', 0, 1, .01, amt, v => { amt = v; draw(); }, v => v.toFixed(2));
+  ctl($('c-mother'), 'mother hue', 0, 360, 1, H, v => { H = v; draw(); }, v => v + '°');
+  draw();
+})();
+
+/* ---------- 6: perceptual ---------- */
+(function () {
+  const hs = Array.from({ length: 12 }, (_, i) => i * 30);
+  const row = $('hsl-row'); row.textContent = '';
+  hs.forEach(h => { const i = document.createElement('i'); i.style.background = `hsl(${h},100%,50%)`; row.append(i); });
+  fillStrip($('ok-row'), hs.map(h => lch2rgb(.72, .14, h)));
+
+  const h2c = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16));
+  const host = $('c-grad');
+  const mk = (id, v) => { const l = document.createElement('label'); l.className = 'ctl'; const s = document.createElement('span'); s.textContent = id; const i = document.createElement('input'); i.type = 'color'; i.value = v; l.append(s, i); host.append(l); i.addEventListener('input', draw); return i; };
+  const c1 = mk('from', '#1f4fd8'), c2 = mk('to', '#f5c400');
+  const N = 240;
+  function paths(a, b) {
+    const la = rgb2lab(...a), lb = rgb2lab(...b);
+    const ca = Math.hypot(la[1], la[2]), cb = Math.hypot(lb[1], lb[2]);
+    const ha = Math.atan2(la[2], la[1]) / rad, hb = Math.atan2(lb[2], lb[1]) / rad;
+    const dh = ((hb - ha + 540) % 360) - 180;
+    return {
+      srgb: t => a.map((v, i) => Math.round(lerp(v, b[i], t))),
+      lab: t => lab2rgb(lerp(la[0], lb[0], t), lerp(la[1], lb[1], t), lerp(la[2], lb[2], t)),
+      lch: t => { const L = lerp(la[0], lb[0], t), C = lerp(ca, cb, t), Hh = ha + dh * t; return lch2rgb(L, C, Hh); }
+    };
+  }
+  function draw() {
+    const p = paths(h2c(c1.value), h2c(c2.value));
+    const prof = $('g-prof'); prof.width = 480; prof.height = 70; const pc = prof.getContext('2d');
+    const cols = { srgb: '#d1495b', lab: '#2a9d8f', lch: '#e9a400' };
+    const cmp = getComputedStyle(document.documentElement).getPropertyValue('--line');
+    pc.strokeStyle = cmp; pc.strokeRect(.5, .5, 479, 69);
+    ['srgb', 'lab', 'lch'].forEach(k => {
+      const cv = $('g-' + k); cv.width = 480; cv.height = 36; const c = cv.getContext('2d');
+      pc.strokeStyle = cols[k]; pc.lineWidth = 2; pc.beginPath();
+      for (let i = 0; i < N; i++) {
+        const col = p[k](i / (N - 1));
+        c.fillStyle = css(col); c.fillRect(i * 2, 0, 2, 36);
+        const L = rgb2lab(...col)[0];
+        const y = 66 - L * 62; i ? pc.lineTo(i * 2, y) : pc.moveTo(0, y);
+      }
+      pc.stroke();
+    });
+    $('g-leg').innerHTML = 'Lightness along each path: <b style="color:#d1495b">sRGB</b> · <b style="color:#2a9d8f">OKLab</b> · <b style="color:#e9a400">OKLCH</b>. A dip means a muddy, darker middle.';
+  }
+  draw();
+})();
+
+/* ---------- 7: chromatic grays ---------- */
+(function () {
+  const n = [], c = [];
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8, L = lerp(.2, .95, t);
+    n.push(lch2rgb(L, 0, 0));
+    c.push(lch2rgb(L, .012 + .018 * Math.abs(t - .5) * 2, t < .5 ? 255 : 70));
+  }
+  fillStrip($('gr-n'), n); fillStrip($('gr-c'), c);
+})();
+
+/* ---------- lab: one still life, six passes ---------- */
+(function () {
+  const BASE = {
+    naive: false,
+    wallL0: .30, wallL1: .38, wallC: .09, wallH: 255,
+    floorL0: .50, floorL1: .62, floorC: .11, floorH: 145,
+    sL: .22, hL: .90, sC: .17, hC: .17, sH: 29, hH: 29, cMid: 0, spec: 0, specPow: 60,
+    shL: .55, shC: 1, shCadd: 0, shH: null, softBase: .05, softGrow: 0, ao: true,
+    bounce: 0, bL: .6, bC: .1, bH: 55, floorBounce: 0,
+    tint: 0, tintC: .035, tintH: 65, lost: 0, vig: 0, halo: 0
+  };
+  const NAIVE = Object.assign({}, BASE, { naive: true, wallRGB: [30, 100, 210], floorRGB: [70, 170, 80], sphereRGB: [225, 40, 40], softBase: .03, ao: false });
+  const P1 = Object.assign({}, BASE);
+  const P2 = Object.assign({}, P1, { sH: 5, hH: 62, sL: .25, hL: .92, sC: .16, hC: .11, cMid: .06, shH: 205, shC: 1.3, shCadd: .02, shL: .6, spec: .45, specPow: 70 });
+  const P3 = Object.assign({}, P2, { wallC: .03, wallH: 235, wallL0: .28, wallL1: .36, floorC: .045, floorH: 75, floorL0: .52, floorL1: .62, shH: 255, shCadd: .03 });
+  const P4 = Object.assign({}, P3, { tint: 1, floorBounce: .8, bounce: .55 });
+  const P5 = Object.assign({}, P4, { lost: 1, softBase: .02, softGrow: .4, vig: .4, halo: .05, spec: .8, specPow: 100 });
+
+  const STAGES = [
+    { t: 'Naive RGB', P: NAIVE, ch: 'Colors picked as pure RGB: saturated blue wall, green floor, red ball. Shading multiplies toward black; the shadow is black at 45%.', lk: 'Grayscale: wall, floor and ball all land on the same mid-gray. Only hue separates them.' },
+    { t: 'Value structure', P: P1, ch: 'Dark wall, mid floor, ball spanning light to dark. Added contact shadow under the ball.', lk: 'Squint: the ball is now the lightest shape against a dark wall. Its shadow side is nearly flat, though.' },
+    { t: 'Temperature', P: P2, ch: 'Highlights drift warm (orange), the ball’s shadow side drifts toward magenta, floor shadow goes cool and more saturated. Added a small highlight.', lk: 'Is the form turning? Warm-to-cool should carry the volume even with fewer value steps.' },
+    { t: 'Chroma budget', P: P3, ch: 'Wall and floor chroma cut to about a quarter; cool wall against a warm floor. The ball keeps its saturation.', lk: 'Mute everything, then see what survives: the ball should be the one loud thing.' },
+    { t: 'Mother color + bounce', P: P4, ch: 'One warm tint added to every pixel. The ball’s red bounces onto the floor; floor light reflects up into its belly, so the shadow side is no longer dead.', lk: 'Do the wall, floor and ball feel lit by the same light?' },
+    { t: 'Edges + focus', P: P5, ch: 'Shadow side of the ball dissolves into the wall (lost edge). Shadow edge softens with distance but stays crisp at contact. Vignette and a sharper highlight.', lk: 'Squint: is the eye still pulled to the contact point and highlight?' }
+  ];
+
+  function render(cv, P) {
+    const W = 320, H = 220; cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d'), img = ctx.createImageData(W, H), D = img.data;
+    const hor = 128, cx = 128, cy = 112, R = 56, cc = cy + R - 5;
+    let lx = -.5, ly = -.58, lz = .64; const ln = Math.hypot(lx, ly, lz); lx /= ln; ly /= ln; lz /= ln;
+    let hx = lx, hy = ly, hz = lz + 1; const hn = Math.hypot(hx, hy, hz); hx /= hn; hy /= hn; hz /= hn;
+    const sx = cx + R * .95, sy = cc + 3, rx = R * 1.55, ry = R * .26;
+    const tA = P.tint * P.tintC * Math.cos(P.tintH * rad), tB = P.tint * P.tintC * Math.sin(P.tintH * rad);
+    const fin = lab => lab2rgb(lab[0], lab[1] + tA, lab[2] + tB);
+    const hMid = (P.sH + P.hH) / 2;
+    const bA = .07 * Math.cos(hMid * rad), bB = .07 * Math.sin(hMid * rad);
+    const bLab = lch2lab(P.bL, P.bC, P.bH);
+    const px_ = new Array(3);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const px = x + .5, py = y + .5, floor = py >= hor;
+      let s = 0;
+      if (floor) {
+        const r = Math.hypot((px - sx) / rx, (py - sy) / ry);
+        const f = clamp((px - cx) / (rx * 1.1), 0, 1), soft = P.softBase + P.softGrow * f;
+        s = 1 - smooth(1 - soft, 1 + soft, r);
+        if (P.ao) { const ao = Math.exp(-(((px - cx) / (R * .8)) ** 2) - (((py - cc) / 9) ** 2)); s = 1 - (1 - s) * (1 - ao * .85); }
+      }
+      let rgb;
+      if (P.naive) {
+        const b = floor ? P.floorRGB : P.wallRGB, k = 1 - .55 * s;
+        rgb = [b[0] * k, b[1] * k, b[2] * k];
+      } else {
+        const t = floor ? (py - hor) / (H - hor) : py / hor;
+        let L = floor ? lerp(P.floorL0, P.floorL1, t) : lerp(P.wallL0, P.wallL1, t);
+        const C = floor ? P.floorC : P.wallC, Hh = floor ? P.floorH : P.wallH;
+        const rr = (((px - W / 2) / (W / 2)) ** 2 + ((py - H / 2) / (H / 2)) ** 2) * .5;
+        L = L * (1 - P.vig * rr) + P.halo * Math.exp(-((px - cx) ** 2 + (py - cy) ** 2) / ((R * 2.1) ** 2));
+        let lab = lch2lab(L, C, Hh);
+        if (floor) {
+          if (s > 0) { const sl = lch2lab(L * P.shL, C * P.shC + P.shCadd, P.shH == null ? Hh : P.shH); lab = [lerp(lab[0], sl[0], s), lerp(lab[1], sl[1], s), lerp(lab[2], sl[2], s)]; }
+          if (P.floorBounce) { const dd = Math.hypot(px - cx, py - cy), w = P.floorBounce * Math.exp(-Math.max(0, dd - R) / (R * .5)); lab = [lab[0] + .05 * w, lab[1] + bA * w, lab[2] + bB * w]; }
+        }
+        rgb = fin(lab);
+      }
+      const dx = px - cx, dy = py - cy, dist = Math.hypot(dx, dy);
+      if (dist < R + 8) {
+        let nx = dx / R, ny = dy / R, nz2 = 1 - nx * nx - ny * ny, nz = 0;
+        if (nz2 > 0) nz = Math.sqrt(nz2); else { const m = Math.hypot(nx, ny); nx /= m; ny /= m; }
+        const lam = Math.max(0, nx * lx + ny * ly + nz * lz);
+        const soft = .6 + P.lost * (1 - clamp(lam * 2.2, 0, 1)) * 7;
+        const alpha = clamp((R - dist) / soft + .5, 0, 1);
+        if (alpha > 0) {
+          let sc;
+          if (P.naive) { const k = .1 + .9 * lam; sc = [P.sphereRGB[0] * k, P.sphereRGB[1] * k, P.sphereRGB[2] * k]; }
+          else {
+            const t = Math.pow(lam, .85), bump = 4 * t * (1 - t);
+            let L = lerp(P.sL, P.hL, t), C = lerp(P.sC, P.hC, t) + P.cMid * bump, Hh = lerp(P.sH, P.hH, t);
+            const sp = P.spec ? Math.pow(Math.max(0, nx * hx + ny * hy + nz * hz), P.specPow) * P.spec : 0;
+            L += sp * .5; C *= 1 - sp;
+            let lab = lch2lab(L, C, Hh);
+            if (P.bounce) { const w = P.bounce * clamp(ny * 1.3, 0, 1) * (1 - clamp(lam * 1.5, 0, 1)); lab = [lerp(lab[0], bLab[0], w), lerp(lab[1], bLab[1], w), lerp(lab[2], bLab[2], w)]; }
+            sc = fin(lab);
+          }
+          rgb = [lerp(rgb[0], sc[0], alpha), lerp(rgb[1], sc[1], alpha), lerp(rgb[2], sc[2], alpha)];
+        }
+      }
+      const o = (y * W + x) * 4; D[o] = rgb[0]; D[o + 1] = rgb[1]; D[o + 2] = rgb[2]; D[o + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    /* stats */
+    let loud = 0, n = 0; const Ls = [];
+    for (let i = 0; i < D.length; i += 12) {
+      const l = rgb2lab(D[i], D[i + 1], D[i + 2]); n++;
+      if (Math.hypot(l[1], l[2]) > .10) loud++;
+      Ls.push(l[0]);
+    }
+    Ls.sort((a, b) => a - b);
+    return { loud: 100 * loud / n, spread: Ls[Math.floor(Ls.length * .95)] - Ls[Math.floor(Ls.length * .05)] };
+  }
+
+  const host = $('lab');
+  STAGES.forEach((st, i) => {
+    const fig = document.createElement('figure');
+    const vz = document.createElement('div'); vz.className = 'viz';
+    const cv = document.createElement('canvas'); vz.append(cv);
+    const cap = document.createElement('figcaption');
+    const stats = render(cv, st.P);
+    cap.innerHTML = `<span class="n">PASS ${i + 1} / 6</span><h3></h3><p class="cap"><b>Changed.</b> </p><p class="cap"><b>Look at.</b> </p><p class="stat"></p>`;
+    cap.querySelector('h3').textContent = st.t;
+    cap.querySelectorAll('.cap')[0].append(st.ch);
+    cap.querySelectorAll('.cap')[1].append(st.lk);
+    cap.querySelector('.stat').textContent = `loud area ${stats.loud.toFixed(0)}% · value range ${stats.spread.toFixed(2)}`;
+    fig.append(vz, cap); host.append(fig);
+  });
+})();
+
+/* ---------- source listing ---------- */
+$('src').textContent = [lab2lin, lin2lab, lab2rgb, lch2lab, lch2rgb, rgb2lab, hueDelta, tintLab].map(f => f.toString()).join('\n\n');
+</script>
+</body>
+</html>

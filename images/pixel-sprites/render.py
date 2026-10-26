@@ -126,7 +126,16 @@ def render_frame(cfg, world, yaw_deg, light):
         upd = hit & (t < zbuf)
         zbuf[upd] = t[upd]
         nbuf[upd] = (M[:3, :3] @ n[upd].T).T
-        mbuf[upd] = mats.index(sh["mat"])
+        mb = np.full(len(o), mats.index(sh["mat"]))
+        if rs.get("stripes") and "mat2" in sh and "stripes" in sh:
+            # opt-in: bands along one local axis, wobbled so they read as brush strokes
+            freq, width, ax, wob = sh["stripes"]
+            ax = int(ax)
+            with np.errstate(invalid="ignore"):
+                p = o + t[:, None] * d
+                ph = p[:, ax] * freq + wob * np.sin(p[:, (ax + 1) % 3] * 9 + p[:, (ax + 2) % 3] * 5)
+            mb = np.where((ph % 1.0) < width * 0.5, mats.index(sh["mat2"]), mb)
+        mbuf[upd] = mb[upd]
 
     opaque = mbuf >= 0
     lam = nbuf @ light

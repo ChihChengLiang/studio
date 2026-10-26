@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Re-coloring a Pixel Tiger</title>
+<meta name="description" content="Six passes of color principles applied to a procedural pixel-art tiger, each checked against a sampled Japanese tiger painting.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding:0 max(16px,env(safe-area-inset-right)) 80px max(16px,env(safe-area-inset-left))}
+.page{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:52px;padding-top:36px}
+.back{font:500 12px var(--font-mono);color:var(--muted);text-decoration:none}
+.back:hover{color:var(--accent)}
+.eyebrow{margin:18px 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0 0 12px;font:600 24px/1.15 var(--font-display);letter-spacing:-.012em}
+h3{margin:0;font:600 16px/1.2 var(--font-display)}
+.lede{margin:14px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+p{margin:0}
+.prose{max-width:66ch;color:var(--muted);display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.prose b{color:var(--fg);font-weight:600}
+a{color:var(--accent)}
+code{font:.9em var(--font-mono);background:var(--surface);border:1px solid var(--line);padding:1px 5px}
+pre{margin:0;overflow-x:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);font:400 12.5px/1.6 var(--font-mono)}
+pre code{border:0;padding:0;background:none}
+section{border-top:1px solid var(--line);padding-top:32px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:0 calc(-1 * max(16px,env(safe-area-inset-left)));padding:10px max(16px,env(safe-area-inset-left))}
+.bar-in{max-width:1040px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar-l{font:500 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.bar button{font:500 13px var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.bar .hint{font:400 12px var(--font-mono);color:var(--muted);margin-left:auto}
+.viz{transition:filter .25s}
+body[data-view="gray"] .viz{filter:grayscale(1)}
+body[data-view="squint"] .viz{filter:grayscale(1) blur(4px)}
+
+.ref{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:24px;align-items:start}
+.ref img{display:block;width:100%;height:auto;border:1px solid var(--line)}
+.ref .col{display:flex;flex-direction:column;gap:14px}
+.cap{font:400 12px/1.5 var(--font-mono);color:var(--muted)}
+.cap b{color:var(--fg);font-weight:500}
+.row{display:flex;flex-direction:column;gap:4px}
+.sw{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line)}
+.sw i{display:block;height:30px}
+.sw.sm i{height:22px}
+.sw.gap{gap:0}
+.lbl{font:500 11px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tabs button{font:500 13px var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:7px 12px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.view{display:grid;grid-template-columns:minmax(0,352px) minmax(0,1fr);gap:24px;align-items:start}
+.stage{border:1px solid var(--line);background:var(--ground,#b19d86)}
+.stage img{display:block;width:100%;height:auto;image-rendering:pixelated}
+.side{display:flex;flex-direction:column;gap:14px}
+.mx{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;font:400 12px var(--font-mono);color:var(--muted);align-items:baseline}
+.mx .k{color:var(--fg)}
+.mx .v{color:var(--fg);text-align:right}
+.mx .d{text-align:right;min-width:4.5em}
+.good{color:#1f8a4c}.bad{color:#c2412d}
+@media (prefers-color-scheme: dark){.good{color:#5fd08d}.bad{color:#ff8a73}}
+.all{display:flex;flex-direction:column;gap:6px}
+.all button{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;align-items:center;text-align:left;font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:6px 10px 6px 12px;cursor:pointer}
+.all button[aria-current="true"]{border-color:var(--accent)}
+.all .t{font:500 12px var(--font-mono);color:var(--muted)}
+.all .t b{display:block;color:var(--fg);font:600 14px var(--font-display)}
+.all .strip{background:var(--ground,#b19d86)}
+.all img{display:block;width:100%;height:auto;image-rendering:pixelated}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:right;padding:8px 10px;border:1px solid var(--line);color:var(--muted);font-family:var(--font-mono)}
+th:first-child,td:first-child{text-align:left;color:var(--fg)}
+th{background:var(--surface);color:var(--fg);font:500 12px var(--font-mono)}
+.scroll{overflow-x:auto}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:0;padding:0;list-style:none}
+.steps li{padding:14px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:14px}
+.steps strong{display:block;color:var(--fg);font:600 15px var(--font-display);margin-bottom:3px}
+@media (max-width:760px){.ref,.view{grid-template-columns:minmax(0,1fr)}.all button{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar" aria-label="Viewing mode">
+  <div class="bar-in">
+    <span class="bar-l">View as</span>
+    <button type="button" data-v="color" aria-pressed="true">Color</button>
+    <button type="button" data-v="gray" aria-pressed="false">Grayscale</button>
+    <button type="button" data-v="squint" aria-pressed="false">Squint</button>
+    <span class="hint">value check first</span>
+  </div>
+</div>
+
+<div class="page">
+  <header>
+    <a class="back" href="../../">← Studio</a>
+    <p class="eyebrow">Images · pixel art · color</p>
+    <h1>Re-coloring a pixel tiger</h1>
+    <p class="lede">The <a href="../pixel-sprites/">procedural tiger</a> keeps its geometry and animation; only its palette changes. Six passes apply one color principle each, in the order painters debug: value, temperature, chroma, mother color, then comparison with a real tiger painting. See <a href="../color-lessons/">Color lessons</a> for the principles.</p>
+  </header>
+
+  <section>
+    <h2>The reference</h2>
+    <div class="ref">
+      <a href="../pixel-sprites/references/tiger-painting.jpg"><img src="../pixel-sprites/references/tiger-painting.jpg" alt="Japanese tiger painting on gold leaf: a mauve-pink tiger with indigo stripes"></a>
+      <div class="col">
+        <div class="prose" style="margin:0">
+          <p>A tiger on a gold-leaf sliding door. Sampled in OKLab, it is a quieter picture than it looks: the body is a <b>muted mauve</b>, the stripes a <b>deep indigo</b>, the ground a <b>tan gold</b>, and the fur is about the same lightness as the ground. What separates them is hue, outline and dark stripes, not strong value contrast.</p>
+        </div>
+        <div class="row"><span class="lbl">Sampled ramps (dark → light, quartiles by lightness)</span>
+          <div class="sw viz" id="ref-fur"></div>
+          <div class="sw viz" id="ref-belly"></div>
+          <div class="sw viz" id="ref-stripe"></div>
+          <div class="sw viz" id="ref-misc"></div>
+        </div>
+        <p class="cap" id="ref-stats"></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Six passes</h2>
+    <div class="tabs" id="tabs" role="group" aria-label="Pass"></div>
+    <div class="view">
+      <div class="stage viz"><img id="gif" alt="Walking tiger, front-right view"></div>
+      <div class="side">
+        <h3 id="p-title"></h3>
+        <div class="prose" style="margin:0"><p id="p-changed"></p><p><b>Look at:</b> <span id="p-look"></span></p></div>
+        <div class="row"><span class="lbl">Palette (fur · belly · stripe · eye, outline)</span>
+          <div class="sw sm viz" id="pal-fur"></div>
+          <div class="sw sm viz" id="pal-belly"></div>
+          <div class="sw sm viz" id="pal-stripe"></div>
+          <div class="sw sm viz" id="pal-misc"></div>
+        </div>
+        <div class="mx" id="mx"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>All passes, eight directions</h2>
+    <p class="prose">Click a row to open it above. Switch the toolbar to Grayscale or Squint and compare the rows: the first row sits at the ground's value, and every later row separates from it.</p>
+    <div class="all" id="all"></div>
+  </section>
+
+  <section>
+    <h2>Metrics by pass</h2>
+    <div class="scroll"><table id="tbl"></table></div>
+    <div class="prose" style="margin-top:16px">
+      <p><b>Reference distance</b> is the mean chromatic (OKLab a/b) distance, ×100, from each rendered pixel color to its nearest sampled reference color; it ignores lightness. <b>Ground gap</b> is the lightness difference between mid fur and the gold. <b>Min step</b> is the smallest lightness gap between adjacent fur shades (small means shading bands merge). <b>Hue drift</b> is the hue difference between darkest and lightest fur. Metrics help you notice; the grayscale and squint views decide.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the loop taught</h2>
+    <ul class="steps">
+      <li><strong>Value fixed the biggest problem cheaply.</strong>The original fur sat 5 points of lightness from the ground. One pass that changed nothing but L moved it to 19 and made the shading bands legible.</li>
+      <li><strong>Principles can overshoot.</strong>Pass 2's temperature shift was bold (hue drift above 50°, many high-chroma pixels) and pass 3 had to pull it back. Pass 4's gold tint moved the tiger <i>away</i> from the painting's mauve; the reference distance rose.</li>
+      <li><strong>The reference corrected the guesses.</strong>Sampling showed the painter's fur has almost no hue shift: value and chroma do the modeling. Pass 5 kept our values, took hue and chroma from the painting, and the distance fell to under 1.</li>
+      <li><strong>Judgment stays with you.</strong>The loud amber eye was kept even though the painting's iris is duller. One saturated accent still beats fidelity here.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Reproduce or change it</h2>
+    <div class="prose">
+      <p>Everything on this page is generated by <code>recolor.py</code> in this folder. It imports <code>../pixel-sprites/render.py</code> and edits only <code>cfg["palette"]</code>, so the geometry, skeleton and shading are shared with the original sprite page. Each pass is a short function over lightness, chroma and hue per ramp. The tiger's stripes are defined in <code>tiger.json</code> but were ignored by the renderer; <code>render.py</code> now draws them when <code>render.stripes</code> is set (off by default, so existing output is unchanged).</p>
+    </div>
+    <pre><code>cd images/sprite-recolor
+python3 recolor.py        # needs numpy and Pillow; rewrites output/ and data.js</code></pre>
+  </section>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D = window.RECOLOR, P = D.passes;
+const $ = id => document.getElementById(id);
+const rgbOf = h => [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+function fill(el, hexes) { el.textContent = ''; hexes.forEach(h => { const i = document.createElement('i'); i.style.background = '#' + h; i.title = '#' + h; el.append(i); }); }
+
+document.documentElement.style.setProperty('--ground', '#' + D.ground);
+document.body.dataset.view = 'color';
+document.querySelectorAll('.bar button').forEach(b => b.addEventListener('click', () => {
+  document.body.dataset.view = b.dataset.v;
+  document.querySelectorAll('.bar button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+
+/* reference */
+fill($('ref-fur'), D.ref.fur); fill($('ref-belly'), D.ref.belly); fill($('ref-stripe'), D.ref.stripe);
+fill($('ref-misc'), [D.ground, D.ref.eye]);
+$('ref-stats').innerHTML = `Fur lightness (5th–95th percentile): <b>${D.ref.stats.fur_L[0].toFixed(2)}–${D.ref.stats.fur_L[2].toFixed(2)}</b> · stripes <b>${D.ref.stats.stripe_L.toFixed(2)}</b> · gold ground <b>${D.ref.stats.ground_L.toFixed(2)}</b> · mean tiger chroma <b>${D.ref.stats.tiger_C.toFixed(3)}</b>. Last row: gold ground and iris.`;
+
+/* tabs + viewer */
+const METRICS = [
+  ['ref_dist', 'Reference distance', 'lower', v => v.toFixed(1)],
+  ['ground_gap', 'Ground gap', 'higher', v => v.toFixed(0)],
+  ['min_step', 'Min shading step', 'higher', v => v.toFixed(0)],
+  ['hue_drift', 'Hue drift (fur)', null, v => v.toFixed(0) + '°'],
+  ['eye_chroma', 'Eye chroma', null, v => v.toFixed(3)]
+];
+let cur = 0;
+function show(n) {
+  cur = n; const p = P[n];
+  document.querySelectorAll('#tabs button').forEach((b, i) => b.setAttribute('aria-pressed', String(i === n)));
+  document.querySelectorAll('#all button').forEach((b, i) => b.setAttribute('aria-current', String(i === n)));
+  $('gif').src = `output/pass${n}_walk.gif`;
+  $('gif').alt = `Walking tiger, pass ${n}: ${p.title}`;
+  $('p-title').textContent = `Pass ${n}: ${p.title}`;
+  $('p-changed').textContent = p.changed; $('p-look').textContent = p.look;
+  fill($('pal-fur'), p.palette.fur); fill($('pal-belly'), p.palette.belly); fill($('pal-stripe'), p.palette.stripe);
+  fill($('pal-misc'), [p.palette.eye, p.palette.outline]);
+  const mx = $('mx'); mx.textContent = '';
+  METRICS.forEach(([k, label, better, f]) => {
+    const v = p.metrics[k], prev = n ? P[n - 1].metrics[k] : null;
+    const k1 = document.createElement('span'); k1.className = 'k'; k1.textContent = label;
+    const v1 = document.createElement('span'); v1.className = 'v'; v1.textContent = f(v);
+    const d1 = document.createElement('span'); d1.className = 'd';
+    if (prev != null && Math.abs(v - prev) > 1e-9) {
+      const diff = v - prev, sign = diff > 0 ? '+' : '−';
+      d1.textContent = sign + f(Math.abs(diff)).replace('°', '');
+      if (better) d1.className = 'd ' + ((diff < 0) === (better === 'lower') ? 'good' : 'bad');
+    }
+    mx.append(k1, v1, d1);
+  });
+}
+P.forEach((p, i) => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = `${i} · ${p.title}`;
+  b.addEventListener('click', () => show(i)); $('tabs').append(b);
+  const r = document.createElement('button'); r.type = 'button';
+  r.innerHTML = `<span class="t"><b></b>pass ${i}</span><span class="strip viz"><img alt="" src="output/pass${i}_strip.png"></span>`;
+  r.querySelector('b').textContent = p.title;
+  r.addEventListener('click', () => { show(i); $('tabs').scrollIntoView({ block: 'center', behavior: 'smooth' }); });
+  $('all').append(r);
+});
+
+/* table */
+(function () {
+  const t = $('tbl');
+  let h = '<thead><tr><th>Pass</th>' + METRICS.map(m => `<th>${m[1]}</th>`).join('') + '</tr></thead><tbody>';
+  P.forEach((p, i) => { h += `<tr><td>${i} · ${p.title}</td>` + METRICS.map(m => `<td>${m[3](p.metrics[m[0]])}</td>`).join('') + '</tr>'; });
+  t.innerHTML = h + '</tbody>';
+})();
+show(0);
+</script>
+</body>
+</html>
