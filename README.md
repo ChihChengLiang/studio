@@ -1,6 +1,6 @@
 # Studio
 
-Explorations in images, music, video and games, published as a static site on GitHub Pages.
+Explorations in images, 3D, music, video and games, published as a static site on GitHub Pages.
 
 ## Layout
 
@@ -9,7 +9,7 @@ index.html                  landing page; lists every exploration
 <category>/<slug>/index.html   one self-contained page per exploration
 ```
 
-Categories: `images`, `music`, `video`, `games`.
+Categories: `images`, `3d`, `music`, `video`, `games`.
 
 ## Adding an exploration
 

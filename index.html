@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Studio</title>
-<meta name="description" content="Explorations in images, music, video and games.">
+<meta name="description" content="Explorations in images, 3D, music, video and games.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 :root{
@@ -39,7 +39,7 @@ nav button[aria-pressed="true"]{background:var(--accent);border-color:var(--acce
 <div class="page">
   <header>
     <h1>Studio</h1>
-    <p class="lede">A notebook of explorations in images, music, video and games. Each entry is a self-contained page.</p>
+    <p class="lede">A notebook of explorations in images, 3D, music, video and games. Each entry is a self-contained page.</p>
   </header>
   <nav id="filters" aria-label="Filter by category"></nav>
   <main id="list"></main>
@@ -47,7 +47,7 @@ nav button[aria-pressed="true"]{background:var(--accent);border-color:var(--acce
 
 <script>
 // To add an exploration: put it in <category>/<slug>/index.html and add one line here.
-var CATEGORIES = ['images', 'music', 'video', 'games'];
+var CATEGORIES = ['images', '3d', 'music', 'video', 'games'];
 var EXPLORATIONS = [
   {
     category: 'images',
@@ -82,6 +82,13 @@ var EXPLORATIONS = [
     path: 'images/p5-brush-gallery/',
     title: 'p5.brush gallery',
     description: 'Every built-in p5.brush brush, plus stroke, fill, hatch, vector-field and custom-brush operations, drawn live with the code beside each.',
+    date: '2026-10'
+  },
+  {
+    category: '3d',
+    path: '3d/padlock-looks/',
+    title: 'One scene, many looks',
+    description: 'The seed-phrase vs password padlocks re-dressed with material, palette, light, camera, tone mapping and post-processing choices: toon, low-poly, neon, retro, halftone.',
     date: '2026-10'
   }
 ];

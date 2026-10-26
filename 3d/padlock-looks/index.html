@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Padlock Look-Dev: One Scene, Many Looks</title>
+<meta name="description" content="The same two padlocks and one human, re-dressed with material, palette, light, camera, tone mapping and post-processing decisions.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#06070B;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#030407;color-scheme:dark}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0 0 14px;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em}
+h3{margin:0;font:600 16px/1.2 var(--font-display)}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:14px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Lab: sticky stage on the left, decision dials on the right */
+.lab{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:28px;align-items:start}
+.stagecol{position:sticky;top:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{position:relative;aspect-ratio:16/10;background:var(--stage);border:1px solid var(--line);overflow:hidden}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tags span{position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;font:500 11px/1 var(--font-mono);color:#fff;background:rgba(10,12,18,.62);padding:5px 8px;border-radius:2px}
+.hint{position:absolute;left:10px;bottom:8px;margin:0;font:400 11px/1 var(--font-mono);color:#fff;mix-blend-mode:difference;opacity:.8;pointer-events:none}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.presets button:hover{border-color:var(--muted)}
+.presets button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.presetnote{font-size:13.5px;color:var(--muted);min-height:3.2em;max-width:70ch}
+.presetnote b{color:var(--fg);font-weight:600}
+
+.controls{display:flex;flex-direction:column;gap:14px;min-width:0}
+.group{background:var(--surface);border:1px solid var(--line);padding:14px 16px 6px;min-width:0}
+.group>h3{margin-bottom:2px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0 0 10px}
+.row{display:flex;flex-direction:column;gap:6px;margin:0 0 12px;min-width:0}
+.row>.lab{display:flex;justify-content:space-between;gap:10px;font:500 11px/1 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.toggle{display:flex;align-items:center;gap:9px;font-size:13.5px;cursor:pointer;margin:0 0 12px}
+.toggle input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatches button{display:flex;flex-direction:column;gap:5px;align-items:stretch;width:64px;padding:0;background:none;border:0;cursor:pointer;font:500 10.5px/1 var(--font-mono);color:var(--muted);text-align:left}
+.swatches .chips{display:flex;height:22px;border:1px solid var(--line)}
+.swatches .chips i{flex:1}
+.swatches button[aria-pressed="true"]{color:var(--fg)}
+.swatches button[aria-pressed="true"] .chips{outline:2px solid var(--accent);outline-offset:1px}
+
+.prose{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px 32px}
+.prose div{min-width:0}
+.prose h3{margin-bottom:6px}
+.prose p{font-size:14px;color:var(--muted)}
+.prose b{color:var(--fg);font-weight:600}
+.foot{font-size:13px;color:var(--muted);max-width:76ch}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#C9CEDB;font-size:14px}
+
+@media (max-width:900px){
+  .lab{grid-template-columns:minmax(0,1fr)}
+  .stagecol{top:0;z-index:5;background:var(--bg);padding:8px 0}
+  .stage{aspect-ratio:16/11}
+  .presets{flex-wrap:nowrap;overflow-x:auto}
+  .presets button{white-space:nowrap}
+  .presetnote{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">3D · three.js</p>
+    <h1>One scene, many looks</h1>
+    <p class="lede">The seed-phrase padlock (24 words, 4.5 m tall) next to the password padlock (12 characters, 17 cm) and a 1.75 m human. The geometry never changes. Everything else is an art-direction decision, and each dial below is one of them.</p>
+  </header>
+
+  <section class="lab">
+    <div class="stagecol">
+      <div class="stage" id="stage">
+        <div class="tags" id="tags"></div>
+        <p class="hint">Drag to orbit</p>
+      </div>
+      <div class="presets" id="presets" role="group" aria-label="Look presets"></div>
+      <p class="presetnote" id="presetnote"></p>
+    </div>
+    <div class="controls" id="controls"></div>
+  </section>
+
+  <section>
+    <h2>How people who do this for a living think about it</h2>
+    <div class="prose">
+      <div><h3>Pick the genre first</h3><p><b>Material family and palette come before geometry.</b> A glossy metal lock, a toon lock and a halftone lock are three different projects built from the same mesh.</p></div>
+      <div><h3>Light for mood, not visibility</h3><p>Warm key, cool fill, a coloured rim from behind. <b>Complementary temperature</b> between key and fill is the cheapest way to make a render feel designed. Hard shadows say "illustration"; soft environment light says "product".</p></div>
+      <div><h3>Restrain the palette</h3><p>Four or five colours and <b>one accent</b>. In every preset the ground and background are nearly the same colour, so the horizon dissolves and the subject carries the frame.</p></div>
+      <div><h3>Grade last</h3><p>Tone mapping and exposure are the film stock and the grade. Switch to <b>None</b> and watch the highlights clip: that harshness is what an untreated three.js scene looks like.</p></div>
+      <div><h3>Post is the signature</h3><p>Bloom, grain, vignette, pixelation, dither and halftone are done <b>on the finished image</b>, so they work on any geometry. The more of them you stack, the more it is a style rather than a polish.</p></div>
+      <div><h3>Model elsewhere, display here</h3><p>Detailed work is usually built and baked in Blender, exported as glTF, and three.js just stages it. Procedural scenes like this one trade fidelity for total control and tiny file size. <b>Lens, depth of field and real photography</b> deserve their own page.</p></div>
+    </div>
+  </section>
+
+  <p class="foot">Scale assumptions are carried over from the padlock comparison: 12 mm of rim per symbol, so ring radius = symbols × 12 mm ÷ 2π. The seed-phrase ring holds 1,024 words (about 1.95 m radius); the password ring holds 95 characters (about 0.15 m). Rings tick to new positions when Idle motion is on. three.js r170 from a CDN, no build step.</p>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* ---------------------------------------------------------------- data */
+
+const LABEL_H = 0.012;                                   // 12 mm of rim per symbol
+const BIG   = { kind: 'big',   symbols: 1024, rotors: 24, thick: 0.07,  gap: 0.05  };
+const SMALL = { kind: 'small', symbols: 95,   rotors: 12, thick: 0.008, gap: 0.005 };
+for (const c of [BIG, SMALL]) c.r = c.symbols * LABEL_H / (2 * Math.PI);
+
+const PALETTES = {
+  Graphite: { bg:'#b4b9c4', ground:'#b4b9c4', body:'#2f333c', shackle:'#eef1f5', paper:'#e8e4d6', ink:'#22242a', accent:'#2B3CD1', human:'#f2a154' },
+  Pastel:   { bg:'#ffe3d3', ground:'#ffd0b5', body:'#7fb2e5', shackle:'#fff1d6', paper:'#fffaf0', ink:'#3b2f4a', accent:'#ff6f91', human:'#ff9f68' },
+  Forest:   { bg:'#cfe8dc', ground:'#a9d6bc', body:'#3f7d6b', shackle:'#f1d68a', paper:'#f6f1de', ink:'#1e3a34', accent:'#e4572e', human:'#f2a154' },
+  Neon:     { bg:'#07060f', ground:'#07060f', body:'#2a2370', shackle:'#3cf0ff', paper:'#14112e', ink:'#3cf0ff', accent:'#ff3cac', human:'#ffe66d', line:'#3cf0ff' },
+  Paper:    { bg:'#efe9dc', ground:'#efe9dc', body:'#b9b2a2', shackle:'#f7f3ea', paper:'#f7f3ea', ink:'#1a1a1a', accent:'#1a1a1a', human:'#d9d2c0' },
+  Sunset:   { bg:'#3b1f4a', ground:'#5a2d5e', body:'#f67e7d', shackle:'#ffb997', paper:'#ffe5d0', ink:'#2a1b3d', accent:'#ffdd94', human:'#ffe66d' },
+};
+
+const TONE = {
+  None: THREE.NoToneMapping, Linear: THREE.LinearToneMapping, Reinhard: THREE.ReinhardToneMapping,
+  Cineon: THREE.CineonToneMapping, ACES: THREE.ACESFilmicToneMapping, AgX: THREE.AgXToneMapping, Neutral: THREE.NeutralToneMapping,
+};
+
+const ANGLES = {
+  low:     new THREE.Vector3(0.35, 0.06, 1),
+  front:   new THREE.Vector3(0, 0.12, 1),
+  quarter: new THREE.Vector3(0.45, 0.42, 1),
+  iso:     new THREE.Vector3(1, 1, 1),
+  top:     new THREE.Vector3(0, 1, 0.14),
+};
+for (const v of Object.values(ANGLES)) v.normalize();
+
+const BASE = {
+  mat:'pbr', outline:false, lineW:2.5, lowpoly:false, pal:'Graphite',
+  light:'studio', warmth:0.15, azimuth:35, shadows:true,
+  angle:'quarter', view:'all', fov:30, ortho:false, zoom:1,
+  tone:'ACES', exposure:1, fog:0.3,
+  bloom:0, ca:0, vignette:0.2, grain:0.04, pixel:1, poster:0, dither:false, halftone:0,
+  motion:true,
+};
+
+const PRESETS = [
+  { name:'Studio product', note:'<b>Glossy PBR under an environment map, ACES tone mapping, long lens, a vignette to hold the eye.</b> The reference look every product configurator is chasing. Detail comes from reflections, not geometry.',
+    set:{ bloom:0.12, vignette:0.35 } },
+  { name:'Toon ink', note:'<b>Three-step toon ramp, a screen-space ink outline and one hard key light.</b> Flat steps of tone plus a line is what makes it read as illustration instead of render.',
+    set:{ mat:'toon', outline:true, lineW:2.5, pal:'Pastel', light:'single', warmth:0.35, azimuth:50, fov:35, tone:'Neutral', fog:0.15, vignette:0.1, grain:0.02, angle:'quarter' } },
+  { name:'Low-poly diorama', note:'<b>Faceted geometry, matte shading, orthographic isometric camera.</b> Removing perspective turns the scene into a miniature. Fog does the depth work.',
+    set:{ mat:'matte', lowpoly:true, pal:'Forest', light:'three', warmth:0.4, azimuth:55, ortho:true, angle:'iso', tone:'AgX', fog:0.2, vignette:0.15, grain:0.03 } },
+  { name:'Neon grid', note:'<b>A fresnel rim shader on near-black, a grid floor, heavy bloom and a touch of chromatic aberration.</b> No lights matter here: the look is the shader plus post.',
+    set:{ mat:'fresnel', pal:'Neon', light:'back', angle:'low', fov:38, tone:'ACES', exposure:1.15, fog:0, shadows:false, bloom:1.1, ca:0.35, vignette:0.55, grain:0.06 } },
+  { name:'Retro 3D', note:'<b>Chunky low-poly, 4 px pixelation, six-level posterize with ordered dither.</b> A PS1-era feel from three small post settings, with no texture work at all.',
+    set:{ mat:'matte', lowpoly:true, pal:'Sunset', light:'single', warmth:0.5, azimuth:40, fov:55, angle:'quarter', tone:'None', fog:0.4, pixel:4, poster:6, dither:true, vignette:0.25, grain:0.05 } },
+  { name:'Halftone print', note:'<b>The finished image runs through the halftone pass from the halftone notebook</b>: two inks, no gradients. Lighting still matters, because it decides where the dots grow.',
+    set:{ mat:'matte', outline:true, lineW:2, pal:'Paper', light:'single', warmth:0, azimuth:45, ortho:true, angle:'iso', tone:'Neutral', fog:0, halftone:1, vignette:0, grain:0 } },
+];
+
+const state = Object.assign({}, BASE);
+let presetIdx = 0;
+
+/* --------------------------------------------------------- renderer */
+
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+renderer.setPixelRatio(DPR);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(PALETTES.Graphite.bg);
+scene.fog = new THREE.FogExp2(PALETTES.Graphite.bg, 0);
+
+const persp = new THREE.PerspectiveCamera(30, 1.6, 0.1, 1000);
+const orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+let cam = persp;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* ------------------------------------------------------- post stack */
+
+const FinalShader = {
+  uniforms: {
+    tDiffuse:{ value:null }, uRes:{ value:new THREE.Vector2(1,1) }, uPixel:{ value:1 }, uPoster:{ value:0 }, uDither:{ value:0 },
+    uHalf:{ value:0 }, uCell:{ value:6 }, uInk:{ value:new THREE.Color() }, uPaper:{ value:new THREE.Color() },
+    uGrain:{ value:0 }, uVig:{ value:0 }, uCA:{ value:0 }, uTime:{ value:0 },
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform vec2 uRes;
+    uniform float uPixel, uPoster, uDither, uHalf, uCell, uGrain, uVig, uCA, uTime;
+    uniform vec3 uInk, uPaper; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    float bayer4(vec2 p){
+      int x = int(mod(p.x,4.0)); int y = int(mod(p.y,4.0));
+      float m[16] = float[16](0.,8.,2.,10., 12.,4.,14.,6., 3.,11.,1.,9., 15.,7.,13.,5.);
+      return m[x + y*4] / 16.0;
+    }
+    void main(){
+      vec2 frag = gl_FragCoord.xy;
+      vec2 snapped = uPixel > 1.0 ? (floor(frag / uPixel) + 0.5) * uPixel : frag;
+      vec2 uv = snapped / uRes;
+      vec2 d = uv - 0.5;
+      vec3 col;
+      if (uCA > 0.0) {
+        vec2 o = d * uCA * 0.03;
+        col = vec3(texture2D(tDiffuse, uv + o).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - o).b);
+      } else col = texture2D(tDiffuse, uv).rgb;
+      if (uHalf > 0.0) {
+        float lum = clamp((dot(col, vec3(0.299,0.587,0.114)) - 0.05) / 0.85, 0.0, 1.0);
+        vec2 p = mat2(0.9553,0.2955,-0.2955,0.9553) * frag / uCell;
+        float dd = length(fract(p) - 0.5);
+        float rad = sqrt(clamp(1.0 - lum, 0.0, 1.0)) * 0.72;
+        float m = smoothstep(rad + 0.07, rad - 0.07, dd);
+        col = mix(col, mix(uPaper, uInk, m), uHalf);
+      }
+      if (uPoster > 1.0) {
+        float n = uPoster - 1.0;
+        float b = uDither > 0.5 ? (bayer4(floor(frag / max(uPixel,1.0))) - 0.5) / n : 0.0;
+        col = floor((col + b) * n + 0.5) / n;
+      }
+      col *= 1.0 - uVig * smoothstep(0.3, 0.95, length(d * vec2(1.25, 1.0)));
+      col += (hash(frag + uTime * 60.0) - 0.5) * uGrain;
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+};
+
+const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+const renderPass = new RenderPass(scene, cam);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0, 0.55, 0.85);
+const finalPass = new ShaderPass(FinalShader);
+composer.addPass(renderPass);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+composer.addPass(finalPass);
+
+/* --------------------------------------------------------- lights */
+
+const lightTarget = new THREE.Object3D();
+scene.add(lightTarget);
+function dirLight() { const l = new THREE.DirectionalLight(0xffffff, 0); l.target = lightTarget; l.shadow.mapSize.set(4096, 4096); l.shadow.camera.near = 1; l.shadow.camera.far = 140; scene.add(l); return l; }
+const key = dirLight(), fill = dirLight(), rim = dirLight();
+const hemi = new THREE.HemisphereLight(0xffffff, 0x445566, 0);
+scene.add(hemi);
+let keyDir = new THREE.Vector3(), fillDir = new THREE.Vector3(), rimDir = new THREE.Vector3();
+let shadowCaster = key, shadowHalf = 0;
+
+const RIGS = {
+  studio: { env:1.0,  key:2.2, fill:0,   rim:0,   hemi:0   },
+  three:  { env:0.25, key:3.0, fill:1.0, rim:2.4, hemi:0.35 },
+  single: { env:0.08, key:4.2, fill:0,   rim:0,   hemi:0.2  },
+  back:   { env:0.12, key:0.6, fill:0.2, rim:5.0, hemi:0.15 },
+};
+
+function sph(az, el) { const a = az * Math.PI/180, e = el * Math.PI/180; return new THREE.Vector3(Math.sin(a)*Math.cos(e), Math.sin(e), Math.cos(a)*Math.cos(e)); }
+function tint(w) { // -1 cool .. +1 warm
+  const c = new THREE.Color(0xffffff);
+  return c.lerp(new THREE.Color(w >= 0 ? 0xffa95c : 0x86b2ff), Math.min(Math.abs(w), 1));
+}
+
+function applyLighting() {
+  const R = RIGS[state.light], p = PALETTES[state.pal];
+  key.color.copy(tint(state.warmth));
+  fill.color.copy(tint(-state.warmth));
+  rim.color.set(0xffffff).lerp(new THREE.Color(p.accent), 0.65);
+  key.intensity = R.key; fill.intensity = R.fill; rim.intensity = R.rim;
+  hemi.intensity = R.hemi; hemi.color.copy(tint(state.warmth * 0.5)); hemi.groundColor.set(p.ground);
+  scene.environmentIntensity = R.env;
+  keyDir = sph(state.azimuth, 52);
+  fillDir = sph(state.azimuth - 120, 20);
+  rimDir = sph(state.azimuth + 180, 35);
+  shadowCaster = state.light === 'back' ? rim : key;
+  for (const l of [key, fill, rim]) l.castShadow = false;
+  shadowCaster.castShadow = state.shadows;
+}
+
+/* --------------------------------------------------------- textures */
+
+const toonRamp = (() => {
+  const t = new THREE.DataTexture(new Uint8Array([70, 150, 255]), 3, 1, THREE.RedFormat);
+  t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t;
+})();
+
+function rotorTexture(cfg, p, glyphs) {
+  const slots = glyphs.length, slotPx = cfg === BIG ? 64 : 96;
+  const thickPx = Math.round(slotPx * cfg.thick / LABEL_H);
+  const c = document.createElement('canvas');
+  c.width = slots * slotPx; c.height = thickPx;
+  const x = c.getContext('2d');
+  x.fillStyle = p.paper; x.fillRect(0, 0, c.width, c.height);
+  const longest = Math.max(...glyphs.map(g => g.length));
+  const fs = Math.min(slotPx * 0.7, thickPx * 0.9 / (longest * 0.62));
+  x.font = `600 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  for (let i = 0; i < slots; i++) {
+    x.save();
+    x.translate((i + 0.5) * slotPx, thickPx / 2);
+    x.rotate(Math.PI / 2);
+    x.fillStyle = p.ink;
+    x.fillText(glyphs[i], 0, 0);
+    x.restore();
+    x.fillStyle = p.ink; x.globalAlpha = 0.25; x.fillRect(i * slotPx, 0, 2, thickPx); x.globalAlpha = 1;
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping;
+  t.repeat.set(cfg.symbols / slots, 1);
+  t.anisotropy = 8;
+  return t;
+}
+const WORDS = 'abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair'.split(' ');
+const CHARS = 'Aa1!Zq9#k@Mx7$bRe4%'.split('');
+let texBig, texSmall, texPal = null;
+
+function matcapTexture(hex) {
+  const s = 256, c = document.createElement('canvas'); c.width = c.height = s;
+  const x = c.getContext('2d'), base = new THREE.Color(hex);
+  const shade = t => base.clone().lerp(new THREE.Color(t > 0 ? 0xffffff : 0x000000), Math.abs(t)).getStyle();
+  const g = x.createRadialGradient(s*.36, s*.30, s*.02, s/2, s/2, s*.52);
+  g.addColorStop(0, shade(.7)); g.addColorStop(.22, shade(.2)); g.addColorStop(.62, shade(0)); g.addColorStop(.92, shade(-.5)); g.addColorStop(1, shade(-.65));
+  x.fillStyle = g; x.fillRect(0, 0, s, s);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+/* -------------------------------------------------------- materials */
+
+const fresnelVS = `varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+  void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vUv = uv; gl_Position = projectionMatrix * mv; }`;
+const fresnelFS = `uniform vec3 uBase; uniform vec3 uRim; uniform float uPow; uniform float uGlow; uniform sampler2D uMap; uniform float uHasMap;
+  varying vec3 vN; varying vec3 vV; varying vec2 vUv;
+  void main(){
+    float f = pow(1.0 - clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0), uPow);
+    vec3 base = uBase; if (uHasMap > 0.5) base *= texture2D(uMap, vUv).rgb;
+    gl_FragColor = vec4(mix(base, uRim * uGlow, f), 1.0);
+  }`;
+function fresnelMat(base, rim, { glow = 2.4, pow = 2.2, map = null } = {}) {
+  return new THREE.ShaderMaterial({
+    vertexShader: fresnelVS, fragmentShader: fresnelFS,
+    uniforms: { uBase:{ value:new THREE.Color(base) }, uRim:{ value:new THREE.Color(rim) }, uPow:{ value:pow }, uGlow:{ value:glow }, uMap:{ value:map }, uHasMap:{ value:map ? 1 : 0 } },
+  });
+}
+function gridMat(base, line) {
+  return new THREE.ShaderMaterial({
+    vertexShader: `varying vec3 vW; void main(){ vW = (modelMatrix * vec4(position,1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vW,1.0); }`,
+    fragmentShader: `uniform vec3 uBase; uniform vec3 uLine; varying vec3 vW;
+      void main(){
+        vec2 c = vW.xz * 0.5; vec2 g = abs(fract(c - 0.5) - 0.5) / fwidth(c);
+        float l = 1.0 - min(min(g.x, g.y), 1.0);
+        l *= exp(-length(vW.xz) * 0.045);
+        gl_FragColor = vec4(mix(uBase, uLine * 1.6, l), 1.0);
+      }`,
+    uniforms: { uBase:{ value:new THREE.Color(base) }, uLine:{ value:new THREE.Color(line) } },
+  });
+}
+const outlineMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms: { uRes:{ value:new THREE.Vector2(1,1) }, uPx:{ value:2.5 }, uColor:{ value:new THREE.Color(0x000000) } },
+  vertexShader: `uniform vec2 uRes; uniform float uPx;
+    void main(){
+      vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      vec3 nv = normalize(normalMatrix * normal);
+      vec2 nd = (projectionMatrix * vec4(nv, 0.0)).xy;
+      clip.xy += normalize(nd + 1e-5) * uPx * 2.0 / uRes * clip.w;
+      gl_Position = clip;
+    }`,
+  fragmentShader: `uniform vec3 uColor; void main(){ gl_FragColor = vec4(uColor, 1.0); }`,
+});
+
+let matSet = null, unlitGround = false;
+const mix = (hex, to, t) => '#' + new THREE.Color(hex).lerp(new THREE.Color(to), t).getHexString();
+
+function buildMaterialSet() {
+  const p = PALETTES[state.pal], kind = state.mat;
+  const spec = {
+    body:     { color:p.body,    metal:.85, rough:.3 },
+    shackle:  { color:p.shackle, metal:.9,  rough:.22 },
+    cap:      { color:mix(p.body, '#000000', .6), metal:.2, rough:.7 },
+    human:    { color:p.human,   metal:0,   rough:.8 },
+    ground:   { color:p.ground,  metal:0,   rough:1 },
+  };
+  const lit = (color, o) => {
+    switch (kind) {
+      case 'pbr':    return new THREE.MeshStandardMaterial({ color, map:o.map, metalness:o.map ? .15 : o.metal, roughness:o.map ? .5 : o.rough });
+      case 'matte':  return new THREE.MeshLambertMaterial({ color, map:o.map });
+      case 'toon':   return new THREE.MeshToonMaterial({ color, map:o.map, gradientMap:toonRamp });
+      case 'matcap': return new THREE.MeshMatcapMaterial({ color:0xffffff, map:o.map, matcap:matcapTexture(o.map ? '#ffffff' : color) });
+      case 'flat':   return new THREE.MeshBasicMaterial({ color, map:o.map });
+    }
+  };
+  const S = {};
+  unlitGround = (kind === 'matcap' || kind === 'flat');
+  if (kind === 'fresnel') {
+    S.body    = fresnelMat(mix(p.body, '#000000', .55), p.accent, { glow:2.6 });
+    S.shackle = fresnelMat(mix(p.shackle, '#000000', .75), p.shackle, { glow:3.2, pow:1.6 });
+    S.cap     = fresnelMat('#050510', p.accent, { glow:1.4 });
+    S.human   = fresnelMat(mix(p.human, '#000000', .8), p.human, { glow:2.4 });
+    S.rotorBig   = [fresnelMat('#9a9ab0', p.accent, { glow:2.2, map:texBig }),   S.cap, S.cap];
+    S.rotorSmall = [fresnelMat('#9a9ab0', p.accent, { glow:2.2, map:texSmall }), S.cap, S.cap];
+    S.ground  = gridMat(p.ground, p.accent);
+  } else {
+    S.body = lit(spec.body.color, spec.body); S.shackle = lit(spec.shackle.color, spec.shackle);
+    S.cap = lit(spec.cap.color, spec.cap); S.human = lit(spec.human.color, spec.human);
+    S.rotorBig   = [lit('#ffffff', { map:texBig }),   S.cap, S.cap];
+    S.rotorSmall = [lit('#ffffff', { map:texSmall }), S.cap, S.cap];
+    S.ground = unlitGround ? new THREE.MeshBasicMaterial({ color:p.ground }) : lit(spec.ground.color, spec.ground);
+  }
+  return S;
+}
+
+function applyMaterials() {
+  const p = PALETTES[state.pal];
+  if (texPal !== state.pal) {
+    texBig?.dispose(); texSmall?.dispose();
+    texBig = rotorTexture(BIG, p, WORDS); texSmall = rotorTexture(SMALL, p, CHARS); texPal = state.pal;
+  }
+  const old = matSet;
+  matSet = buildMaterialSet();
+  world.traverse(o => { if (o.userData.role) o.material = matSet[o.userData.role]; });
+  ground.material = matSet.ground;
+  shadowPlane.visible = unlitGround;
+  if (old) {
+    const seen = new Set();
+    for (const m of Object.values(old).flat()) if (!seen.has(m)) { seen.add(m); m.map?.dispose?.(); m.matcap?.dispose?.(); m.dispose(); }
+  }
+  scene.background.set(p.bg); scene.fog.color.set(p.bg);
+  outlineMat.uniforms.uColor.value.set(p.line || p.ink);
+  finalPass.uniforms.uInk.value.setHex(parseInt(p.ink.slice(1), 16), THREE.LinearSRGBColorSpace);
+  finalPass.uniforms.uPaper.value.setHex(parseInt(p.paper.slice(1), 16), THREE.LinearSRGBColorSpace);
+  applyLighting();
+}
+
+/* ---------------------------------------------------------- the world */
+
+const world = new THREE.Group();
+scene.add(world);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshBasicMaterial());
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+scene.add(ground);
+const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.ShadowMaterial({ opacity: 0.3 }));
+shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = 0.002; shadowPlane.receiveShadow = true; shadowPlane.visible = false;
+scene.add(shadowPlane);
+
+let rotors = [], boxes = {}, anchors = {}, outlines = [];
+
+function faceted(g, lowpoly) { if (!lowpoly) return g; const n = g.toNonIndexed(); n.computeVertexNormals(); g.dispose(); return n; }
+function hullOf(g) {
+  const h = new THREE.BufferGeometry();
+  h.setAttribute('position', g.attributes.position.clone());
+  if (g.index) h.setIndex(g.index.clone());
+  const m = mergeVertices(h, 1e-4); m.computeVertexNormals(); return m;
+}
+function part(parent, geo, role, hull) {
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial());
+  m.userData.role = role; m.castShadow = true; m.receiveShadow = true;
+  const o = new THREE.Mesh(hull || hullOf(geo), outlineMat);
+  o.visible = state.outline; o.userData.outline = true; m.add(o); outlines.push(o);
+  parent.add(m); return m;
+}
+
+function buildLock(cfg, lowpoly) {
+  const g = new THREE.Group(), big = cfg === BIG;
+  const r = cfg.r, th = cfg.thick, gap = cfg.gap, n = cfg.rotors, total = n * (th + gap);
+  const bodyD = r * 1.3, bodyH = r * 2.3, bodyW = total + (big ? 1 : r * 1.2);
+  const shR = big ? total * 0.35 : r * 0.85, tube = shR * 0.18;
+  const radial = lowpoly ? (big ? 16 : 10) : 64;
+
+  const body = part(g, faceted(new THREE.BoxGeometry(bodyW, bodyH, bodyD), lowpoly), 'body');
+  body.position.set(0, 0, -th);
+  const topY = bodyH / 2;
+  const arc = part(g, faceted(new THREE.TorusGeometry(shR, tube, lowpoly ? 5 : 24, lowpoly ? 8 : 64, Math.PI), lowpoly), 'shackle');
+  arc.position.set(0, topY, -th);
+  const legGeo = faceted(new THREE.CylinderGeometry(tube, tube, bodyH * 0.5, lowpoly ? 5 : 16), lowpoly), legHull = hullOf(legGeo);
+  for (const s of [-1, 1]) { const leg = part(g, legGeo, 'shackle', legHull); leg.position.set(s * shR, topY - bodyH * 0.25, -th); }
+
+  const rotorGeo = faceted(new THREE.CylinderGeometry(r, r, th, radial, 1, false), lowpoly), rotorHull = hullOf(rotorGeo);
+  const startX = -((n - 1) * (th + gap)) / 2, locks = [];
+  for (let i = 0; i < n; i++) {
+    const pivot = new THREE.Group();
+    pivot.position.set(startX + i * (th + gap), 0, r * 0.1);
+    const rm = part(pivot, rotorGeo, big ? 'rotorBig' : 'rotorSmall', rotorHull);
+    rm.rotation.z = Math.PI / 2;
+    g.add(pivot);
+    locks.push({ pivot, target: 0, slot: 2 * Math.PI / cfg.symbols, big });
+  }
+  const b = new THREE.Box3().setFromObject(g);
+  g.position.y -= b.min.y;
+  return { group: g, bodyW, bodyH, rotors: locks };
+}
+
+function buildHuman(lowpoly) {
+  const g = new THREE.Group(), seg = lowpoly ? 6 : 16;
+  const legH = 0.85, torsoH = 0.6, headR = 0.13;
+  const legs = part(g, faceted(new THREE.CylinderGeometry(0.11, 0.09, legH, lowpoly ? 6 : 12), lowpoly), 'human'); legs.position.y = legH / 2;
+  const torso = part(g, faceted(new THREE.CylinderGeometry(0.14, 0.17, torsoH, lowpoly ? 6 : 12), lowpoly), 'human'); torso.position.y = legH + torsoH / 2;
+  const head = part(g, faceted(new THREE.SphereGeometry(headR, seg, seg), lowpoly), 'human'); head.position.y = legH + torsoH + headR;
+  return g;
+}
+
+function buildWorld() {
+  world.traverse(o => { if (o.isMesh && !o.userData.outline) { /* geometry shared with hulls: dispose both */ o.geometry.dispose(); } else if (o.isMesh) o.geometry.dispose(); });
+  world.clear(); outlines = []; rotors = [];
+  const big = buildLock(BIG, state.lowpoly), small = buildLock(SMALL, state.lowpoly), human = buildHuman(state.lowpoly);
+  big.group.position.x = -(big.bodyW / 2 + 1.6);
+  small.group.position.x = small.bodyW / 2 + 1.0;
+  human.position.set(0, 0, 0.4);
+  world.add(big.group, small.group, human);
+  rotors = big.rotors.concat(small.rotors);
+  world.updateMatrixWorld(true);
+  boxes = { big: new THREE.Box3().setFromObject(big.group), small: new THREE.Box3().setFromObject(small.group), human: new THREE.Box3().setFromObject(human) };
+  boxes.all = boxes.big.clone().union(boxes.small).union(boxes.human);
+  const top = b => new THREE.Vector3((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2);
+  anchors = { big: top(boxes.big), small: top(boxes.small), human: top(boxes.human) };
+  for (const o of outlines) o.visible = state.outline;
+  if (matSet) world.traverse(o => { if (o.userData.role) o.material = matSet[o.userData.role]; });
+}
+
+/* ---------------------------------------------------------- camera */
+
+const controls = new OrbitControls(cam, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.enableZoom = false; controls.enablePan = false;
+controls.minPolarAngle = 0.04; controls.maxPolarAngle = Math.PI / 2 - 0.015;
+controls.autoRotateSpeed = 0.5;
+
+const cur = { center: new THREE.Vector3(), h: 5 };
+const dirTarget = new THREE.Vector3().copy(ANGLES.quarter);
+let dirAnim = false, snapNext = true, W = 1, H = 1;
+controls.addEventListener('start', () => { dirAnim = false; });
+
+function viewWanted() {
+  const b = boxes[state.view], size = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
+  const pad = state.view === 'small' ? 1.5 : state.view === 'big' ? 1.35 : 1.4;
+  const aspect = W / H;
+  return { center: c, h: Math.max(size.y / 2 * pad, size.x / 2 * pad / aspect) * state.zoom };
+}
+
+function setCamera(next) {
+  if (next === cam) return;
+  next.position.copy(cam.position); next.quaternion.copy(cam.quaternion);
+  cam = next; controls.object = cam; renderPass.camera = cam;
+}
+
+function updateCamera(dt) {
+  setCamera(state.ortho ? orthoCam : persp);
+  const want = viewWanted(), k = snapNext ? 1 : 1 - Math.exp(-dt * 6);
+  cur.center.lerp(want.center, k); cur.h += (want.h - cur.h) * k;
+  controls.target.copy(cur.center);
+  const dir = cam.position.clone().sub(controls.target).normalize();
+  if (snapNext) dir.copy(dirTarget);
+  else if (dirAnim) { dir.lerp(dirTarget, k).normalize(); if (dir.distanceTo(dirTarget) < 1e-3) dirAnim = false; }
+  const aspect = W / H, dist = state.ortho ? 80 : cur.h / Math.tan(THREE.MathUtils.degToRad(state.fov) / 2);
+  cam.position.copy(controls.target).addScaledVector(dir, dist);
+  if (cam.isPerspectiveCamera) { cam.fov = state.fov; cam.aspect = aspect; cam.near = Math.max(0.01, dist * 0.03); cam.far = dist * 80 + 200; }
+  else { cam.left = -cur.h * aspect; cam.right = cur.h * aspect; cam.top = cur.h; cam.bottom = -cur.h; cam.near = 0.1; cam.far = 600; }
+  cam.updateProjectionMatrix();
+  controls.autoRotate = state.motion;
+  controls.update(dt);
+  snapNext = false;
+  scene.fog.density = state.fog * 1.15 / dist;
+
+  // lights follow the view so the shadow map is spent where we are looking
+  lightTarget.position.set(cur.center.x, 0, 0);
+  const half = THREE.MathUtils.clamp(cur.h * 2.4, 2.5, 14);
+  key.position.copy(lightTarget.position).addScaledVector(keyDir, 50);
+  fill.position.copy(lightTarget.position).addScaledVector(fillDir, 50);
+  rim.position.copy(lightTarget.position).addScaledVector(rimDir, 50);
+  if (Math.abs(half - shadowHalf) > shadowHalf * 0.02) {
+    shadowHalf = half;
+    for (const l of [key, rim]) { const c = l.shadow.camera; c.left = c.bottom = -half; c.right = c.top = half; c.updateProjectionMatrix(); l.shadow.bias = -0.0004; l.shadow.normalBias = half * 0.0012; l.shadow.radius = 3; }
+  }
+}
+
+/* ------------------------------------------------------------- motion */
+
+let nextTick = 0;
+function tickRotors(dt, t) {
+  if (state.motion && t > nextTick && rotors.length) {
+    nextTick = t + 0.3 + Math.random() * 0.45;
+    const r = rotors[Math.floor(Math.random() * rotors.length)];
+    r.target += (Math.random() < 0.5 ? -1 : 1) * r.slot * (r.big ? 12 + Math.floor(Math.random() * 60) : 2 + Math.floor(Math.random() * 7));
+  }
+  const k = 1 - Math.exp(-dt * 5);
+  for (const r of rotors) r.pivot.rotation.x += (r.target - r.pivot.rotation.x) * k;
+}
+
+/* ----------------------------------------------------- labels (HTML) */
+
+const tagsEl = document.getElementById('tags');
+const TAGS = [
+  ['big', 'Seed phrase · 24 words'],
+  ['small', 'Password · 12 chars'],
+  ['human', 'Human · 1.75 m'],
+].map(([k, text]) => { const s = document.createElement('span'); s.textContent = text; tagsEl.appendChild(s); return { k, el: s }; });
+const _v = new THREE.Vector3();
+function updateTags() {
+  for (const t of TAGS) {
+    _v.copy(anchors[t.k]); _v.y += t.k === 'small' ? 0.05 : t.k === 'human' ? 0.1 : 0.25; _v.project(cam);
+    const on = _v.z < 1 && Math.abs(_v.x) < 1.05 && Math.abs(_v.y) < 1.05;
+    t.el.style.display = on ? '' : 'none';
+    if (on) t.el.style.transform = `translate(-50%,-110%) translate(${((_v.x * .5 + .5) * W).toFixed(1)}px,${((-_v.y * .5 + .5) * H).toFixed(1)}px)`;
+  }
+}
+
+/* ------------------------------------------------------------ resize */
+
+function resize() {
+  const r = stage.getBoundingClientRect();
+  W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
+  renderer.setSize(W, H, false);
+  composer.setSize(W, H);
+  bloom.resolution.set(W, H);
+  finalPass.uniforms.uRes.value.set(W * DPR, H * DPR);
+  outlineMat.uniforms.uRes.value.set(W * DPR, H * DPR);
+}
+new ResizeObserver(resize).observe(stage);
+
+/* ---------------------------------------------------------------- UI */
+
+const GROUPS = [
+  { title:'Material', note:'The shading model decides the genre faster than the geometry does.', rows:[
+    { key:'mat', type:'seg', opts:[['pbr','Glossy PBR'],['matte','Matte'],['toon','Toon'],['matcap','Matcap'],['fresnel','Fresnel'],['flat','Unlit']] },
+    { key:'outline', type:'toggle', label:'Ink outline' },
+    { key:'lineW', type:'range', label:'Line width', min:1, max:6, step:.5, fmt:v => v + ' px' },
+    { key:'lowpoly', type:'toggle', label:'Low-poly facets' },
+  ]},
+  { title:'Palette', note:'Four or five colours and one accent. Restraint reads as taste.', rows:[ { key:'pal', type:'swatch' } ]},
+  { title:'Light', note:'Direction and temperature set the mood. Studio uses an environment map instead of lamps.', rows:[
+    { key:'light', type:'seg', opts:[['studio','Studio env'],['three','Three-point'],['single','Single key'],['back','Backlit']] },
+    { key:'warmth', type:'range', label:'Key temperature', min:-1, max:1, step:.05, fmt:v => v === 0 ? 'neutral' : v > 0 ? 'warm ' + Math.round(v * 100) : 'cool ' + Math.round(-v * 100) },
+    { key:'azimuth', type:'range', label:'Key direction', min:0, max:360, step:5, fmt:v => v + '°' },
+    { key:'shadows', type:'toggle', label:'Cast shadows' },
+  ]},
+  { title:'Camera', note:'Only the big switches here. Lens, depth of field and photographic framing belong to a later page.', rows:[
+    { key:'angle', type:'seg', opts:[['low','Low hero'],['front','Front'],['quarter','Three-quarter'],['iso','Isometric'],['top','Top']] },
+    { key:'view', type:'seg', opts:[['all','All three'],['big','Seed phrase'],['small','Password']] },
+    { key:'fov', type:'range', label:'Field of view', min:8, max:90, step:1, fmt:v => v + '°', hint:'Dolly-compensated: the framing stays put while perspective changes.' },
+    { key:'ortho', type:'toggle', label:'Orthographic (no perspective)' },
+    { key:'zoom', type:'range', label:'Distance', min:0.3, max:2, step:.05, fmt:v => '×' + v.toFixed(2) },
+  ]},
+  { title:'Colour and atmosphere', note:'Tone mapping is the film stock. Fog separates foreground from background.', rows:[
+    { key:'tone', type:'seg', opts:Object.keys(TONE).map(k => [k, k]) },
+    { key:'exposure', type:'range', label:'Exposure', min:0.3, max:2.5, step:.05, fmt:v => v.toFixed(2) },
+    { key:'fog', type:'range', label:'Fog', min:0, max:1, step:.05, fmt:v => v.toFixed(2) },
+  ]},
+  { title:'Post-processing', note:'Applied to the finished image, so it works on any geometry. The order is: bloom, tone map, then these.', rows:[
+    { key:'bloom', type:'range', label:'Bloom', min:0, max:2, step:.05, fmt:v => v.toFixed(2) },
+    { key:'ca', type:'range', label:'Chromatic aberration', min:0, max:1, step:.05, fmt:v => v.toFixed(2) },
+    { key:'vignette', type:'range', label:'Vignette', min:0, max:1, step:.05, fmt:v => v.toFixed(2) },
+    { key:'grain', type:'range', label:'Film grain', min:0, max:.3, step:.01, fmt:v => v.toFixed(2) },
+    { key:'pixel', type:'range', label:'Pixelate', min:1, max:12, step:1, fmt:v => v === 1 ? 'off' : v + ' px' },
+    { key:'poster', type:'range', label:'Posterize levels', min:0, max:8, step:1, fmt:v => v < 2 ? 'off' : v },
+    { key:'dither', type:'toggle', label:'Ordered dither (with posterize)' },
+    { key:'halftone', type:'range', label:'Halftone', min:0, max:1, step:.05, fmt:v => v.toFixed(2) },
+  ]},
+  { title:'Motion', note:'Small, eased movement keeps a still scene alive.', rows:[
+    { key:'motion', type:'toggle', label:'Idle motion (rings tick, slow orbit)' },
+  ]},
+];
+
+const controlsEl = document.getElementById('controls');
+const setters = {};   // key -> fn(value) that syncs the DOM
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+for (const g of GROUPS) {
+  const box = el('section', 'group');
+  box.append(el('h3', '', g.title), el('p', 'gnote', g.note));
+  for (const r of g.rows) {
+    if (r.type === 'seg') {
+      const row = el('div', 'row'), seg = el('div', 'seg');
+      const btns = r.opts.map(([v, label]) => { const b = el('button', '', label); b.type = 'button'; b.onclick = () => change(r.key, v); seg.append(b); return [v, b]; });
+      row.append(seg); box.append(row);
+      setters[r.key] = val => btns.forEach(([v, b]) => b.setAttribute('aria-pressed', String(v === val)));
+    } else if (r.type === 'swatch') {
+      const row = el('div', 'row'), sw = el('div', 'swatches');
+      const btns = Object.entries(PALETTES).map(([name, p]) => {
+        const b = el('button'); b.type = 'button'; b.onclick = () => change('pal', name);
+        const chips = el('span', 'chips'); for (const c of [p.bg, p.body, p.shackle, p.paper, p.accent]) { const i = el('i'); i.style.background = c; chips.append(i); }
+        b.append(chips, document.createTextNode(name)); sw.append(b); return [name, b];
+      });
+      row.append(sw); box.append(row);
+      setters.pal = val => btns.forEach(([n, b]) => b.setAttribute('aria-pressed', String(n === val)));
+    } else if (r.type === 'toggle') {
+      const lab = el('label', 'toggle'), cb = el('input'); cb.type = 'checkbox';
+      cb.onchange = () => change(r.key, cb.checked);
+      lab.append(cb, document.createTextNode(r.label)); box.append(lab);
+      setters[r.key] = val => { cb.checked = !!val; };
+    } else if (r.type === 'range') {
+      const row = el('div', 'row'), lab = el('div', 'lab'), out = el('output');
+      const input = el('input'); input.type = 'range'; input.min = r.min; input.max = r.max; input.step = r.step; input.setAttribute('aria-label', r.label);
+      lab.append(el('span', '', r.label), out);
+      input.oninput = () => change(r.key, parseFloat(input.value));
+      row.append(lab, input); if (r.hint) row.append(el('p', 'gnote', r.hint)); box.append(row);
+      setters[r.key] = val => { input.value = val; out.textContent = r.fmt(val); };
+    }
+  }
+  controlsEl.append(box);
+}
+
+const presetsEl = document.getElementById('presets'), presetNote = document.getElementById('presetnote');
+const presetBtns = PRESETS.map((p, i) => { const b = el('button', '', p.name); b.type = 'button'; b.onclick = () => applyPreset(i); presetsEl.append(b); return b; });
+
+function syncUI() { for (const [k, fn] of Object.entries(setters)) fn(state[k]); }
+function markPreset(i) {
+  presetIdx = i;
+  presetBtns.forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+  presetNote.innerHTML = i >= 0 ? PRESETS[i].note : '<b>Custom.</b> You have left the preset. Pick one to reset all dials.';
+}
+
+const MAT_KEYS = new Set(['mat', 'pal']);
+const LIGHT_KEYS = new Set(['light', 'warmth', 'azimuth', 'shadows']);
+
+function change(key, val) {
+  state[key] = val;
+  if (key === 'lowpoly') { buildWorld(); applyMaterials(); }
+  else if (MAT_KEYS.has(key)) applyMaterials();
+  else if (LIGHT_KEYS.has(key)) applyLighting();
+  else if (key === 'outline') outlines.forEach(o => { o.visible = val; });
+  else if (key === 'angle') { dirTarget.copy(ANGLES[val]); dirAnim = true; }
+  setters[key]?.(val);
+  markPreset(-1);
+}
+
+function applyPreset(i) {
+  const lowChanged = PRESETS[i].set.lowpoly !== undefined ? PRESETS[i].set.lowpoly !== state.lowpoly : state.lowpoly !== BASE.lowpoly;
+  Object.assign(state, BASE, PRESETS[i].set);
+  if (lowChanged) buildWorld();
+  applyMaterials();
+  outlines.forEach(o => { o.visible = state.outline; });
+  dirTarget.copy(ANGLES[state.angle]); dirAnim = true;
+  syncUI(); markPreset(i);
+}
+
+/* -------------------------------------------------------------- loop */
+
+const clock = new THREE.Clock();
+let elapsed = 0;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.1); elapsed += dt;
+  tickRotors(dt, elapsed);
+  updateCamera(dt);
+  renderer.toneMapping = TONE[state.tone];
+  renderer.toneMappingExposure = state.exposure;
+  bloom.strength = state.bloom; bloom.enabled = state.bloom > 0.01;
+  outlineMat.uniforms.uPx.value = state.lineW * DPR;
+  const u = finalPass.uniforms;
+  u.uPixel.value = Math.max(1, state.pixel) * DPR; u.uPoster.value = state.poster; u.uDither.value = state.dither ? 1 : 0;
+  u.uHalf.value = state.halftone; u.uCell.value = 6 * DPR; u.uGrain.value = state.grain; u.uVig.value = state.vignette; u.uCA.value = state.ca; u.uTime.value = elapsed % 100;
+  composer.render();
+  updateTags();
+}
+
+/* ------------------------------------------------------------- start */
+
+try {
+  resize();
+  buildWorld();
+  applyPreset(0);
+  window.__studio = { state, applyPreset, change, THREE };
+  renderer.setAnimationLoop(frame);
+} catch (err) {
+  console.error(err);
+  const p = el('p', 'nogl', 'This page needs WebGL2. ' + err.message); stage.append(p);
+}
+</script>
+</body>
+</html>
