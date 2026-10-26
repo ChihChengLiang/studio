@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>p5.brush Gallery</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F4F1EA; --surface:#FBF9F4; --fg:#1B1A17; --muted:#6A665C; --line:#D8D2C3; --accent:#B3412A; --paper:#F5F0E0;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#14130F;--surface:#1C1B16;--fg:#ECE8DB;--muted:#9C978A;--line:#34322A;--accent:#E8795F;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding:40px max(16px,env(safe-area-inset-right)) 80px max(16px,env(safe-area-inset-left))}
+.page{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.back{font:500 12px var(--font-mono);color:var(--muted);text-decoration:none}
+.back:hover{color:var(--accent)}
+.eyebrow{margin:18px 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em}
+h2{margin:0 0 6px;font:600 26px/1.15 var(--font-display);letter-spacing:-.012em}
+.lede{margin:14px 0 0;max-width:64ch;color:var(--muted);font-size:16px}
+p{margin:0}
+code{font:.88em var(--font-mono);background:var(--surface);border:1px solid var(--line);padding:1px 5px}
+a{color:var(--accent)}
+.toc{display:flex;flex-wrap:wrap;gap:8px 18px;margin:20px 0 0;padding:0;list-style:none;font:500 13px var(--font-mono)}
+.toc a{color:var(--fg);text-decoration:none;border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+section{border-top:1px solid var(--line);padding-top:30px}
+.intro{color:var(--muted);max-width:68ch;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column}
+figure canvas{display:block;width:100%;aspect-ratio:4/3;background:var(--paper)}
+figcaption{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line)}
+figcaption b{font:600 14px var(--font-mono)}
+figcaption span{font-size:13px;color:var(--muted);line-height:1.4}
+details{font:12px/1.5 var(--font-mono)}
+summary{cursor:pointer;color:var(--accent)}
+pre{margin:6px 0 0;padding:8px;overflow-x:auto;background:var(--bg);border:1px solid var(--line);font:11.5px/1.5 var(--font-mono);white-space:pre}
+.status{font:12px var(--font-mono);color:var(--muted)}
+.err{padding:16px;border:1px solid var(--accent);color:var(--accent);display:none}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+td:first-child{font-family:var(--font-mono);white-space:nowrap}
+.tablewrap{overflow-x:auto}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <a class="back" href="../../">← Studio</a>
+    <p class="eyebrow">Images · generative drawing</p>
+    <h1>p5.brush gallery</h1>
+    <p class="lede">What <a href="https://github.com/acamposuribe/p5.brush">p5.brush</a> can draw: every built-in brush, plus the stroke, fill, hatch, vector-field and custom-brush operations. All tiles are drawn live by the library, and each one shows the code that made it.</p>
+    <ul class="toc">
+      <li><a href="#brushes">Brushes</a></li>
+      <li><a href="#strokes">Stroke ops</a></li>
+      <li><a href="#fills">Fill and wash</a></li>
+      <li><a href="#hatch">Hatch and mass</a></li>
+      <li><a href="#fields">Vector fields</a></li>
+      <li><a href="#prims">Primitives</a></li>
+      <li><a href="#custom">Custom brushes</a></li>
+      <li><a href="#ref">Cheat sheet</a></li>
+    </ul>
+    <p class="status" id="status" style="margin-top:14px">Loading p5.brush…</p>
+    <div class="err" id="err" role="alert"></div>
+  </header>
+
+  <section id="brushes"><h2>Built-in brushes</h2>
+    <p class="intro" id="brushes-intro">Each tile draws a straight line, a spline and a heavier weight with the same brush. The list comes from <code>brush.box()</code> at runtime.</p>
+    <div class="grid" id="g-brushes"></div></section>
+  <section id="strokes"><h2>Stroke operations</h2>
+    <p class="intro"><code>set</code>, <code>pick</code>, <code>stroke</code>, <code>strokeWeight</code> and <code>noStroke</code> control the stroke. Pressure on spline points, and manual strokes, shape each mark.</p>
+    <div class="grid" id="g-strokes"></div></section>
+  <section id="fills"><h2>Fill and wash</h2>
+    <p class="intro">Fill simulates watercolor: soft edges, bleed and texture. Wash is the fast solid alternative. Opacity runs 0–255.</p>
+    <div class="grid" id="g-fills"></div></section>
+  <section id="hatch"><h2>Hatch and mass</h2>
+    <p class="intro">Hatching lays parallel strokes inside any shape. Mass fills a shape the way a hand would with a dry medium, best with crayon or pastel.</p>
+    <div class="grid" id="g-hatch"></div></section>
+  <section id="fields"><h2>Vector fields</h2>
+    <p class="intro">A field bends every stroke that follows it. Each tile draws the same set of flow lines inside one named field. <code>brush.listFields()</code> returns the names.</p>
+    <div class="grid" id="g-fields"></div></section>
+  <section id="prims"><h2>Primitives</h2>
+    <p class="intro">Shapes take stroke, fill and hatch. <code>line</code>, <code>flowLine</code>, <code>spline</code> and <code>arc</code> are stroke only.</p>
+    <div class="grid" id="g-prims"></div></section>
+  <section id="custom"><h2>Custom brushes</h2>
+    <p class="intro"><code>brush.add(name, params)</code> defines a brush. Types are <code>default</code>, <code>spray</code>, <code>marker</code>, <code>custom</code> (draw the tip) and <code>image</code> (a photo as the tip, not shown here).</p>
+    <div class="grid" id="g-custom"></div></section>
+
+  <section id="ref"><h2>Cheat sheet</h2>
+    <p class="intro">Condensed from the official p5.brush <code>llms.txt</code>. Shown here for the standalone build. In the p5 build, use p5's own transforms, seeding and frame handling.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Group</th><th>Calls</th></tr></thead>
+      <tbody>
+      <tr><td>Setup</td><td><code>createCanvas</code> · <code>scaleBrushes(n)</code> · <code>angleMode</code> · <code>seed</code> · <code>noiseSeed</code> · <code>clear</code> · <code>render()</code> (required) · <code>load(target)</code></td></tr>
+      <tr><td>Transforms</td><td><code>push</code> · <code>pop</code> · <code>translate</code> · <code>rotate</code> · <code>scale</code></td></tr>
+      <tr><td>Stroke</td><td><code>set(name, color, weight)</code> · <code>pick(name)</code> · <code>stroke</code> · <code>strokeWeight</code> · <code>noStroke</code></td></tr>
+      <tr><td>Fill</td><td><code>fill(color, opacity)</code> · <code>noFill</code> · <code>fillBleed(strength, "in"|"out")</code> · <code>fillTexture(texture, border, scatter?)</code> · <code>wash</code> · <code>noWash</code></td></tr>
+      <tr><td>Hatch</td><td><code>hatch(dist, angle, {rand, continuous, gradient})</code> · <code>noHatch</code> · <code>hatchStyle(name, color, weight)</code> · <code>hatchArray</code></td></tr>
+      <tr><td>Mass</td><td><code>mass(brush, color, {precision, strength, gradient, outline})</code> · <code>noMass</code> · <code>massArray</code></td></tr>
+      <tr><td>Fields</td><td><code>field(name)</code> · <code>noField</code> · <code>wiggle(n)</code> · <code>listFields</code> · <code>refreshField(t)</code> · <code>addField(name, fn)</code></td></tr>
+      <tr><td>Lines</td><td><code>line</code> · <code>flowLine(x, y, len, dir)</code> · <code>spline(points, curvature)</code> · <code>beginStroke</code> / <code>move</code> / <code>endStroke</code></td></tr>
+      <tr><td>Shapes</td><td><code>rect(x,y,w,h,"corner"|"center")</code> · <code>circle(x,y,r,irregularity)</code> · <code>arc</code> · <code>polygon</code> · <code>beginShape</code> / <code>vertex</code> / <code>endShape</code></td></tr>
+      <tr><td>Management</td><td><code>box()</code> · <code>add(name, params)</code> · <code>clip([x1,y1,x2,y2])</code> · <code>noClip</code></td></tr>
+      <tr><td>Classes</td><td><code>Polygon</code> (draw, fill, wash, hatch, mass, intersect) · <code>Plot</code> · <code>Position</code></td></tr>
+      </tbody></table></div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/p5.brush@2.2.3/dist/brush.js"></script>
+<script>
+(function () {
+  var W = 320, H = 240;
+  var INK = '#2a2622';
+  var $ = function (id) { return document.getElementById(id); };
+  function fail(msg) { var e = $('err'); e.style.display = 'block'; e.textContent = msg; $('status').textContent = ''; }
+  if (typeof brush === 'undefined') { fail('p5.brush did not load from the CDN. Check your connection and reload.'); return; }
+
+  var queue = [], running = false, drawn = 0, total = 0;
+
+  // A tile: a canvas, a caption, and the source of the function that draws it.
+  function tile(gridId, name, note, fn) {
+    var fig = document.createElement('figure');
+    var cv = document.createElement('canvas');
+    cv.width = W * 2; cv.height = H * 2;
+    cv.setAttribute('aria-label', name + ' sample');
+    var cap = document.createElement('figcaption');
+    var b = document.createElement('b'); b.textContent = name;
+    var s = document.createElement('span'); s.textContent = note;
+    var d = document.createElement('details');
+    var sm = document.createElement('summary'); sm.textContent = 'code';
+    var pre = document.createElement('pre'); pre.textContent = dedent(fn.toString());
+    d.appendChild(sm); d.appendChild(pre);
+    cap.appendChild(b); cap.appendChild(s); cap.appendChild(d);
+    fig.appendChild(cv); fig.appendChild(cap);
+    $(gridId).appendChild(fig);
+    total++;
+    var job = { cv: cv, fn: fn };
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        if (es[0].isIntersecting) { io.disconnect(); queue.push(job); pump(); }
+      }, { rootMargin: '300px' });
+      io.observe(fig);
+    } else { queue.push(job); pump(); }
+  }
+
+  function dedent(src) {
+    var body = src.replace(/^[^{]*\{/, '').replace(/\}\s*$/, '').replace(/^\n/, '');
+    var lines = body.split('\n'), min = 99;
+    lines.forEach(function (l) { if (l.trim()) min = Math.min(min, l.match(/^ */)[0].length); });
+    return lines.map(function (l) { return l.slice(min); }).join('\n').trim();
+  }
+
+  function pump() {
+    if (running) return;
+    var job = queue.shift();
+    if (!job) return;
+    running = true;
+    setTimeout(function () {
+      try {
+        brush.clear('#F5F0E0');
+        brush.seed(7); brush.noiseSeed(7);
+        brush.push();
+        brush.translate(-W, -H);           // WEBGL origin is the centre; work from the top-left
+        brush.scale(2);                    // canvas is 2x for sharpness; draw in 320x240 units
+        brush.noStroke(); brush.noFill(); brush.noWash(); brush.noHatch(); brush.noMass(); brush.noField(); brush.noClip();
+        job.fn();
+        brush.pop();
+        brush.render();
+        job.cv.getContext('2d').drawImage(shared, 0, 0);   // copy out now: browsers drop old WebGL contexts
+      } catch (e) {
+        console.error(e);
+        job.cv.parentNode.querySelector('figcaption span').textContent = 'Could not draw: ' + e.message;
+      }
+      drawn++;
+      $('status').textContent = drawn < total ? 'Drew ' + drawn + ' of ' + total + ' samples. The rest draw as you scroll.' : 'All ' + total + ' samples drawn with p5.brush 2.2.3.';
+      running = false;
+      pump();
+    }, 0);
+  }
+
+  // Setup: create a first canvas to initialise the library, then discover brushes.
+  var shared = document.createElement('canvas');   // one WebGL canvas, copied into a 2D canvas per tile
+  shared.width = W * 2; shared.height = H * 2;
+  try {
+    brush.load(shared);
+    brush.angleMode(brush.DEGREES);
+    brush.scaleBrushes(5);
+  } catch (e) { fail('p5.brush could not start: ' + e.message); return; }
+
+  // 1 · Brushes
+  var names = brush.box();
+  $('brushes-intro').innerHTML = 'There are <b>' + names.length + '</b> built-in brushes (' + names.map(function (n) { return '<code>' + n + '</code>'; }).join(' ') + '). Each tile draws a straight line, a spline and a heavier weight with the same brush. The list comes from <code>brush.box()</code> at runtime.';
+  var BRUSH_NOTES = {
+    '2B': 'Soft, dark graphite.', 'HB': 'Medium graphite, the everyday pencil.', '2H': 'Hard, light, thin graphite.',
+    cpencil: 'Coloured pencil with visible grain.', pen: 'Clean ink pen.', rotring: 'Technical pen, even and thin.',
+    spray: 'Scattered dots, like an airbrush.', marker: 'Flat solid marker with soft tip buildup.', marker2: 'A second marker with a different tip.',
+    charcoal: 'Smudgy, grainy and dark.', hatch_brush: 'Made for clean hatching.', crayon: 'Waxy and grainy. Good for mass.', pastel: 'Soft dry pastel. Good for mass.'
+  };
+  names.forEach(function (n) {
+    tile('g-brushes', n, BRUSH_NOTES[n] || 'Built-in brush.', function () {
+      brush.set(n, '#2a2622', 1);
+      brush.line(30, 40, 290, 40);
+      brush.spline([[30, 120], [100, 80], [180, 150], [290, 100]], 0.9);
+      brush.strokeWeight(2.5);
+      brush.line(30, 200, 290, 190);
+    });
+  });
+
+  // 2 · Stroke ops
+  tile('g-strokes', 'set + weight', 'Same brush at four weight multipliers.', function () {
+    [0.5, 1, 2, 3.5].forEach(function (w, i) {
+      brush.set('2B', '#2a2622', w);
+      brush.line(30, 40 + i * 46, 290, 40 + i * 46);
+    });
+  });
+  tile('g-strokes', 'stroke colour', 'Colour comes from set() or stroke().', function () {
+    brush.set('marker', '#c0392b', 1.2); brush.line(30, 50, 290, 50);
+    brush.stroke('#2874a6'); brush.line(30, 110, 290, 110);
+    brush.stroke(40, 130, 90); brush.line(30, 170, 290, 170);
+  });
+  tile('g-strokes', 'pick', 'Switch brush, keep colour and weight.', function () {
+    brush.set('HB', '#7d3c98', 1.5);
+    ['HB', 'charcoal', 'pen', 'spray'].forEach(function (n, i) {
+      brush.pick(n);
+      brush.line(30, 40 + i * 46, 290, 40 + i * 46);
+    });
+  });
+  tile('g-strokes', 'spline pressure', 'A third value per point sets pressure along the stroke.', function () {
+    brush.set('marker', '#2a2622', 1.5);
+    brush.spline([[30, 120, 0.2], [100, 60, 1.6], [180, 180, 0.4], [290, 90, 2]], 0.9);
+  });
+  tile('g-strokes', 'manual stroke', 'beginStroke / move / endStroke steer each segment by angle and length.', function () {
+    brush.set('charcoal', '#2a2622', 1.4);
+    brush.beginStroke('curve', 40, 190);
+    brush.move(-60, 70, 1);
+    brush.move(10, 60, 1.6);
+    brush.move(-40, 70, 0.8);
+    brush.endStroke(-80, 0.2);
+  });
+  tile('g-strokes', 'wiggle', 'wiggle(n) makes every line wobble like a hand.', function () {
+    brush.set('rotring', '#2a2622', 1);
+    [0, 2, 5, 9].forEach(function (w, i) {
+      brush.wiggle(w);
+      brush.line(30, 40 + i * 46, 290, 40 + i * 46);
+    });
+  });
+
+  // 3 · Fills
+  var BLOB = [[70, 50], [250, 40], [280, 130], [210, 200], [90, 190], [40, 120]];
+  tile('g-fills', 'fill', 'Watercolor fill, 120 of 255 opacity.', function () {
+    brush.noStroke(); brush.fill('#2874a6', 120);
+    brush.polygon([[70, 50], [250, 40], [280, 130], [210, 200], [90, 190], [40, 120]]);
+  });
+  tile('g-fills', 'fillBleed out', 'Colour bleeds past the outline.', function () {
+    brush.noStroke(); brush.fill('#c0392b', 130); brush.fillBleed(0.5, 'out');
+    brush.circle(160, 120, 70, 0.3);
+  });
+  tile('g-fills', 'fillBleed in', 'Colour bleeds inward from the edge.', function () {
+    brush.noStroke(); brush.fill('#117a65', 130); brush.fillBleed(0.5, 'in');
+    brush.circle(160, 120, 70, 0.3);
+  });
+  tile('g-fills', 'fillTexture', 'Texture strength and border intensity, both 0 to 1.', function () {
+    brush.noStroke(); brush.fill('#b9770e', 140); brush.fillTexture(0.9, 0.9);
+    brush.rect(60, 50, 200, 140);
+  });
+  tile('g-fills', 'scatter off', 'fillTexture(..., false) drops the sparse edge layers.', function () {
+    brush.noStroke(); brush.fill('#b9770e', 140); brush.fillTexture(0.6, 0.6, false);
+    brush.rect(60, 50, 200, 140);
+  });
+  tile('g-fills', 'wash', 'Fast solid fill, no watercolor simulation.', function () {
+    brush.noStroke(); brush.wash('#7d3c98', 160);
+    brush.circle(160, 120, 70, 0.2);
+  });
+  tile('g-fills', 'fill + stroke', 'Shapes can carry both at once.', function () {
+    brush.set('HB', '#2a2622', 1.2); brush.fill('#e59866', 130); brush.fillBleed(0.3);
+    brush.rect(60, 50, 200, 140);
+  });
+  tile('g-fills', 'layered fills', 'Overlapping translucent fills mix like glazes.', function () {
+    brush.noStroke();
+    brush.fill('#c0392b', 90); brush.circle(125, 110, 60, 0.2);
+    brush.fill('#2874a6', 90); brush.circle(195, 110, 60, 0.2);
+    brush.fill('#f1c40f', 90); brush.circle(160, 160, 60, 0.2);
+  });
+
+  // 4 · Hatch
+  var SQ = function () { brush.rect(60, 40, 200, 160); };
+  tile('g-hatch', 'hatch', 'Spacing 8, angle 45°.', function () {
+    brush.set('HB', '#2a2622', 1); brush.hatch(8, 45);
+    brush.rect(60, 40, 200, 160);
+  });
+  tile('g-hatch', 'dense, steep', 'Spacing 4, angle 80°, pen.', function () {
+    brush.set('pen', '#2a2622', 0.8); brush.hatch(4, 80);
+    brush.circle(160, 120, 75, 0.1);
+  });
+  tile('g-hatch', 'rand', 'rand adds jitter to spacing and angle.', function () {
+    brush.set('cpencil', '#c0392b', 1); brush.hatch(9, 30, { rand: 0.6 });
+    brush.rect(60, 40, 200, 160);
+  });
+  tile('g-hatch', 'continuous', 'One unbroken line instead of separate strokes.', function () {
+    brush.set('2B', '#2a2622', 1); brush.hatch(10, 45, { continuous: true });
+    brush.rect(60, 40, 200, 160);
+  });
+  tile('g-hatch', 'gradient', 'Spacing grows across the shape.', function () {
+    brush.set('HB', '#2a2622', 1); brush.hatch(6, 60, { gradient: 0.8 });
+    brush.rect(60, 40, 200, 160);
+  });
+  tile('g-hatch', 'hatchStyle', 'Hatch with a different brush and colour than the outline.', function () {
+    brush.set('rotring', '#2a2622', 1); brush.hatchStyle('charcoal', '#2874a6', 1.2); brush.hatch(10, 20);
+    brush.circle(160, 120, 75, 0.1);
+  });
+  tile('g-hatch', 'cross-hatch', 'Draw the same shape twice at two angles.', function () {
+    brush.set('2H', '#2a2622', 1);
+    brush.hatch(8, 40); brush.rect(60, 40, 200, 160);
+    brush.hatch(8, 130); brush.rect(60, 40, 200, 160);
+  });
+  ['crayon', 'pastel', 'charcoal', 'cpencil'].forEach(function (bn) {
+    if (names.indexOf(bn) < 0) return;
+    tile('g-hatch', 'mass: ' + bn, 'Hand-filled dry-media area.', function () {
+      brush.noStroke(); brush.mass(bn, '#b03a2e', { strength: 0.8, precision: 0.6 });
+      brush.circle(160, 120, 75, 0.2);
+    });
+  });
+  tile('g-hatch', 'mass options', 'precision 0.9, strength 1, outline on.', function () {
+    brush.mass('crayon', '#1f618d', { precision: 0.9, strength: 1, outline: true });
+    brush.rect(70, 50, 180, 140);
+  });
+
+  // 5 · Fields
+  brush.listFields().forEach(function (f) {
+    tile('g-fields', f, 'Flow lines inside the "' + f + '" field.', function () {
+      brush.field(f); brush.set('HB', '#2a2622', 1);
+      for (var i = 0; i < 6; i++) brush.flowLine(30, 30 + i * 36, 250, 0);
+    });
+  });
+  tile('g-fields', 'addField', 'A custom field: angles written into a grid.', function () {
+    brush.addField('diag', function (t, field) {
+      for (var c = 0; c < field.length; c++)
+        for (var r = 0; r < field[0].length; r++)
+          field[c][r] = 20 + c * 3;
+      return field;
+    });
+    brush.field('diag'); brush.set('2B', '#8e44ad', 1);
+    for (var i = 0; i < 6; i++) brush.flowLine(30, 30 + i * 36, 250, 0);
+  });
+  tile('g-fields', 'fields + fill', 'Fields also bend hatches and fills. Polygons ignore them.', function () {
+    brush.field('waves'); brush.set('HB', '#2a2622', 1); brush.hatch(9, 0);
+    brush.rect(60, 40, 200, 160);
+  });
+
+  // 6 · Primitives
+  tile('g-prims', 'line', 'Straight stroke.', function () { brush.set('HB', INK, 1.2); brush.line(40, 190, 280, 50); });
+  tile('g-prims', 'flowLine', 'Follows the active field.', function () { brush.field('curved'); brush.set('HB', INK, 1.2); brush.flowLine(40, 60, 230, 0); brush.flowLine(40, 140, 230, 0); });
+  tile('g-prims', 'spline', 'Smooth curve through points.', function () { brush.set('charcoal', INK, 1.2); brush.spline([[40, 180], [100, 60], [180, 190], [280, 70]], 1); });
+  tile('g-prims', 'rect', 'Corner mode and center mode.', function () {
+    brush.set('pen', INK, 1); brush.rect(40, 40, 110, 80);
+    brush.set('pen', '#c0392b', 1); brush.rect(220, 160, 110, 80, 'center');
+  });
+  tile('g-prims', 'circle', 'Irregularity 0, 0.3 and 0.8.', function () {
+    brush.set('2B', INK, 1);
+    brush.circle(65, 120, 45, 0); brush.circle(160, 120, 45, 0.3); brush.circle(255, 120, 45, 0.8);
+  });
+  tile('g-prims', 'arc', 'Stroke only. Angles in degrees here.', function () {
+    brush.set('marker', '#2874a6', 1.2); brush.arc(160, 150, 90, 200, 340); brush.arc(160, 150, 60, 20, 160);
+  });
+  tile('g-prims', 'polygon', 'From a list of points.', function () {
+    brush.set('rotring', INK, 1); brush.fill('#f1c40f', 120);
+    brush.polygon([[160, 30], [200, 100], [280, 110], [220, 160], [240, 220], [160, 185], [80, 220], [100, 160], [40, 110], [120, 100]]);
+  });
+  tile('g-prims', 'beginShape', 'vertex() with optional pressure and curvature.', function () {
+    brush.set('2B', INK, 1.2); brush.fill('#58d68d', 110);
+    brush.beginShape(0.8);
+    brush.vertex(60, 170); brush.vertex(110, 50); brush.vertex(210, 70); brush.vertex(270, 180);
+    brush.endShape(true);
+  });
+  tile('g-prims', 'Polygon reuse', 'Store a polygon, then hatch and mass the same geometry.', function () {
+    var p = brush.polygon([[60, 40], [260, 40], [260, 200], [60, 200]]);
+    brush.hatch(10, 45); brush.set('HB', INK, 1); p.hatch();
+  });
+
+  // 7 · Custom brushes
+  brush.add('gallery_default', { type: 'default', weight: 3, scatter: 0.4, sharpness: 0.6, grain: 5, opacity: 40, spacing: 0.4, pressure: [0.5, 1.4, 0.5], noise: 0.4 });
+  brush.add('gallery_spray', { type: 'spray', weight: 6, scatter: 4, grain: 5, opacity: 20, spacing: 3, pressure: [0.4, 1, 0.4] });
+  brush.add('gallery_marker', { type: 'marker', weight: 4, scatter: 0, opacity: 70, spacing: 0.3, pressure: [1, 1], markerTip: true });
+  brush.add('gallery_square', { type: 'marker', weight: 4, scatter: 0, opacity: 70, spacing: 0.3, pressure: [1, 1], markerTip: false });
+  brush.add('gallery_diamond', { type: 'custom', weight: 6, scatter: 0.1, opacity: 120, spacing: 0.7, pressure: [0.6, 1.4, 0.6], tip: function (_m) { _m.noStroke(); _m.fill(0); _m.rotate(Math.PI / 4); _m.rect(-20, -20, 40, 40); }, rotate: 'natural', markerTip: false });
+  brush.add('gallery_dots', { type: 'custom', weight: 5, scatter: 0.4, opacity: 200, spacing: 2.5, pressure: [1, 1], tip: function (_m) { _m.noStroke(); _m.fill(0); _m.circle(0, 0, 40); }, rotate: 'random', markerTip: false });
+  var CUSTOM = [
+    ['gallery_default', 'type: default', 'Pencil-like, with sharpness and grain.'],
+    ['gallery_spray', 'type: spray', 'Scattered dots with wide scatter.'],
+    ['gallery_marker', 'type: marker', 'Flat solid mark with soft ends.'],
+    ['gallery_square', 'markerTip: false', 'Same marker without end buildup.'],
+    ['gallery_diamond', 'type: custom (diamond)', 'The tip is drawn in code, in a 100×100 space, dark = ink. rotate: "natural".'],
+    ['gallery_dots', 'type: custom (dots)', 'Wide spacing and random rotation.']
+  ];
+  CUSTOM.forEach(function (c) {
+    tile('g-custom', c[1], c[2], function () {
+      brush.set(c[0], '#2a2622', 1);
+      brush.line(30, 50, 290, 50);
+      brush.spline([[30, 140], [100, 100], [180, 170], [290, 120]], 0.9);
+      brush.line(30, 210, 290, 205);
+    });
+  });
+})();
+</script>
+</body>
+</html>
