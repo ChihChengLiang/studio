@@ -1,0 +1,1278 @@
+<title>Halftone and Dithering Notebook</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column. Each demo is one <section> with prefixed ids, so any section can be lifted out on its own. */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --accent-soft:#DFE3FA; --stage:#06070B;
+  --paper:#FFFFFF; --ink:#161616;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--accent-soft:#1B2040;--stage:#030407;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--accent-soft:#1B2040;--stage:#030407;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 8px;font:600 17px/1.2 var(--font-display);letter-spacing:-.005em}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:14px 0 0;max-width:64ch;color:var(--muted);font-size:16px}
+p{margin:0}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:68ch;color:var(--muted)}
+.prose strong,.prose b{color:var(--fg);font-weight:600}
+code,.mono{font-family:var(--font-mono);font-size:.9em}
+:not(pre)>code{background:var(--surface);border:1px solid var(--line);padding:1px 5px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.demo>header{display:flex;flex-direction:column;gap:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center}
+.toolbar .spacer{margin-left:auto}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.panel{min-width:0}
+.panel .ph{font:600 15px/1.2 var(--font-display);margin:0 0 2px}
+.panel .ps{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+canvas.paper{display:block;width:100%;background:var(--paper);border:1px solid var(--line)}
+canvas.pixelated{image-rendering:pixelated}
+.hrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:7px 0}
+.hrow>label,.hrow>.lab{min-width:84px}
+.hrow input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.hrow .v{min-width:44px;text-align:right;color:var(--fg);font:500 12.5px var(--font-mono);font-variant-numeric:tabular-nums}
+.hrow select{flex:1}
+.controls-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 28px}
+select,button{font:500 13.5px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer;min-width:0}
+select{max-width:100%}
+button:hover,select:hover{border-color:var(--muted)}
+.seg{display:flex}
+.seg button{border-radius:0;margin-left:-1px;padding:8px 12px}
+.seg button:first-child{margin-left:0}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.seg .lbl{align-self:center;margin-right:10px;font-size:13px;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 12px}
+.tile canvas{width:100%;aspect-ratio:1;display:block;background:var(--paper);border:1px solid var(--line)}
+.tn{font:600 13.5px/1.25 var(--font-display);margin:7px 0 0}
+.td{font-size:12px;color:var(--muted);margin:2px 0 0;line-height:1.4}
+.points{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;max-width:72ch;color:var(--muted)}
+.points b{color:var(--fg);font-weight:600}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:72ch}
+.note b{color:var(--fg);font-weight:600}
+.defs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px 32px;margin:0}
+.defs div{min-width:0}
+.defs dt{font:600 15px/1.2 var(--font-display);margin:0 0 4px}
+.defs dd{margin:0;color:var(--muted);font-size:14px}
+.tablewrap{overflow-x:auto}
+table.plain{border-collapse:collapse;width:100%;min-width:520px;font-size:13.5px}
+table.plain th,table.plain td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.tag{display:inline-block;font:500 11px/1 var(--font-mono);padding:3px 6px;border:1px solid var(--line);color:var(--muted)}
+.tag.built{border-color:var(--accent);color:var(--accent)}
+pre{margin:0;overflow-x:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);font:400 12.5px/1.6 var(--font-mono);color:var(--fg)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px 36px}
+.cols>*{min-width:0}
+
+@media (max-width:760px){.two{grid-template-columns:minmax(0,1fr)}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+#threejs{font:400 15px/1.55 var(--font-body)}
+#threejs *{box-sizing:border-box}
+#threejs body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 var(--font-body);padding-block:36px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#threejs .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+#threejs .eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+#threejs h1{margin:0;font:700 clamp(32px,6vw,52px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+#threejs h2{margin:0 0 14px;font:600 20px/1.2 var(--font-display);letter-spacing:-.01em}
+#threejs .lede{margin:14px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+#threejs .stage{position:relative;aspect-ratio:16/10;background:var(--stage);border:1px solid var(--line);overflow:hidden}
+#threejs .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#threejs .stage p{position:absolute;inset:0;margin:0;display:grid;place-items:center;padding:24px;text-align:center;color:#C9CEDB;font-size:14px}
+#threejs .hud{margin:0;padding:10px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 20px;font:400 12px/1.4 var(--font-mono);font-variant-numeric:tabular-nums}
+#threejs .hud div{display:flex;gap:8px;align-items:baseline;min-width:0}
+#threejs .hud dt{color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+#threejs .hud dd{margin:0;color:var(--fg);overflow-wrap:anywhere}
+#threejs .main{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:32px;align-items:start}
+#threejs .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:22px 24px}
+#threejs .field{display:flex;flex-direction:column;gap:7px;min-width:0}
+#threejs .field>label,#threejs .field>span.lab{font:500 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#threejs .field .hint{margin:0;font-size:12.5px;color:var(--muted);line-height:1.4}
+#threejs select,#threejs button{font:500 14px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:9px 11px;border-radius:2px;cursor:pointer;min-width:0}
+#threejs select{width:100%}
+#threejs select:disabled{opacity:.5;cursor:default}
+#threejs button:hover,#threejs select:hover{border-color:var(--muted)}
+#threejs :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#threejs input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0}
+#threejs .row{display:flex;gap:10px;align-items:center}
+#threejs .row output{font:500 13px var(--font-mono);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+#threejs .seg{display:flex}
+#threejs .seg button{flex:1;border-radius:0;margin-left:-1px;padding:9px 8px}
+#threejs .seg button:first-child{margin-left:0}
+#threejs .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+#threejs .primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);padding:10px 16px}
+#threejs .primary:hover{border-color:var(--accent);filter:brightness(1.08)}
+#threejs .primary:disabled{opacity:.6;cursor:default}
+#threejs .maskbox{display:flex;flex-direction:column;gap:10px}
+#threejs .maskbox canvas{width:128px;height:128px;image-rendering:pixelated;background:#000;border:1px solid var(--line);display:block}
+#threejs .maskbox p{margin:0;font:400 12px/1.5 var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+#threejs .bench{border-top:1px solid var(--line);padding-top:28px}
+#threejs .bench-head{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;margin-bottom:14px}
+#threejs .bench-head p{margin:0;color:var(--muted);font-size:14px;max-width:56ch}
+#threejs .tablewrap{overflow-x:auto}
+#threejs table{border-collapse:collapse;width:100%;min-width:520px;font:400 13px/1.4 var(--font-mono);font-variant-numeric:tabular-nums}
+#threejs th,#threejs td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+#threejs th:first-child,#threejs td:first-child{text-align:left}
+#threejs th{font-weight:500;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+#threejs td.total{color:var(--accent);font-weight:500}
+#threejs .status{margin:12px 0 0;font:400 12.5px/1.5 var(--font-mono);color:var(--muted);min-height:1.5em}
+#threejs .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 32px;border-top:1px solid var(--line);padding-top:28px}
+#threejs .notes p,#threejs .notes li{color:var(--muted);font-size:14px}
+#threejs .notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px}
+#threejs pre{margin:0;overflow-x:auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);font:400 12.5px/1.6 var(--font-mono);color:var(--fg)}
+@media (max-width:820px){#threejs .main{grid-template-columns:minmax(0,1fr)}
+#threejs .maskbox{flex-direction:row;align-items:flex-start;gap:16px}
+}
+@media (max-width:560px){#threejs .stage{aspect-ratio:4/3}
+}
+@media (prefers-reduced-motion:reduce){#threejs *{transition:none!important;scroll-behavior:auto!important}
+}
+
+#threejs .wrap{width:100%;min-width:0;margin:0}
+</style>
+
+<div class="page">
+
+<header>
+  <p class="eyebrow">Working notes · one conversation</p>
+  <h1>Halftone and Dithering Notebook</h1>
+  <p class="lede">It began with a poster built from coloured dots. It ended with a blue-noise sphere you can benchmark on your own GPU. This file keeps the summary and every demo from the thread, each one self-contained so you can lift it into another repo.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#vocab">Vocabulary</a></li>
+    <li><a href="#amfm">1 · AM vs FM</a></li>
+    <li><a href="#shepard">2 · Shepard halftone</a></li>
+    <li><a href="#sphere-shepard">3 · Shepard sphere</a></li>
+    <li><a href="#gallery-gray">4 · Dither gallery</a></li>
+    <li><a href="#gallery-color">5 · Colour gallery</a></li>
+    <li><a href="#threejs">6 · three.js blue noise</a></li>
+    <li><a href="#ideas">More ideas</a></li>
+    <li><a href="#porting">Porting</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="vocab" aria-labelledby="vocab-h">
+  <header><p class="eyebrow">The starting point</p><h2 id="vocab-h">What to call the dotted style</h2></header>
+  <div class="prose">
+    <p>The reference was the <b>Taiwan Spectrum</b> poster (National Museum of Modern Art Tainan, 2026–27): lettering and shapes built from a coarse grid of round dots in four flat inks. The general name for that look is <b>halftone</b>. The related terms below are the ones worth searching for.</p>
+  </div>
+  <dl class="defs">
+    <div><dt>Halftone (AM)</dt><dd>Dots sit on a fixed grid and their size carries the tone. This is the newspaper and screen-print method, and what the poster uses.</dd></div>
+    <div><dt>Stochastic (FM)</dt><dd>Every dot is the same size and their density carries the tone. Inkjet printers work this way, and error diffusion is the usual algorithm.</dd></div>
+    <div><dt>Dot matrix, dot grid</dt><dd>The strict grid also recalls LED signboards and dot-matrix printers.</dd></div>
+    <div><dt>Overprint, misregistration</dt><dd>Colour layers printed separately and slightly out of line, as in risograph and screen printing.</dd></div>
+    <div><dt>Ben-Day dots</dt><dd>Flat, bright colour dots in the style of Roy Lichtenstein's comic panels.</dd></div>
+    <div><dt>Ishihara style</dt><dd>Letters hidden in fields of coloured dots, like a colour-blindness test plate. A good fit for an exhibition called Spectrum.</dd></div>
+  </dl>
+  <p class="note"><b>Search terms:</b> halftone poster, dot grid typography, Ishihara-inspired graphic design.</p>
+</section>
+
+<section class="demo" id="amfm" aria-labelledby="amfm-h">
+  <header><p class="eyebrow">Demo 1</p><h2 id="amfm-h">AM and FM on a pure gradient and a simple figure</h2>
+  <p class="lede">The same source drawn two ways. AM keeps a fixed grid and varies the dot size. FM keeps a fixed dot size and varies how many there are.</p></header>
+  <div class="toolbar">
+    <div class="seg" id="amfm-src"><button type="button" data-v="grad" class="on" aria-pressed="true">Gradient</button><button type="button" data-v="sphere" aria-pressed="false">Sphere</button><button type="button" data-v="shapes" aria-pressed="false">Shapes</button></div>
+    <div class="seg spacer" id="amfm-zoom"><span class="lbl">Zoom</span><button type="button" data-v="1" class="on" aria-pressed="true">1×</button><button type="button" data-v="2" aria-pressed="false">2×</button><button type="button" data-v="4" aria-pressed="false">4×</button></div>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <p class="ph">AM · amplitude modulated</p><p class="ps">Fixed grid, dot size varies</p>
+      <canvas class="paper" id="amfm-am" style="aspect-ratio:340/240" aria-label="AM halftone"></canvas>
+      <div style="margin-top:10px">
+        <div class="hrow"><label for="amfm-cell">Cell size</label><input type="range" id="amfm-cell" min="4" max="24" step="1" value="10"><span class="v" id="amfm-cellv">10</span></div>
+        <div class="hrow"><label for="amfm-ang">Angle</label><input type="range" id="amfm-ang" min="0" max="90" step="1" value="45"><span class="v" id="amfm-angv">45°</span></div>
+        <div class="hrow"><label for="amfm-shape">Dot shape</label><select id="amfm-shape"><option value="round">Round</option><option value="square">Square</option><option value="ellipse">Ellipse</option><option value="line">Line</option></select></div>
+      </div>
+    </div>
+    <div class="panel">
+      <p class="ph">FM · frequency modulated</p><p class="ps">Fixed dot size, density varies</p>
+      <canvas class="paper" id="amfm-fm" style="aspect-ratio:340/240" aria-label="FM halftone"></canvas>
+      <div style="margin-top:10px">
+        <div class="hrow"><label for="amfm-dot">Dot size</label><input type="range" id="amfm-dot" min="1" max="6" step="0.5" value="2"><span class="v" id="amfm-dotv">2</span></div>
+        <div class="hrow"><label for="amfm-meth">Method</label><select id="amfm-meth"><option value="fs">Error diffusion (Floyd–Steinberg)</option><option value="atk">Error diffusion (Atkinson)</option><option value="rand">Random threshold</option><option value="bayer">Ordered (Bayer), not true FM</option></select></div>
+        <div class="hrow"><label for="amfm-fmshape">Dot style</label><select id="amfm-fmshape"><option value="square">Square pixels</option><option value="round">Round dots</option></select></div>
+      </div>
+    </div>
+  </div>
+  <ul class="points">
+    <li><b>Gradient at 4× zoom.</b> AM keeps an even rhythm and the dots swell until they merge into a solid area. FM looks like grain that thickens toward the dark end.</li>
+    <li><b>Angle.</b> 45° is the traditional angle for black because the eye notices the grid least there. In four-colour printing each ink gets its own angle so the grids don't beat against each other and produce moiré.</li>
+    <li><b>Dot shape.</b> Round dots jump in darkness around 50% grey, when they start touching. Ellipse dots smooth that jump. Lines give an engraved, banknote look.</li>
+    <li><b>Shapes with large cells.</b> AM edges go jagged because detail can't be smaller than one cell. FM keeps edges crisper at the same dot size.</li>
+  </ul>
+</section>
+
+<section class="demo" id="shepard" aria-labelledby="shepard-h">
+  <header><p class="eyebrow">Demo 2</p><h2 id="shepard-h">Shepard tone meets AM: an ever-brightening field</h2>
+  <p class="lede">A Shepard tone stacks tones an octave apart that all rise together. Each fades in at the bottom and out at the top, so the scale seems to climb forever. Here, several dot grids each twice as fine as the next shrink continuously and fade out as they get finer, while a new coarse grid fades in.</p></header>
+  <canvas class="paper" id="shf-cv" style="aspect-ratio:340/220" aria-label="Animated Shepard halftone field"></canvas>
+  <div class="toolbar">
+    <button type="button" id="shf-play">Pause</button>
+    <div class="seg" id="shf-dir"><button type="button" data-v="1" class="on" aria-pressed="true">Ever brighter</button><button type="button" data-v="-1" aria-pressed="false">Ever darker</button></div>
+    <div class="seg spacer" id="shf-ang"><button type="button" data-v="same" class="on" aria-pressed="true">Same angle</button><button type="button" data-v="rot" aria-pressed="false">Angle per layer</button></div>
+  </div>
+  <div class="controls-grid">
+    <div class="hrow"><label for="shf-spd">Speed</label><input type="range" id="shf-spd" min="1" max="30" step="1" value="8"><span class="v" id="shf-spdv">8</span></div>
+    <div class="hrow"><label for="shf-lay">Layers</label><input type="range" id="shf-lay" min="2" max="5" step="1" value="4"><span class="v" id="shf-layv">4</span></div>
+    <div class="hrow"><label for="shf-ink">Max ink</label><input type="range" id="shf-ink" min="10" max="70" step="1" value="45"><span class="v" id="shf-inkv">45%</span></div>
+    <div class="hrow"><label for="shf-fin">Fade-in length</label><input type="range" id="shf-fin" min="5" max="50" step="1" value="25"><span class="v" id="shf-finv">25%</span></div>
+    <div class="hrow"><label for="shf-cmin">Finest cell</label><input type="range" id="shf-cmin" min="3" max="8" step="0.5" value="4"><span class="v" id="shf-cminv">4</span></div>
+    <div class="hrow"><span class="lab">Mean ink now</span><span style="flex:1"></span><span class="v" id="shf-mean">0%</span></div>
+  </div>
+  <p class="ps" style="font-size:12.5px;color:var(--muted);margin:4px 0 0">Envelope: each layer's ink across its life, from coarse to fine</p>
+  <canvas id="shf-env" style="display:block;width:100%;height:90px" aria-label="Layer envelope chart"></canvas>
+  <ul class="points">
+    <li><b>Pitch becomes grid frequency.</b> Each layer's cell size halves over its life, so the grid keeps getting finer by a factor of 2 per octave.</li>
+    <li><b>Loudness becomes ink coverage.</b> The bell-shaped envelope means a layer never appears or vanishes abruptly. The dots on the curve are the layers.</li>
+    <li><b>Why it works.</b> Every dot is always shrinking, which the eye reads as "getting lighter", while the mean ink stays in a narrow band.</li>
+    <li><b>Fade-in length is the seam.</b> Short values strengthen the effect but let you catch coarse dots blooming. Around 15–25% balances it. More layers smooth the mean-ink wobble.</li>
+  </ul>
+</section>
+
+<section class="demo" id="sphere-shepard" aria-labelledby="sphere-shepard-h">
+  <header><p class="eyebrow">Demo 3</p><h2 id="sphere-shepard-h">The same trick on a shaded sphere</h2>
+  <p class="lede">Each layer's ink is scaled by the sphere's tone at that point. The layers are weighted so that together they always add up to the right shade. The sphere keeps its shading while every dot keeps shrinking.</p></header>
+  <canvas class="paper" id="shs-cv" style="aspect-ratio:340/240" aria-label="Animated Shepard halftone sphere"></canvas>
+  <div class="toolbar">
+    <button type="button" id="shs-play">Pause</button>
+    <div class="seg" id="shs-dir"><button type="button" data-v="1" class="on" aria-pressed="true">Ever brighter</button><button type="button" data-v="-1" aria-pressed="false">Ever darker</button></div>
+    <div class="seg spacer" id="shs-view"><button type="button" data-v="dots" class="on" aria-pressed="true">Halftone</button><button type="button" data-v="orig" aria-pressed="false">Original</button></div>
+  </div>
+  <div class="controls-grid">
+    <div class="hrow"><label for="shs-spd">Speed</label><input type="range" id="shs-spd" min="1" max="30" step="1" value="8"><span class="v" id="shs-spdv">8</span></div>
+    <div class="hrow"><label for="shs-lay">Layers</label><input type="range" id="shs-lay" min="2" max="5" step="1" value="4"><span class="v" id="shs-layv">4</span></div>
+    <div class="hrow"><label for="shs-fin">Fade-in length</label><input type="range" id="shs-fin" min="5" max="50" step="1" value="20"><span class="v" id="shs-finv">20%</span></div>
+    <div class="hrow"><label for="shs-cmin">Finest cell</label><input type="range" id="shs-cmin" min="2.5" max="8" step="0.5" value="3.5"><span class="v" id="shs-cminv">3.5</span></div>
+    <div class="hrow"><label for="shs-lit">Light angle</label><input type="range" id="shs-lit" min="0" max="360" step="1" value="225"><span class="v" id="shs-litv">225°</span></div>
+    <div class="hrow"><label for="shs-ang">Screen angle</label><select id="shs-ang"><option value="same">45° for all layers</option><option value="rot">Rotate per layer</option></select></div>
+  </div>
+  <p class="ps" style="font-size:12.5px;color:var(--muted);margin:4px 0 0">Envelope: each layer's share of the ink, from coarse to fine</p>
+  <canvas id="shs-env" style="display:block;width:100%;height:90px" aria-label="Layer envelope chart"></canvas>
+  <pre>// per point: split the sphere's tone between layers by envelope weight
+w[L] = env(phase[L]) / sum(env)           // weights add to 1
+d[L] = 1 - (1 - tone) ** w[L]             // layer coverage; layers multiply back to tone
+r[L] = cell[L] * sqrt(d[L] / PI)          // round-dot radius</pre>
+  <ul class="points">
+    <li><b>The shadow side carries the illusion.</b> Dark areas have big dots, so you can clearly watch them shrink. In the highlight the dots are already tiny.</li>
+    <li><b>Turn the light while it plays</b> to stack a real lighting change on top of the illusory one.</li>
+    <li><b>Angle per layer</b> hides the coarse layer's fade-in better on large flat-toned areas.</li>
+  </ul>
+</section>
+
+<section class="demo" id="gallery-gray" aria-labelledby="gallery-gray-h">
+  <header><p class="eyebrow">Demo 4</p><h2 id="gallery-gray-h">Sixteen ways to render one sphere in black and white</h2>
+  <p class="lede">From simple thresholding to single-line TSP art. Change the light angle or pixel size and every tile re-renders.</p></header>
+  <div class="toolbar">
+    <div class="hrow" style="flex:1;min-width:220px;margin:0"><label for="gg-lit" style="min-width:auto">Light angle</label><input type="range" id="gg-lit" min="0" max="360" step="1" value="225"><span class="v" id="gg-litv">225°</span></div>
+    <div class="seg" id="gg-ps"><span class="lbl">Pixel size</span><button type="button" data-v="1" class="on" aria-pressed="true">1</button><button type="button" data-v="2" aria-pressed="false">2</button><button type="button" data-v="3" aria-pressed="false">3</button></div>
+    <button type="button" id="gg-big">Large tiles</button>
+  </div>
+  <div class="tiles" id="gg-grid"></div>
+  <ul class="points">
+    <li><b>Threshold, random, blue noise.</b> Threshold loses all the shading. Random keeps the tones but looks grainy. Blue noise keeps the tones with the cleanest grain because its dots are spread as evenly as possible.</li>
+    <li><b>Bayer vs blue noise.</b> Both are lookup tables: fast and stable in animation. Bayer shows its grid; blue noise hides it.</li>
+    <li><b>Floyd–Steinberg, Atkinson, Riemersma.</b> These spread each pixel's rounding error to its neighbours. Floyd–Steinberg leaves faint "worm" patterns in smooth mid-tones, Atkinson blows out highlights and deepens shadows, and Riemersma (error flowing along a Hilbert curve) has a more organic, swirly texture.</li>
+    <li><b>Line screen, crosshatch, spiral, squiggle.</b> Strokes replace dots. Spiral and squiggle shift smoothly as you turn the light, since they're continuous lines and not a pixel grid.</li>
+    <li><b>Stippling vs TSP art.</b> The same evenly spaced dots, but TSP joins them into one continuous line you could send to a pen plotter.</li>
+  </ul>
+</section>
+
+<section class="demo" id="gallery-color" aria-labelledby="gallery-color-h">
+  <header><p class="eyebrow">Demo 5</p><h2 id="gallery-color-h">Sixteen ways to render a coloured sphere</h2>
+  <p class="lede">Limited-palette dithering, print processes, screens, and painterly or poster-style dots, including a nod to the Taiwan Spectrum poster. Use the rainbow sphere to give the palettes more to work with.</p></header>
+  <div class="toolbar">
+    <div class="seg" id="cg-src"><button type="button" data-v="lit" class="on" aria-pressed="true">Lit sphere</button><button type="button" data-v="rainbow" aria-pressed="false">Rainbow sphere</button></div>
+    <div class="hrow" style="flex:1;min-width:200px;margin:0"><label for="cg-lit" style="min-width:auto">Light</label><input type="range" id="cg-lit" min="0" max="360" step="1" value="225"><span class="v" id="cg-litv">225°</span></div>
+    <div class="seg" id="cg-ps"><span class="lbl">Pixel size</span><button type="button" data-v="1" class="on" aria-pressed="true">1</button><button type="button" data-v="2" aria-pressed="false">2</button><button type="button" data-v="3" aria-pressed="false">3</button></div>
+    <button type="button" id="cg-big">Large tiles</button>
+  </div>
+  <div class="tiles" id="cg-grid"></div>
+  <ul class="points">
+    <li><b>Dithering makes up for a small palette.</b> Compare "8 colours, no dither" with the Floyd–Steinberg tile. Both use the same eight colours, but dithering brings back the orange and the shading.</li>
+    <li><b>Linear light matters.</b> The linear-light tile spreads error in physical light values. Highlights come out brighter and mid-tones closer to the original. Simple dithering code often gets this subtly wrong.</li>
+    <li><b>RGB vs OKLab.</b> Choosing the nearest palette colour by how the eye sees it (OKLab) usually picks better neighbours, especially in shadows and on the rainbow sphere's blues and purples.</li>
+    <li><b>Print vs screen.</b> CMYK and riso subtract light, so overlaps get darker. RGB subpixels add light on black, so overlaps get brighter. Zoom into the CMYK tile to see the rosettes the four screen angles form.</li>
+    <li><b>Ishihara and the poster grid</b> are the most graphic. On the rainbow sphere, the four-ink poster tile gets close to the Taiwan Spectrum look.</li>
+  </ul>
+</section>
+
+<section class="demo" id="threejs" aria-labelledby="t-heading">
+  <header><p class="eyebrow">Demo 6</p><h2 id="t-heading">Blue noise in three.js, with a benchmark</h2>
+  <p class="lede">The question was how fast pure blue-noise dithering renders. This demo draws a lit sphere at low resolution, then one full-screen shader compares every cell with a blue-noise mask. Run the benchmark to time it on your own GPU.</p></header>
+
+
+<div class="wrap">
+  
+
+  <section aria-label="Preview">
+    <div class="stage" id="t-stage">
+      <canvas id="t-gl" aria-label="Sphere dithered with a blue-noise mask"></canvas>
+      <p id="t-fallback" hidden>This page needs WebGL and the three.js script from cdnjs. Check that both are available, then reload.</p>
+    </div>
+    <dl class="hud" aria-live="off">
+      <div><dt>Frame rate</dt><dd id="t-h-fps">–</dd></div>
+      <div><dt>Buffer</dt><dd id="t-h-buf">–</dd></div>
+      <div><dt>Cells</dt><dd id="t-h-cells">–</dd></div>
+      <div><dt>Mask</dt><dd id="t-h-mask">–</dd></div>
+    </dl>
+  </section>
+
+  <section class="main" aria-label="Controls">
+    <div class="controls">
+      <div class="field">
+        <label for="t-mask">Threshold mask</label>
+        <select id="t-mask">
+          <option value="blue" selected>Blue noise (void and cluster)</option>
+          <option value="ign">Interleaved gradient noise</option>
+          <option value="bayer">Bayer 8×8</option>
+          <option value="white">White noise</option>
+        </select>
+        <p class="hint">Blue noise has no clumps and no visible grid. The others are here for comparison.</p>
+      </div>
+      <div class="field">
+        <label for="t-masksize">Mask size</label>
+        <select id="t-masksize">
+          <option value="32">32 × 32</option>
+          <option value="64" selected>64 × 64</option>
+          <option value="128">128 × 128</option>
+        </select>
+        <p class="hint">Larger masks repeat less. 128 takes a moment to build.</p>
+      </div>
+      <div class="field">
+        <label for="t-pix">Cell size</label>
+        <div class="row"><input type="range" id="t-pix" min="1" max="8" step="1" value="3"><output id="t-pixv" for="t-pix">3 px</output></div>
+        <p class="hint">The scene renders at 1/cell² of the screen resolution.</p>
+      </div>
+      <div class="field">
+        <label for="t-temporal">Temporal mode</label>
+        <select id="t-temporal">
+          <option value="0" selected>Static</option>
+          <option value="1">Golden-ratio value shift</option>
+          <option value="2">Shifted lookup (R2)</option>
+        </select>
+        <p class="hint">Animated modes move the pattern every frame so the eye averages it.</p>
+      </div>
+      <div class="field">
+        <span class="lab" id="t-lab-space">Compare in</span>
+        <div class="seg" id="t-space" role="group" aria-labelledby="t-lab-space">
+          <button type="button" data-v="0" aria-pressed="true">Linear light</button>
+          <button type="button" data-v="1" aria-pressed="false">sRGB values</button>
+        </div>
+        <p class="hint">Linear light keeps the brightness correct. sRGB makes it too bright.</p>
+      </div>
+      <div class="field">
+        <span class="lab" id="t-lab-look">Scene</span>
+        <div class="seg" id="t-look" role="group" aria-labelledby="t-lab-look">
+          <button type="button" data-v="night" aria-pressed="true">Night</button>
+          <button type="button" data-v="paper" aria-pressed="false">Paper</button>
+        </div>
+        <p class="hint">Light dots on dark, or dark dots on light.</p>
+      </div>
+      <div class="field">
+        <label for="t-exp">Exposure</label>
+        <div class="row"><input type="range" id="t-exp" min="0.5" max="2" step="0.05" value="1"><output id="t-expv" for="t-exp">1.00</output></div>
+      </div>
+      <div class="field">
+        <span class="lab" id="t-lab-play">Light and satellite</span>
+        <button type="button" id="t-play" aria-labelledby="t-lab-play t-play">Pause</button>
+      </div>
+    </div>
+
+    <aside class="maskbox" aria-label="Mask preview">
+      <span class="field"><span class="lab" style="font:500 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Mask preview</span></span>
+      <canvas id="t-maskprev" width="64" height="64" aria-label="Grayscale picture of the threshold mask"></canvas>
+      <p id="t-maskinfo" aria-live="polite">–</p>
+    </aside>
+  </section>
+
+  <section class="bench" aria-label="Benchmark">
+    <h2>Benchmark</h2>
+    <div class="bench-head">
+      <button type="button" class="primary" id="t-runbench">Run benchmark</button>
+      <p>Times each pass at four output sizes with the current mask, cell size and temporal mode. Every pass repeats until at least 40 ms have elapsed, and the clock stops when the GPU has finished.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Output size</th><th>Scene</th><th>Dither pass</th><th>Plain copy</th><th>Scene + dither</th></tr></thead>
+        <tbody id="t-benchbody">
+          <tr><td>1280 × 720</td><td>–</td><td>–</td><td>–</td><td class="total">–</td></tr>
+          <tr><td>1920 × 1080</td><td>–</td><td>–</td><td>–</td><td class="total">–</td></tr>
+          <tr><td>2560 × 1440</td><td>–</td><td>–</td><td>–</td><td class="total">–</td></tr>
+          <tr><td>3840 × 2160</td><td>–</td><td>–</td><td>–</td><td class="total">–</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="status" id="t-benchstatus" aria-live="polite">Not run yet.</p>
+  </section>
+
+  <section class="notes" aria-label="Notes">
+    <div>
+      <h2>The shader</h2>
+      <pre>vec2 cell = floor(gl_FragCoord.xy / uPixel);
+vec3 c    = texture2D(tScene, (cell + .5) / uRt).rgb;
+float lum = dot(c, vec3(.2126, .7152, .0722));
+float t   = rankFromMask(mod(cell, uMaskN));
+gl_FragColor = vec4(lum &gt; t ? uLight : uDark, 1.);</pre>
+    </div>
+    <div>
+      <h2>Reading the numbers</h2>
+      <ul>
+        <li>The plain copy column is the floor: a full-screen pass that only samples a texture. The dither pass should sit close to it.</li>
+        <li>Timings ignore vsync and presentation, so they show headroom. A real frame also pays for your own draw calls.</li>
+        <li>Raise the cell size and the scene column drops quickly, because the scene renders at a fraction of the screen.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+
+  <div class="cols" style="margin-top:8px">
+    <div>
+      <h3>Rough cost estimates</h3>
+      <p class="note" style="margin-bottom:12px"><b>Estimates, not measurements.</b> They come from how GPUs work. The benchmark above gives real numbers for your hardware.</p>
+      <div class="tablewrap"><table class="plain">
+        <thead><tr><th>Hardware at 4K (8.3M pixels)</th><th>Dither pass</th></tr></thead>
+        <tbody>
+          <tr><td>Discrete GPU</td><td>0.05–0.15 ms</td></tr>
+          <tr><td>Integrated laptop GPU</td><td>0.3–1 ms</td></tr>
+          <tr><td>Phone</td><td>1–3 ms</td></tr>
+        </tbody>
+      </table></div>
+      <p class="prose" style="margin-top:12px">At 1080p divide by about 4. Rendering the scene at a lower resolution and upscaling with nearest-neighbour filtering cuts the cost further. The frame rate is then limited by the scene and the JS draw calls, not the dithering.</p>
+    </div>
+    <div>
+      <h3>Setup notes</h3>
+      <ul class="points">
+        <li><b>Noise texture.</b> Use a pre-baked 64×64 or 128×128 mask with <code>NearestFilter</code>, <code>RepeatWrapping</code> and no mipmaps.</li>
+        <li><b>Where to run it.</b> A <code>ShaderPass</code> in <code>EffectComposer</code> or a custom full-screen quad. The extra render-target pass usually costs more than the dither itself. Dithering inside one material's fragment shader avoids it.</li>
+        <li><b>Animation.</b> A static mask looks like a screen door stuck to the glass. Offset it every frame with an R2 or golden-ratio step, or cycle 32–64 pre-baked slices.</li>
+        <li><b>Linear vs sRGB.</b> Compare against the threshold in linear light, or everything looks darker than intended.</li>
+        <li><b>Moving cameras.</b> Screen-anchored dither swims over the scene. Anchor it in world or object space as Return of the Obra Dinn does.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="ideas" aria-labelledby="ideas-h">
+  <header><p class="eyebrow">Reference</p><h2 id="ideas-h">Other dithering ideas, and which are built here</h2></header>
+  <div class="tablewrap">
+    <table class="plain">
+      <thead><tr><th>Idea</th><th>What it is</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Blue-noise dithering</td><td>A threshold mask with no clumps and no visible grid. Game engines use it, often changing it each frame (temporal blue noise).</td><td><span class="tag built">Demos 4, 6</span></td></tr>
+        <tr><td>Riemersma dithering</td><td>Error diffusion along a Hilbert curve, which avoids the directional worms of row-by-row diffusion.</td><td><span class="tag built">Demo 4</span></td></tr>
+        <tr><td>Temporal dithering</td><td>Flicker a pixel between two values across frames to fake an in-between tone. Many LCDs do this.</td><td><span class="tag built">Demo 6</span></td></tr>
+        <tr><td>Weighted Voronoi stippling</td><td>Move each point to the ink-weighted centre of its cell (Lloyd relaxation) for a hand-stippled look.</td><td><span class="tag built">Demo 4</span></td></tr>
+        <tr><td>TSP art</td><td>Join the stipples with one non-crossing line, ideal for pen plotters and laser cutting.</td><td><span class="tag built">Demo 4</span></td></tr>
+        <tr><td>Spiral and wave halftones</td><td>One spiral or parallel sine waves whose width or amplitude follows the tone, in the engraving and banknote style.</td><td><span class="tag built">Demo 4</span></td></tr>
+        <tr><td>Glyph and ASCII halftones</td><td>Letters, or a custom threshold shape such as a cross or heart, as the dot.</td><td><span class="tag built">Demo 4 (ASCII)</span></td></tr>
+        <tr><td>Limited-palette dithering</td><td>Game Boy greens, CGA, three-ink riso. Error diffusion in colour gives rich results from very few inks.</td><td><span class="tag built">Demo 5</span></td></tr>
+        <tr><td>Moiré reveal</td><td>Hide an image by shifting the dot phase inside a region. It pops out when a transparent grid of the same frequency is laid on top.</td><td><span class="tag">Not built</span></td></tr>
+        <tr><td>Dual-image halftones</td><td>One picture in dot size, another in dot shape or angle, so the image changes up close, from afar, or when tilted.</td><td><span class="tag">Not built</span></td></tr>
+        <tr><td>Return of the Obra Dinn</td><td>1-bit game that pins the dither pattern to a sphere around the camera to stop it swimming. Lucas Pope's devlog explains it.</td><td><span class="tag">Reading</span></td></tr>
+        <tr><td>Audio noise shaping</td><td>Error diffusion in time, pushing quantisation noise into frequencies the ear hears less. A cousin of the Shepard idea.</td><td><span class="tag">Reading</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="demo" id="porting" aria-labelledby="porting-h">
+  <header><p class="eyebrow">For your other repo</p><h2 id="porting-h">Porting notes</h2></header>
+  <div class="cols">
+    <div>
+      <h3>How the file is organised</h3>
+      <ul class="points">
+        <li>Every demo is one <code>&lt;section&gt;</code> and one self-invoking script. Element ids are prefixed per demo: <code>amfm-</code>, <code>shf-</code>, <code>shs-</code>, <code>gg-</code>, <code>cg-</code>, <code>t-</code>.</li>
+        <li>Demos 1 to 5 use Canvas 2D only and have no dependencies. Demo 6 needs WebGL and three.js r128 (the global <code>THREE</code>).</li>
+        <li>The first script defines two shared helpers: <code>segGroup</code> for button groups and <code>watchVisible</code>, which pauses animation when a demo is off screen.</li>
+        <li>All colours come from the tokens at the top of the stylesheet. Demo 6's CSS is scoped under <code>#threejs</code>. Canvases keep a white "paper" ground in both themes.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Reusable cores</h3>
+      <ul class="points">
+        <li><code>tone(x, y)</code>: the shaded-sphere function used by demos 1 to 4. Swap it to dither any scalar field.</li>
+        <li><code>ed()</code> / <code>pd()</code>: serpentine error diffusion, grey and palette versions.</li>
+        <li><code>voidAndCluster(N)</code>: the blue-noise mask generator, in the global script of demo 6. It returns a rank per cell.</li>
+        <li><code>stipples()</code> and <code>tour()</code>: weighted Voronoi stippling and the TSP tour.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Costs and limits</h3>
+      <ul class="points">
+        <li>Building a 128×128 blue-noise mask took about 1 second in Node and 64×64 about 40 ms. Bake larger masks offline or build them in a worker.</li>
+        <li>The colour gallery's riso and pointillism tiles are the slowest. Tiles render one per animation frame so the page stays responsive.</li>
+        <li>The cost estimates in demo 6 come from how GPUs work. They are not measurements. Use the built-in benchmark for real numbers.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+function watchVisible(el){
+  var o={v:true};
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(e){o.v=e[e.length-1].isIntersecting;},{rootMargin:'120px'}).observe(el);
+  }
+  return o;
+}
+function segGroup(box,cb){
+  var btns=box.querySelectorAll('button');
+  btns.forEach(function(x){x.addEventListener('click',function(){
+    btns.forEach(function(y){y.classList.remove('on');y.setAttribute('aria-pressed','false');});
+    x.classList.add('on');x.setAttribute('aria-pressed','true');
+    cb(x.getAttribute('data-v'));
+  });});
+}
+</script>
+
+<script>
+/* Demo 1: AM and FM */
+(function(){
+var $=function(id){return document.getElementById('amfm-'+id);};
+var LW=340,LH=240,src='grad',zoom=1;
+function dark(x,y){
+  if(src==='grad'){return Math.min(1,Math.max(0,(x-10)/(LW-20)));}
+  if(src==='sphere'){
+    var cx=170,cy=118,R=92,dx=x-cx,dy=y-cy,q=(dx*dx+dy*dy)/(R*R);
+    if(q<1){var nz=Math.sqrt(1-q),nx=dx/R,ny=dy/R,L=[-0.5,-0.6,0.62],m=Math.hypot(L[0],L[1],L[2]);
+      var lum=Math.max(0,(nx*L[0]+ny*L[1]+nz*L[2])/m);return 1-(0.06+0.94*Math.pow(lum,1.1));}
+    var sx=(x-200)/110,sy=(y-218)/16,s=sx*sx+sy*sy;
+    return s<1?0.08+0.5*(1-s):0.08;
+  }
+  var d=0.04;
+  if((x-85)*(x-85)+(y-120)*(y-120)<62*62)d=0.2;
+  if(x>140&&x<230&&y>60&&y<180)d=0.5;
+  var tx=x-285,ty=y-185;if(ty<0&&ty>-120&&Math.abs(tx)<-ty*0.45)d=0.88;
+  return d;
+}
+function setup(cv){var r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.width*dpr*LH/LW);
+  var ctx=cv.getContext('2d');var k=cv.width/LW;
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(k*zoom,0,0,k*zoom,k*(LW/2-LW/2*zoom),k*(LH/2-LH/2*zoom));
+  ctx.fillStyle='#161616';ctx.strokeStyle='#161616';return ctx;}
+function drawAM(){
+  var ctx=setup($('am'));var c=+$('cell').value,a=+$('ang').value*Math.PI/180,shape=$('shape').value;
+  var ca=Math.cos(a),sa=Math.sin(a),cx=LW/2,cy=LH/2;
+  var n=Math.ceil(Math.hypot(LW,LH)/c/2)+2;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(a);ctx.beginPath();
+  for(var i=-n;i<=n;i++)for(var j=-n;j<=n;j++){
+    var u=i*c,v=j*c,x=cx+u*ca-v*sa,y=cy+u*sa+v*ca;
+    if(x<-c||x>LW+c||y<-c||y>LH+c)continue;
+    var d=dark(Math.min(LW-0.01,Math.max(0,x)),Math.min(LH-0.01,Math.max(0,y)));
+    if(d<=0.002)continue;
+    if(shape==='round'){var r=c*Math.sqrt(d/Math.PI);if(d>0.78)r=c*0.5+(c*0.71-c*0.5)*((d-0.78)/0.22);ctx.moveTo(u+r,v);ctx.arc(u,v,r,0,Math.PI*2);}
+    else if(shape==='square'){var s=c*Math.sqrt(d);ctx.rect(u-s/2,v-s/2,s,s);}
+    else if(shape==='ellipse'){var rx=c*Math.sqrt(d/Math.PI)*1.35,ry=rx*0.68;ctx.moveTo(u+rx,v);ctx.ellipse(u,v,rx,ry,0,0,Math.PI*2);}
+    else{var h=c*d;ctx.rect(u-c/2-0.05,v-h/2,c+0.1,h);}
+  }
+  ctx.fill();ctx.restore();
+}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+var B4=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+function drawFM(){
+  var ctx=setup($('fm'));var s=+$('dot').value,m=$('meth').value,round=$('fmshape').value==='round';
+  var gw=Math.ceil(LW/s),gh=Math.ceil(LH/s);var g=new Float32Array(gw*gh);
+  for(var y=0;y<gh;y++)for(var x=0;x<gw;x++)g[y*gw+x]=dark(Math.min(LW-0.01,(x+0.5)*s),Math.min(LH-0.01,(y+0.5)*s));
+  var out=new Uint8Array(gw*gh);var R=rng(7);
+  if(m==='rand'){for(var i=0;i<g.length;i++)out[i]=R()<g[i]?1:0;}
+  else if(m==='bayer'){for(var y2=0;y2<gh;y2++)for(var x2=0;x2<gw;x2++)out[y2*gw+x2]=g[y2*gw+x2]>(B4[(y2&3)*4+(x2&3)]+0.5)/16?1:0;}
+  else{
+    var K=m==='fs'?[[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]]:[[1,0,1/8],[2,0,1/8],[-1,1,1/8],[0,1,1/8],[1,1,1/8],[0,2,1/8]];
+    for(var y3=0;y3<gh;y3++){var rev=y3&1;
+      for(var k=0;k<gw;k++){var x3=rev?gw-1-k:k,i3=y3*gw+x3,o=g[i3]>=0.5?1:0;out[i3]=o;var e=g[i3]-o;
+        for(var q=0;q<K.length;q++){var dx=rev?-K[q][0]:K[q][0],nx=x3+dx,ny=y3+K[q][1];if(nx>=0&&nx<gw&&ny<gh)g[ny*gw+nx]+=e*K[q][2];}}}
+  }
+  ctx.beginPath();
+  for(var y4=0;y4<gh;y4++)for(var x4=0;x4<gw;x4++)if(out[y4*gw+x4]){
+    if(round){var r=s*0.62;ctx.moveTo(x4*s+s/2+r,y4*s+s/2);ctx.arc(x4*s+s/2,y4*s+s/2,r,0,Math.PI*2);}
+    else ctx.rect(x4*s-0.02,y4*s-0.02,s+0.04,s+0.04);}
+  ctx.fill();
+}
+function all(){$('cellv').textContent=$('cell').value;$('angv').textContent=$('ang').value+'°';$('dotv').textContent=(+$('dot').value).toFixed(1);drawAM();drawFM();}
+['cell','ang','shape','dot','meth','fmshape'].forEach(function(id){$(id).addEventListener('input',all);});
+segGroup($('src'),function(v){src=v;all();});
+segGroup($('zoom'),function(v){zoom=+v;all();});
+new ResizeObserver(all).observe($('am'));
+all();
+})();
+</script>
+
+<script>
+/* Demo 2: Shepard halftone on a flat field */
+(function(){
+var $=function(id){return document.getElementById('shf-'+id);};
+var LW=340,LH=220,t=0,dir=1,playing=true,angMode='same',last=performance.now();
+var cv=$('cv'),ec=$('env'),V=watchVisible(cv);
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)playing=false;
+function P(){return{spd:+$('spd').value,N:+$('lay').value,ink:+$('ink').value/100,a:+$('fin').value/100,cmin:+$('cmin').value};}
+function env(p,a){var s=function(x){return x*x*(3-2*x);};return p<a?s(p/a):s((1-p)/(1-a));}
+function sizeC(c,h){var r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round((h||r.width*LH/LW)*d);}
+function draw(){
+  var o=P(),ctx=cv.getContext('2d'),k=cv.width/LW;
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(k,0,0,k,0,0);ctx.fillStyle='#161616';
+  var cx=LW/2,cy=LH/2,keep=1;ctx.beginPath();
+  for(var L=0;L<o.N;L++){
+    var p=((t+L/o.N)%1+1)%1;
+    var c=o.cmin*Math.pow(2,o.N*(1-p));
+    var d=o.ink*env(p,o.a);keep*=1-d;
+    if(d<0.002)continue;
+    var r=c*Math.sqrt(d/Math.PI);
+    var th=angMode==='same'?Math.PI/4:Math.PI/4+L*Math.PI/(o.N*2);
+    var ca=Math.cos(th),sa=Math.sin(th),n=Math.ceil(Math.hypot(LW,LH)/c/2)+1;
+    for(var i=-n;i<=n;i++)for(var j=-n;j<=n;j++){
+      var x=cx+(i*c)*ca-(j*c)*sa,y=cy+(i*c)*sa+(j*c)*ca;
+      if(x<-r||x>LW+r||y<-r||y>LH+r)continue;
+      ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,Math.PI*2);
+    }
+  }
+  ctx.fill();
+  $('mean').textContent=Math.round((1-keep)*100)+'%';
+  drawEnv(o);
+}
+function drawEnv(o){
+  var ctx=ec.getContext('2d'),W=ec.width,H=ec.height,d=window.devicePixelRatio||1;
+  var cs=getComputedStyle(document.documentElement);
+  var tx=cs.getPropertyValue('--muted')||'#888',ac=cs.getPropertyValue('--accent')||'#378ADD',bd=cs.getPropertyValue('--line')||'#ccc';
+  ctx.clearRect(0,0,W,H);var pad=8*d,top=10*d,bot=H-20*d;
+  ctx.strokeStyle=bd;ctx.lineWidth=1*d;ctx.beginPath();ctx.moveTo(pad,bot);ctx.lineTo(W-pad,bot);ctx.stroke();
+  ctx.strokeStyle=tx;ctx.lineWidth=1.5*d;ctx.beginPath();
+  for(var i=0;i<=200;i++){var p=i/200,x=pad+p*(W-2*pad),y=bot-(bot-top)*env(p,o.a);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);}
+  ctx.stroke();
+  ctx.fillStyle=tx;ctx.font=(11*d)+'px sans-serif';ctx.textBaseline='top';
+  ctx.textAlign='left';ctx.fillText('coarse, fading in',pad,bot+5*d);ctx.textAlign='right';ctx.fillText('fine, fading out',W-pad,bot+5*d);
+  ctx.fillStyle=ac;
+  for(var L=0;L<o.N;L++){var pp=((t+L/o.N)%1+1)%1,x2=pad+pp*(W-2*pad),y2=bot-(bot-top)*env(pp,o.a);ctx.beginPath();ctx.arc(x2,y2,5*d,0,Math.PI*2);ctx.fill();}
+}
+function loop(now){
+  var dt=Math.min(0.1,(now-last)/1000);last=now;
+  if(!V.v){requestAnimationFrame(loop);return;}
+  if(playing){var o=P();t+=dir*dt*o.spd/(100*o.N/4);}
+  draw();requestAnimationFrame(loop);
+}
+function labels(){$('spdv').textContent=$('spd').value;$('layv').textContent=$('lay').value;$('inkv').textContent=$('ink').value+'%';$('finv').textContent=$('fin').value+'%';$('cminv').textContent=(+$('cmin').value).toFixed(1);}
+['spd','lay','ink','fin','cmin'].forEach(function(id){$(id).addEventListener('input',labels);});
+function syncPlay(){$('play').textContent=playing?'Pause':'Play';}
+$('play').addEventListener('click',function(){playing=!playing;syncPlay();});
+segGroup($('dir'),function(v){dir=+v;});
+segGroup($('ang'),function(v){angMode=v;});
+function rs(){sizeC(cv);sizeC(ec,90);}
+new ResizeObserver(rs).observe(cv);rs();labels();syncPlay();requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* Demo 3: Shepard halftone on a sphere */
+(function(){
+var $=function(id){return document.getElementById('shs-'+id);};
+var LW=340,LH=240,t=0,dir=1,playing=true,view='dots',last=performance.now();
+var cv=$('cv'),ec=$('env'),V=watchVisible(cv);
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)playing=false;
+function P(){return{spd:+$('spd').value,N:+$('lay').value,a:+$('fin').value/100,cmin:+$('cmin').value,lit:+$('lit').value*Math.PI/180,ang:$('ang').value};}
+function env(p,a){var s=function(x){return x*x*(3-2*x);};return p<a?s(p/a):s((1-p)/(1-a));}
+function tone(x,y,lit){
+  var cx=170,cy=112,R=90,dx=x-cx,dy=y-cy,q=(dx*dx+dy*dy)/(R*R);
+  var lx=Math.cos(lit)*0.7,ly=Math.sin(lit)*0.7,lz=0.62,m=Math.hypot(lx,ly,lz);
+  if(q<1){var nz=Math.sqrt(1-q),nx=dx/R,ny=dy/R;
+    var lum=Math.max(0,(nx*lx+ny*ly+nz*lz)/m);return 1-(0.05+0.95*Math.pow(lum,1.1));}
+  var sx=(x-(cx-lx/m*70))/115,sy=(y-(cy+R+8))/15,s=sx*sx+sy*sy;
+  return s<1?0.07+0.5*(1-s):0.07;
+}
+function sizeC(c,h){var r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round((h||r.width*LH/LW)*d);}
+function radius(c,d){if(d<=0.78)return c*Math.sqrt(d/Math.PI);return c*(0.5+0.21*Math.min(1,(d-0.78)/0.22));}
+function draw(){
+  var o=P(),ctx=cv.getContext('2d'),k=cv.width/LW;
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+  var ph=[],ws=[],sum=0,L;
+  for(L=0;L<o.N;L++){var p=((t+L/o.N)%1+1)%1;ph.push(p);var e=env(p,o.a);ws.push(e);sum+=e;}
+  if(view==='orig'){
+    var img=ctx.createImageData(cv.width,cv.height),D=img.data;
+    for(var py=0;py<cv.height;py++)for(var px=0;px<cv.width;px++){var v=Math.round(255*(1-tone(px/k,py/k,o.lit))),i=(py*cv.width+px)*4;D[i]=D[i+1]=D[i+2]=v;D[i+3]=255;}
+    ctx.putImageData(img,0,0);drawEnv(o);return;
+  }
+  ctx.setTransform(k,0,0,k,0,0);ctx.fillStyle='#161616';
+  var cx=LW/2,cy=LH/2;
+  ctx.beginPath();
+  for(L=0;L<o.N;L++){
+    var w=ws[L]/sum;if(w<0.004)continue;
+    var c=o.cmin*Math.pow(2,o.N*(1-ph[L]));
+    var th=o.ang==='same'?Math.PI/4:Math.PI/4+L*Math.PI/(o.N*2);
+    var ca=Math.cos(th),sa=Math.sin(th),n=Math.ceil(Math.hypot(LW,LH)/c/2)+1;
+    for(var a=-n;a<=n;a++)for(var b=-n;b<=n;b++){
+      var x=cx+(a*c)*ca-(b*c)*sa,y=cy+(a*c)*sa+(b*c)*ca;
+      if(x<-c||x>LW+c||y<-c||y>LH+c)continue;
+      var tv=tone(Math.min(LW-0.01,Math.max(0,x)),Math.min(LH-0.01,Math.max(0,y)),o.lit);
+      var d=1-Math.pow(1-Math.min(0.97,tv),w);
+      if(d<0.003)continue;
+      var r=radius(c,d);ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,Math.PI*2);
+    }
+  }
+  ctx.fill();drawEnv(o);
+}
+function drawEnv(o){
+  var ctx=ec.getContext('2d'),W=ec.width,H=ec.height,d=window.devicePixelRatio||1;
+  var cs=getComputedStyle(document.documentElement);
+  var tx=cs.getPropertyValue('--muted')||'#888',ac=cs.getPropertyValue('--accent')||'#378ADD',bd=cs.getPropertyValue('--line')||'#ccc';
+  ctx.clearRect(0,0,W,H);var pad=8*d,top=10*d,bot=H-20*d;
+  ctx.strokeStyle=bd;ctx.lineWidth=1*d;ctx.beginPath();ctx.moveTo(pad,bot);ctx.lineTo(W-pad,bot);ctx.stroke();
+  ctx.strokeStyle=tx;ctx.lineWidth=1.5*d;ctx.beginPath();
+  for(var i=0;i<=200;i++){var p=i/200,x=pad+p*(W-2*pad),y=bot-(bot-top)*env(p,o.a);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);}
+  ctx.stroke();
+  ctx.fillStyle=tx;ctx.font=(11*d)+'px sans-serif';ctx.textBaseline='top';
+  ctx.textAlign='left';ctx.fillText('coarse, fading in',pad,bot+5*d);ctx.textAlign='right';ctx.fillText('fine, fading out',W-pad,bot+5*d);
+  ctx.fillStyle=ac;
+  for(var L=0;L<o.N;L++){var pp=((t+L/o.N)%1+1)%1,x2=pad+pp*(W-2*pad),y2=bot-(bot-top)*env(pp,o.a);ctx.beginPath();ctx.arc(x2,y2,5*d,0,Math.PI*2);ctx.fill();}
+}
+function loop(now){
+  var dt=Math.min(0.1,(now-last)/1000);last=now;
+  if(!V.v){requestAnimationFrame(loop);return;}
+  if(playing){var o=P();t+=dir*dt*o.spd/(100*o.N/4);}
+  draw();requestAnimationFrame(loop);
+}
+function labels(){$('spdv').textContent=$('spd').value;$('layv').textContent=$('lay').value;$('finv').textContent=$('fin').value+'%';$('cminv').textContent=(+$('cmin').value).toFixed(1);$('litv').textContent=$('lit').value+'°';}
+['spd','lay','fin','cmin','lit'].forEach(function(id){$(id).addEventListener('input',labels);});
+function syncPlay(){$('play').textContent=playing?'Pause':'Play';}
+$('play').addEventListener('click',function(){playing=!playing;syncPlay();});
+segGroup($('dir'),function(v){dir=+v;});
+segGroup($('view'),function(v){view=v;});
+function rs(){sizeC(cv);sizeC(ec,90);}
+new ResizeObserver(rs).observe(cv);rs();labels();syncPlay();requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* Demo 4: black-and-white dithering gallery */
+(function(){
+var $=function(id){return document.getElementById('gg-'+id);};
+var L=128,lit=225*Math.PI/180,ps=1,big=false;
+function tone(x,y){var cx=64,cy=58,R=42,dx=x-cx,dy=y-cy,q=(dx*dx+dy*dy)/(R*R);
+  var lx=Math.cos(lit)*0.7,ly=Math.sin(lit)*0.7,lz=0.62,m=Math.hypot(lx,ly,lz);
+  if(q<1){var nz=Math.sqrt(1-q),lum=Math.max(0,(dx/R*lx+dy/R*ly+nz*lz)/m);return 1-(0.04+0.96*Math.pow(lum,1.1));}
+  var sx=(x-(cx-lx/m*30))/55,sy=(y-(cy+R+6))/8,s=sx*sx+sy*sy;return s<1?0.06+0.55*(1-s):0.06;}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function tg(G){var T=new Float32Array(G*G),s=L/G;for(var y=0;y<G;y++)for(var x=0;x<G;x++)T[y*G+x]=tone((x+0.5)*s,(y+0.5)*s);return T;}
+function gridDraw(ctx,W,G,O){var oc=document.createElement('canvas');oc.width=oc.height=G;var c=oc.getContext('2d'),img=c.createImageData(G,G),D=img.data;
+  for(var i=0;i<G*G;i++){var v=O[i]?22:255;D[i*4]=D[i*4+1]=D[i*4+2]=v;D[i*4+3]=255;}c.putImageData(img,0,0);ctx.imageSmoothingEnabled=false;ctx.drawImage(oc,0,0,W,W);}
+function pix(ctx,W,f){var img=ctx.createImageData(W,W),D=img.data,k=W/L;
+  for(var py=0;py<W;py++)for(var px=0;px<W;px++){var a=Math.max(0,Math.min(1,f((px+0.5)/k,(py+0.5)/k,k))),v=Math.round(255-a*233),i=(py*W+px)*4;D[i]=D[i+1]=D[i+2]=v;D[i+3]=255;}ctx.putImageData(img,0,0);}
+function cov(half,dist,k){return Math.max(0,Math.min(1,(half-dist)*k+0.5));}
+function ed(G,T,K){var g=Float32Array.from(T),O=new Uint8Array(G*G);
+  for(var y=0;y<G;y++){var rev=y&1;for(var q=0;q<G;q++){var x=rev?G-1-q:q,i=y*G+x,o=g[i]>=0.5?1:0;O[i]=o;var e=g[i]-o;
+    for(var n=0;n<K.length;n++){var dx=rev?-K[n][0]:K[n][0],nx=x+dx,ny=y+K[n][1];if(nx>=0&&nx<G&&ny<G)g[ny*G+nx]+=e*K[n][2];}}}return O;}
+var FS=[[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]],ATK=[[1,0,1/8],[2,0,1/8],[-1,1,1/8],[0,1,1/8],[1,1,1/8],[0,2,1/8]];
+var BAY=[[0]];while(BAY.length<8){var bs=BAY.length,bn=[];for(var by=0;by<2*bs;by++){bn.push([]);for(var bx=0;bx<2*bs;bx++)bn[by].push(4*BAY[by%bs][bx%bs]+[[0,2],[3,1]][Math.floor(by/bs)][Math.floor(bx/bs)]);}BAY=bn;}
+var BN=(function(){var N=32,E=new Float32Array(N*N),K=new Float32Array(N*N),filled=new Uint8Array(N*N),rank=new Float32Array(N*N),R=rng(3),sg=1.6;
+  for(var y=0;y<N;y++)for(var x=0;x<N;x++){var dx=Math.min(x,N-x),dy=Math.min(y,N-y);K[y*N+x]=Math.exp(-(dx*dx+dy*dy)/(2*sg*sg));}
+  for(var i=0;i<N*N;i++)E[i]=R()*1e-6;
+  for(var r=0;r<N*N;r++){var bi=-1,bv=Infinity;for(var i2=0;i2<N*N;i2++)if(!filled[i2]&&E[i2]<bv){bv=E[i2];bi=i2;}
+    filled[bi]=1;rank[bi]=r;var ix=bi%N,iy=(bi/N)|0;
+    for(var j=0;j<N*N;j++){var jx=j%N,jy=(j/N)|0;E[j]+=K[((jy-iy+N)%N)*N+((jx-ix+N)%N)];}}
+  return rank;})();
+function d2xy(n,d){var x=0,y=0,t=d;for(var s=1;s<n;s*=2){var rx=(t>>1)&1,ry=(t^rx)&1;if(ry===0){if(rx===1){x=s-1-x;y=s-1-y;}var tmp=x;x=y;y=tmp;}x+=s*rx;y+=s*ry;t=t>>2;}return[x,y];}
+function stipples(N,seed){var G=128,T=tg(G),R=rng(seed),P=[],guard=0;
+  while(P.length<N&&guard<4e5){guard++;var x=R()*G,y=R()*G;if(R()<T[(y|0)*G+(x|0)])P.push([x,y]);}
+  var B=4,nb=G/B;
+  function buckets(){var bk=[];for(var i=0;i<nb*nb;i++)bk.push([]);P.forEach(function(p,i){bk[Math.min(nb-1,(p[1]/B)|0)*nb+Math.min(nb-1,(p[0]/B)|0)].push(i);});return bk;}
+  function near(bk,x,y){var bx=(x/B)|0,by=(y/B)|0,best=-1,bd=Infinity;
+    for(var r=0;r<nb;r++){for(var dy=-r;dy<=r;dy++)for(var dx=-r;dx<=r;dx++){if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;var cx=bx+dx,cy=by+dy;if(cx<0||cy<0||cx>=nb||cy>=nb)continue;
+      var cell=bk[cy*nb+cx];for(var q=0;q<cell.length;q++){var j=cell[q],ex=P[j][0]-x,ey=P[j][1]-y,d=ex*ex+ey*ey;if(d<bd){bd=d;best=j;}}}
+      if(best>=0&&(r*B)*(r*B)>bd)break;}return best;}
+  for(var it=0;it<10;it++){var bk=buckets(),sx=new Float64Array(P.length),sy=new Float64Array(P.length),sw=new Float64Array(P.length);
+    for(var yy=0;yy<G;yy++)for(var xx=0;xx<G;xx++){var w=T[yy*G+xx];if(w<0.005)continue;var j2=near(bk,xx+0.5,yy+0.5);sx[j2]+=w*(xx+0.5);sy[j2]+=w*(yy+0.5);sw[j2]+=w;}
+    P.forEach(function(p,j){if(sw[j]>0){p[0]=sx[j]/sw[j];p[1]=sy[j]/sw[j];}});}
+  return P;}
+function tour(P){var n=P.length,vis=new Uint8Array(n),t=[0];vis[0]=1;
+  for(var s=1;s<n;s++){var a=P[t[t.length-1]],best=-1,bd=Infinity;for(var j=0;j<n;j++)if(!vis[j]){var dx=P[j][0]-a[0],dy=P[j][1]-a[1],d=dx*dx+dy*dy;if(d<bd){bd=d;best=j;}}vis[best]=1;t.push(best);}
+  function D(i,j){return Math.hypot(P[i][0]-P[j][0],P[i][1]-P[j][1]);}
+  for(var pass=0;pass<4;pass++)for(var i=0;i<n-3;i++)for(var j2=i+2;j2<Math.min(n-1,i+60);j2++){
+    var a2=t[i],b=t[i+1],c=t[j2],d2=t[j2+1];if(D(a2,c)+D(b,d2)<D(a2,b)+D(c,d2)-1e-9){var l=i+1,r=j2;while(l<r){var tmp=t[l];t[l]=t[r];t[r]=tmp;l++;r--;}}}
+  return t;}
+var cache={};
+function sumT(){var T=tg(128),s=0;for(var i=0;i<T.length;i++)s+=T[i];return s;}
+var tiles=[
+ ['Original','Continuous tone, for reference',function(ctx,W){pix(ctx,W,function(x,y){return tone(x,y);});}],
+ ['Threshold','Ink if darker than 50%',function(ctx,W){var G=Math.round(L/ps),T=tg(G);gridDraw(ctx,W,G,T.map(function(v){return v>=0.5?1:0;}));}],
+ ['Random','Compare to random noise per pixel',function(ctx,W){var G=Math.round(L/ps),T=tg(G),R=rng(9);gridDraw(ctx,W,G,T.map(function(v){return R()<v?1:0;}));}],
+ ['Bayer 8×8','Ordered, crosshatch-like texture',function(ctx,W){var G=Math.round(L/ps),T=tg(G),O=new Uint8Array(G*G);for(var y=0;y<G;y++)for(var x=0;x<G;x++)O[y*G+x]=T[y*G+x]>(BAY[y&7][x&7]+0.5)/64?1:0;gridDraw(ctx,W,G,O);}],
+ ['Blue noise','Void-and-cluster threshold mask',function(ctx,W){var G=Math.round(L/ps),T=tg(G),O=new Uint8Array(G*G);for(var y=0;y<G;y++)for(var x=0;x<G;x++)O[y*G+x]=T[y*G+x]>(BN[(y&31)*32+(x&31)]+0.5)/1024?1:0;gridDraw(ctx,W,G,O);}],
+ ['Floyd–Steinberg','Classic error diffusion',function(ctx,W){var G=Math.round(L/ps);gridDraw(ctx,W,G,ed(G,tg(G),FS));}],
+ ['Atkinson','Diffuses only 6/8, punchy contrast',function(ctx,W){var G=Math.round(L/ps);gridDraw(ctx,W,G,ed(G,tg(G),ATK));}],
+ ['Riemersma','Error flows along a Hilbert curve',function(ctx,W){var G=Math.round(L/ps),T=tg(G),O=new Uint8Array(G*G),n=1;while(n<G)n*=2;var Q=16,w=[],ws=0,i;for(i=0;i<Q;i++){w.push(Math.pow(16,i/(Q-1)));ws+=w[i];}for(i=0;i<Q;i++)w[i]/=ws;var h=[];for(i=0;i<Q;i++)h.push(0);
+   for(var d=0;d<n*n;d++){var xy=d2xy(n,d),x=xy[0],y=xy[1];if(x>=G||y>=G)continue;var e=0;for(i=0;i<Q;i++)e+=h[i]*w[i];var v=T[y*G+x]+e,o=v>=0.5?1:0;O[y*G+x]=o;h.shift();h.push(v-o);}gridDraw(ctx,W,G,O);}],
+ ['AM halftone','Round dots on a 45° grid',function(ctx,W){var k=W/L,c=4*ps,a=Math.PI/4,ca=Math.cos(a),sa=Math.sin(a),n=Math.ceil(L/c)+2;ctx.setTransform(k,0,0,k,0,0);ctx.fillStyle='#161616';ctx.beginPath();
+   for(var i=-n;i<=n;i++)for(var j=-n;j<=n;j++){var x=64+i*c*ca-j*c*sa,y=64+i*c*sa+j*c*ca;if(x<-c||x>L+c||y<-c||y>L+c)continue;var t=tone(Math.max(0,Math.min(L-0.01,x)),Math.max(0,Math.min(L-0.01,y)));var r=t<=0.78?c*Math.sqrt(t/Math.PI):c*(0.5+0.21*(t-0.78)/0.22);if(r<0.05)continue;ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,Math.PI*2);}ctx.fill();ctx.setTransform(1,0,0,1,0,0);}],
+ ['Line screen','Line thickness follows tone',function(ctx,W){var s=3*ps,a=Math.PI/4,ca=Math.cos(a),sa=Math.sin(a);pix(ctx,W,function(x,y,k){var t=tone(x,y),u=x*ca+y*sa,q=Math.abs(((u%s)+s)%s-s/2);return cov(s*t/2,q,k);});}],
+ ['Crosshatch','Hatch layers added as it darkens',function(ctx,W){var s=3*ps,hw=0.35*ps;function ln(u,k){return cov(hw,Math.abs(((u%s)+s)%s-s/2),k);}pix(ctx,W,function(x,y,k){var t=tone(x,y),a=0,S=Math.SQRT1_2;
+   if(t>0.12)a=Math.max(a,ln((x+y)*S,k));if(t>0.35)a=Math.max(a,ln((x-y)*S+s/2,k));if(t>0.58)a=Math.max(a,ln(y+s/2,k));if(t>0.8)a=Math.max(a,ln(x,k));if(t>0.92)a=Math.max(a,0.85);return a;});}],
+ ['Spiral','One line, width follows tone',function(ctx,W){var s=2.6*ps;pix(ctx,W,function(x,y,k){var dx=x-64,dy=y-58,r=Math.hypot(dx,dy),th=Math.atan2(dy,dx),ph=r-s*th/(2*Math.PI),q=Math.abs(((ph%s)+s)%s-s/2);return cov(s*tone(x,y)/2,q,k);});}],
+ ['Squiggle','Wave amplitude follows tone',function(ctx,W){var s=3.5*ps,lam=1.8*ps,f=2*Math.PI/lam,hw=0.28*ps;pix(ctx,W,function(x,y,k){var i0=Math.round(y/s),best=Infinity;
+   for(var i=i0-1;i<=i0+1;i++){var yc=i*s,t=tone(x,Math.max(0,Math.min(L-0.01,yc))),A=s*0.5*t,o=A*Math.sin(x*f),sl=A*f*Math.cos(x*f),d=Math.abs(y-yc-o)/Math.sqrt(1+sl*sl);if(d<best)best=d;}return cov(Math.max(hw,0.55/k),best,k);});}],
+ ['Stippling','Weighted Voronoi, Lloyd relaxed',function(ctx,W){var key='st'+lit+'|'+ps,rd=0.95*ps;if(!cache[key])cache[key]=stipples(Math.min(3500,Math.round(sumT()/(Math.PI*rd*rd))),5);var k=W/L;ctx.setTransform(k,0,0,k,0,0);ctx.fillStyle='#161616';ctx.beginPath();cache[key].forEach(function(p){ctx.moveTo(p[0]+rd,p[1]);ctx.arc(p[0],p[1],rd,0,Math.PI*2);});ctx.fill();ctx.setTransform(1,0,0,1,0,0);}],
+ ['TSP art','Stipples joined by one line',function(ctx,W){var key='tsp'+lit+'|'+ps;if(!cache[key]){var P=stipples(Math.min(1400,Math.round(sumT()/(Math.PI*2.2*ps*ps))),11);cache[key]={P:P,t:tour(P)};}var P2=cache[key].P,t=cache[key].t,k=W/L;ctx.setTransform(k,0,0,k,0,0);ctx.strokeStyle='#161616';ctx.lineWidth=Math.max(0.35,0.9/k);ctx.lineJoin='round';ctx.beginPath();t.forEach(function(j,i){if(i)ctx.lineTo(P2[j][0],P2[j][1]);else ctx.moveTo(P2[j][0],P2[j][1]);});ctx.stroke();ctx.setTransform(1,0,0,1,0,0);}],
+ ['ASCII','Characters as the dot shapes',function(ctx,W){var ramp=' .:-=+*#%@',cw=3.4*ps,ch=5.2*ps,k=W/L;ctx.fillStyle='#161616';ctx.font=(ch*k*1.05)+'px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+   for(var y=ch/2;y<L;y+=ch)for(var x=cw/2;x<L;x+=cw){var t=tone(x,y),c=ramp[Math.min(ramp.length-1,Math.floor(t*ramp.length))];if(c!==' ')ctx.fillText(c,x*k,y*k);}}]
+];
+var grid=$('grid');
+tiles.forEach(function(t,i){var d=document.createElement('div');d.className='tile';d.innerHTML='<canvas id="gg-t'+i+'" aria-label="'+t[0]+'"></canvas><p class="tn">'+t[0]+'</p><p class="td">'+t[1]+'</p>';grid.appendChild(d);});
+var token=0;
+function renderAll(){var my=++token,i=0;
+  function step(){if(my!==token)return;var cv=$('t'+i),r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1,W=Math.max(32,Math.round(r.width*dpr));
+    cv.width=cv.height=W;var ctx=cv.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,W);
+    try{tiles[i][2](ctx,W);}catch(e){}i++;if(i<tiles.length)requestAnimationFrame(step);}
+  requestAnimationFrame(step);}
+var deb;$('lit').addEventListener('input',function(){$('litv').textContent=$('lit').value+'°';lit=+$('lit').value*Math.PI/180;clearTimeout(deb);deb=setTimeout(renderAll,120);});
+segGroup($('ps'),function(v){ps=+v;renderAll();});
+$('big').addEventListener('click',function(){big=!big;grid.style.gridTemplateColumns=big?'repeat(2,minmax(0,1fr))':'';$('big').textContent=big?'Small tiles':'Large tiles';});
+var lastW=0;new ResizeObserver(function(){var w=grid.getBoundingClientRect().width+(big?1:0);if(w!==lastW){lastW=w;renderAll();}}).observe(grid);
+})();
+</script>
+
+<script>
+/* Demo 5: colour dithering gallery */
+(function(){
+var $=function(id){return document.getElementById('cg-'+id);};
+var L=128,lit=225*Math.PI/180,ps=1,src='lit',big=false;
+function s2l(v){return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);}
+function l2s(v){v=Math.max(0,Math.min(1,v));return v<=0.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-0.055;}
+function hex(h){return [1,3,5].map(function(i){return parseInt(h.slice(i,i+2),16)/255;});}
+function oklab(r,g,b){var l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b),m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b),s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return[0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s];}
+function toSp(c,sp){if(sp==='rgb')return c;var q=c.map(s2l);return sp==='lin'?q:oklab(q[0],q[1],q[2]);}
+function hsv(h,s,v){var f=function(n){var k=(n+h*6)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1));};return[f(5),f(3),f(1)];}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function col(x,y){var cx=64,cy=58,R=42,dx=x-cx,dy=y-cy,q=(dx*dx+dy*dy)/(R*R);
+  var lx=Math.cos(lit)*0.7,ly=Math.sin(lit)*0.7,lz=0.62;var m=Math.hypot(lx,ly,lz);lx/=m;ly/=m;lz/=m;
+  if(q<1){var nx=dx/R,ny=dy/R,nz=Math.sqrt(1-q);var key=Math.max(0,nx*lx+ny*ly+nz*lz);
+    var fx=-lx,fy=-ly,fz=0.35;var fm=Math.hypot(fx,fy,fz);var fill=Math.max(0,(nx*fx+ny*fy+nz*fz)/fm);
+    var hx=lx,hy=ly,hz=lz+1;var hm=Math.hypot(hx,hy,hz);var spec=Math.pow(Math.max(0,(nx*hx+ny*hy+nz*hz)/hm),40)*0.7;
+    var alb,KC,FC;
+    if(src==='lit'){alb=[0.85,0.26,0.06];KC=[1.15,1.06,0.92];FC=[0.15,0.32,0.75];}
+    else{alb=hsv(((Math.atan2(ny,nx)/(2*Math.PI))+1)%1,0.85,1).map(s2l);KC=[1.1,1.1,1.1];FC=[0.18,0.18,0.24];}
+    return[0,1,2].map(function(i){return l2s(alb[i]*(key*KC[i]+fill*FC[i]+0.03)+spec);});}
+  var sx=(x-(cx-lx*30))/55,sy=(y-(cy+R+6))/8,s=sx*sx+sy*sy,sh=s<1?(1-s):0;
+  var bg=[0.93,0.91,0.87].map(s2l),tint=[0.62,0.58,0.42];return bg.map(function(v,i){return l2s(v*(1-sh*tint[i]));});}
+var scache={};
+function getS(G){var key=G+'|'+lit+'|'+src;if(scache[key])return scache[key];var S=new Float32Array(G*G*3),s=L/G;
+  for(var y=0;y<G;y++)for(var x=0;x<G;x++){var c=col((x+0.5)*s,(y+0.5)*s),i=(y*G+x)*3;S[i]=c[0];S[i+1]=c[1];S[i+2]=c[2];}return scache[key]=S;}
+var BAY=[[0]];while(BAY.length<8){var bs=BAY.length,bnn=[];for(var by=0;by<2*bs;by++){bnn.push([]);for(var bx=0;bx<2*bs;bx++)bnn[by].push(4*BAY[by%bs][bx%bs]+[[0,2],[3,1]][Math.floor(by/bs)][Math.floor(bx/bs)]);}BAY=bnn;}
+var BN=(function(){var N=32,E=new Float32Array(N*N),K=new Float32Array(N*N),f=new Uint8Array(N*N),rank=new Float32Array(N*N),R=rng(3),sg=1.6;
+  for(var y=0;y<N;y++)for(var x=0;x<N;x++){var dx=Math.min(x,N-x),dy=Math.min(y,N-y);K[y*N+x]=Math.exp(-(dx*dx+dy*dy)/(2*sg*sg));}
+  for(var i=0;i<N*N;i++)E[i]=R()*1e-6;
+  for(var r=0;r<N*N;r++){var bi=-1,bv=Infinity;for(var i2=0;i2<N*N;i2++)if(!f[i2]&&E[i2]<bv){bv=E[i2];bi=i2;}f[bi]=1;rank[bi]=r;var ix=bi%N,iy=(bi/N)|0;
+    for(var j=0;j<N*N;j++){var jx=j%N,jy=(j/N)|0;E[j]+=K[((jy-iy+N)%N)*N+((jx-ix+N)%N)];}}return rank;})();
+function bn(x,y){return (BN[((y%32+32)%32)*32+((x%32+32)%32)]+0.5)/1024;}
+function pd(G,S,palH,mode,sp,spread){var pal=palH.map(hex),P=pal.map(function(c){return toSp(c,sp);}),n=G*G,Wb=new Float32Array(n*3),O=new Uint8Array(n);
+  for(var i=0;i<n;i++){var v=toSp([S[i*3],S[i*3+1],S[i*3+2]],sp);Wb[i*3]=v[0];Wb[i*3+1]=v[1];Wb[i*3+2]=v[2];}
+  function near(a,b,c){var bi=0,bd=1e9;for(var k=0;k<P.length;k++){var d=(a-P[k][0])*(a-P[k][0])+(b-P[k][1])*(b-P[k][1])+(c-P[k][2])*(c-P[k][2]);if(d<bd){bd=d;bi=k;}}return bi;}
+  if(mode==='fs'){var K=[[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
+    for(var y=0;y<G;y++){var rev=y&1;for(var q=0;q<G;q++){var x=rev?G-1-q:q,i3=y*G+x,a=Wb[i3*3],b=Wb[i3*3+1],c=Wb[i3*3+2],o=near(a,b,c);O[i3]=o;var e=[a-P[o][0],b-P[o][1],c-P[o][2]];
+      for(var kk=0;kk<K.length;kk++){var nx=x+(rev?-K[kk][0]:K[kk][0]),ny=y+K[kk][1];if(nx>=0&&nx<G&&ny<G){var j=(ny*G+nx)*3;Wb[j]+=e[0]*K[kk][2];Wb[j+1]+=e[1]*K[kk][2];Wb[j+2]+=e[2]*K[kk][2];}}}}}
+  else for(var y2=0;y2<G;y2++)for(var x2=0;x2<G;x2++){var i4=y2*G+x2,t=mode==='bayer'?(BAY[y2&7][x2&7]+0.5)/64:mode==='bn'?bn(x2,y2):0.5,o2=(t-0.5)*(spread||0);O[i4]=near(Wb[i4*3]+o2,Wb[i4*3+1]+o2,Wb[i4*3+2]+o2);}
+  var out=[];for(var m=0;m<n;m++)out.push(pal[O[m]]);return out;}
+function drawRGB(ctx,W,G,arr){var oc=document.createElement('canvas');oc.width=oc.height=G;var c=oc.getContext('2d'),img=c.createImageData(G,G),D=img.data;
+  for(var i=0;i<G*G;i++){var v=arr[i];D[i*4]=Math.round(v[0]*255);D[i*4+1]=Math.round(v[1]*255);D[i*4+2]=Math.round(v[2]*255);D[i*4+3]=255;}c.putImageData(img,0,0);ctx.imageSmoothingEnabled=false;ctx.drawImage(oc,0,0,W,W);}
+function pixRGB(ctx,W,f){var img=ctx.createImageData(W,W),D=img.data,k=W/L;
+  for(var py=0;py<W;py++)for(var px=0;px<W;px++){var c=f((px+0.5)/k,(py+0.5)/k,k),i=(py*W+px)*4;D[i]=Math.round(Math.max(0,Math.min(1,c[0]))*255);D[i+1]=Math.round(Math.max(0,Math.min(1,c[1]))*255);D[i+2]=Math.round(Math.max(0,Math.min(1,c[2]))*255);D[i+3]=255;}ctx.putImageData(img,0,0);}
+function cov(half,dist,k){return Math.max(0,Math.min(1,(half-dist)*k+0.5));}
+var P8=['#000000','#FF0000','#00FF00','#0000FF','#00FFFF','#FF00FF','#FFFF00','#FFFFFF'];
+var PICO=['#000000','#1D2B53','#7E2553','#008751','#AB5236','#5F574F','#C2C3C7','#FFF1E8','#FF004D','#FFA300','#FFEC27','#00E436','#29ADFF','#83769C','#FF77A8','#FFCCAA'];
+var GB=['#0F380F','#306230','#8BAC0F','#9BBC0F'];
+var CGA=['#000000','#55FFFF','#FF55FF','#FFFFFF'];
+function g(){return Math.round(L/ps);}
+function dotR(s,v){v=Math.max(0,Math.min(1,v));return v<=0.78?s*Math.sqrt(v/Math.PI):s*(0.5+0.21*(v-0.78)/0.22);}
+var pcache={};
+function pack(){var key='p'+ps;if(pcache[key])return pcache[key];var R=rng(21),C=[],B=6*ps,nb=Math.ceil(L/B),bk=[],gap=0.35*ps,i;for(i=0;i<nb*nb;i++)bk.push([]);
+  [2.8,2.0,1.4,0.9].forEach(function(r0){var r=r0*ps;for(var a=0;a<3000;a++){var x=R()*L,y=R()*L;if(Math.hypot(x-64,y-64)>60-r)continue;
+    var bx=(x/B)|0,by=(y/B)|0,ok=true;for(var dy=-1;dy<=1&&ok;dy++)for(var dx=-1;dx<=1&&ok;dx++){var cx=bx+dx,cy=by+dy;if(cx<0||cy<0||cx>=nb||cy>=nb)continue;var cell=bk[cy*nb+cx];for(var q=0;q<cell.length;q++){var c=cell[q];if(Math.hypot(c[0]-x,c[1]-y)<c[2]+r+gap){ok=false;break;}}}
+    if(ok){var cc=[x,y,r];C.push(cc);bk[by*nb+bx].push(cc);}}});return pcache[key]=C;}
+var tiles=[
+ ['Original','Full colour, for reference',function(ctx,W){pixRGB(ctx,W,col);}],
+ ['8 colours, no dither','Nearest colour only, harsh bands',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),P8,'none','rgb'));}],
+ ['8 colours + Floyd–Steinberg','Each RGB channel on or off',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),P8,'fs','rgb'));}],
+ ['8 colours, linear light','Same, but error spread in true light',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),P8,'fs','lin'));}],
+ ['8 colours + blue noise','Ordered, no error diffusion',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),P8,'bn','rgb',1));}],
+ ['Game Boy','4 greens, by brightness',function(ctx,W){var G=g(),S=getS(G),S2=new Float32Array(S.length),a=hex(GB[0]),b=hex(GB[3]);for(var i=0;i<G*G;i++){var l=0.2126*S[i*3]+0.7152*S[i*3+1]+0.0722*S[i*3+2];for(var c=0;c<3;c++)S2[i*3+c]=a[c]+(b[c]-a[c])*l;}drawRGB(ctx,W,G,pd(G,S2,GB,'fs','rgb'));}],
+ ['CGA palette','Black, cyan, magenta, white',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),CGA,'fs','rgb'));}],
+ ['PICO-8 + FS (RGB)','16 colours, distance in RGB',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),PICO,'fs','rgb'));}],
+ ['PICO-8 + FS (OKLab)','Distance as the eye sees it',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),PICO,'fs','oklab'));}],
+ ['PICO-8 + Bayer','Ordered pattern to a palette',function(ctx,W){var G=g();drawRGB(ctx,W,G,pd(G,getS(G),PICO,'bayer','rgb',0.32));}],
+ ['CMYK rosette','C 15°, M 75°, Y 0°, K 45° screens',function(ctx,W){var s=3.2*ps,ang=[15,75,0,45].map(function(a){return a*Math.PI/180;}),ink=[[0,0.68,0.94],[0.93,0.05,0.55],[1,0.93,0],[0.13,0.12,0.12]];
+   pixRGB(ctx,W,function(x,y,k){var c=col(x,y),Kt=1-Math.max(c[0],c[1],c[2]),kk=Kt>0.4?(Kt-0.4)/0.6*0.9:0,v=[0,1,2].map(function(i){return kk>=1?0:Math.max(0,(1-c[i]-kk)/(1-kk));});v.push(kk);
+     var o=[1,1,1];for(var i=0;i<4;i++){if(v[i]<0.01)continue;var ca=Math.cos(ang[i]),sa=Math.sin(ang[i]),u=(x-64)*ca+(y-64)*sa,w=-(x-64)*sa+(y-64)*ca,du=u-s*Math.round(u/s),dw=w-s*Math.round(w/s),a=cov(dotR(s,v[i]),Math.hypot(du,dw),k);
+       o=o.map(function(ch,j){return ch*(1-a*(1-ink[i][j]));});}return o;});}],
+ ['Riso duotone','Pink and blue inks, grain, misprint',function(ctx,W){var G=g(),S=getS(G),paper=[0.97,0.95,0.9].map(s2l),A=[1,0.28,0.69].map(s2l),B=[0,0.47,0.75].map(s2l),av=new Float32Array(G*G),bv=new Float32Array(G*G);
+   function mix(a,b){return paper.map(function(p,i){return p*(1-a*(1-A[i]))*(1-b*(1-B[i]));});}
+   for(var i=0;i<G*G;i++){var t=[S[i*3],S[i*3+1],S[i*3+2]].map(s2l),ba=0,bb=0,bd=1e9;for(var a=0;a<=1.001;a+=0.1)for(var b=0;b<=1.001;b+=0.1){var m=mix(a,b),d=(m[0]-t[0])*(m[0]-t[0])+(m[1]-t[1])*(m[1]-t[1])+(m[2]-t[2])*(m[2]-t[2]);if(d<bd){bd=d;ba=a;bb=b;}}av[i]=ba;bv[i]=bb;}
+   var out=[];for(var y=0;y<G;y++)for(var x=0;x<G;x++){var ia=av[y*G+x]>bn(x,y)?1:0,xb=Math.max(0,x-1),ib=bv[y*G+xb]>bn(x+13,y+7)?1:0;out.push(mix(ia,ib).map(l2s));}drawRGB(ctx,W,G,out);}],
+ ['RGB subpixels','Additive dots on black, like an LED wall',function(ctx,W){var s=3.3*ps;pixRGB(ctx,W,function(x,y,k){var cx=Math.floor(x/s),cy=Math.floor(y/s),j=Math.min(2,Math.floor((x-cx*s)/(s/3))),c=col((cx+0.5)*s,(cy+0.5)*s),xs=cx*s+(j+0.5)*s/3,ys=(cy+0.5)*s;
+   var a=cov(s/6*0.95*Math.sqrt(c[j]),Math.hypot(x-xs,(y-ys)*0.55),k)*Math.min(1,c[j]*1.3+0.2);var o=[0,0,0];o[j]=a;return o;});}],
+ ['Pointillism','Pure paint dabs mixed by the eye',function(ctx,W){var pal=['#E63B2E','#F28C28','#F7D23E','#4CAF50','#1B7F79','#2E4FB8','#7A3FA0','#FFFFFF','#F3E3C3','#2B2B3A'],PL=pal.map(function(h){var c=hex(h).map(s2l);return oklab(c[0],c[1],c[2]);}),k=W/L,R=rng(17),N=Math.round(7000/(ps*ps)),r=1.05*ps;
+   ctx.fillStyle='#F4EEDF';ctx.fillRect(0,0,W,W);ctx.setTransform(k,0,0,k,0,0);
+   for(var n=0;n<N;n++){var x=R()*L,y=R()*L,cc=col(x,y).map(s2l),t=oklab(cc[0],cc[1],cc[2]);var w=PL.map(function(p){return Math.exp(-((p[0]-t[0])*(p[0]-t[0])+(p[1]-t[1])*(p[1]-t[1])+(p[2]-t[2])*(p[2]-t[2]))/(2*0.06*0.06));});var sum=w.reduce(function(a,b){return a+b;},0),u=R()*sum,idx=0;
+     if(sum<1e-12){var bd=1e9;PL.forEach(function(p,i){var d=(p[0]-t[0])*(p[0]-t[0])+(p[1]-t[1])*(p[1]-t[1])+(p[2]-t[2])*(p[2]-t[2]);if(d<bd){bd=d;idx=i;}});}else{while(idx<w.length-1&&(u-=w[idx])>0)idx++;}
+     ctx.fillStyle=pal[idx];ctx.beginPath();ctx.ellipse(x,y,r*1.25,r*0.8,R()*Math.PI,0,Math.PI*2);ctx.fill();}ctx.setTransform(1,0,0,1,0,0);}],
+ ['Ishihara plate','Packed dots in a muted palette',function(ctx,W){var pal=['#E57A3C','#F0A05A','#D4563A','#F6C48A','#7FA86E','#5E8C5A','#A7C08A','#D9C7A8','#BBA88A','#6B5A4E','#4A6B4A','#8FA7C2'],PL=pal.map(function(h){var c=hex(h).map(s2l);return oklab(c[0],c[1],c[2]);}),k=W/L,R=rng(5);
+   ctx.setTransform(k,0,0,k,0,0);pack().forEach(function(d){var x=d[0],y=d[1],r=d[2],cc=col(x,y).map(s2l),t=oklab(cc[0],cc[1],cc[2]);t[0]+=(R()-0.5)*0.12;t[1]+=(R()-0.5)*0.04;t[2]+=(R()-0.5)*0.04;var bi=0,bd=1e9;PL.forEach(function(p,i){var dd=(p[0]-t[0])*(p[0]-t[0])+2*(p[1]-t[1])*(p[1]-t[1])+2*(p[2]-t[2])*(p[2]-t[2]);if(dd<bd){bd=dd;bi=i;}});
+     ctx.fillStyle=pal[bi];ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();});ctx.setTransform(1,0,0,1,0,0);}],
+ ['Four-ink poster grid','Flat inks, dot size from darkness',function(ctx,W){var pal=['#F26B3A','#2BAE4E','#3EC1EE','#FFD93B'],PL=pal.map(function(h){var c=hex(h).map(s2l);return oklab(c[0],c[1],c[2]);}),s=4.4*ps,k=W/L;ctx.setTransform(k,0,0,k,0,0);
+   for(var j=0;j*s<L;j++)for(var i=0;i*s<L;i++){var x=(i+0.5)*s,y=(j+0.5)*s,c=col(x,y),lum=0.2126*c[0]+0.7152*c[1]+0.0722*c[2],cv=Math.max(0,(0.9-lum)/0.75);if(cv<0.02)continue;
+     var cc=c.map(s2l),t=oklab(cc[0],cc[1],cc[2]),off=(bn(i,j)-0.5)*0.22,bi=0,bd=1e9;PL.forEach(function(p,n){var d=(p[0]-t[0]-off)*(p[0]-t[0]-off)*0.6+(p[1]-t[1])*(p[1]-t[1])+(p[2]-t[2])*(p[2]-t[2]);if(d<bd){bd=d;bi=n;}});
+     ctx.fillStyle=pal[bi];ctx.beginPath();ctx.arc(x,y,s*0.5*Math.sqrt(Math.min(1,cv*1.4)),0,Math.PI*2);ctx.fill();}ctx.setTransform(1,0,0,1,0,0);}]
+];
+var grid=$('grid');
+tiles.forEach(function(t,i){var d=document.createElement('div');d.className='tile';d.innerHTML='<canvas id="cg-t'+i+'" aria-label="'+t[0]+'"></canvas><p class="tn">'+t[0]+'</p><p class="td">'+t[1]+'</p>';grid.appendChild(d);});
+var token=0;
+function renderAll(){var my=++token,i=0;
+  function step(){if(my!==token)return;var cv=$('t'+i),r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1,W=Math.max(32,Math.round(r.width*dpr));
+    cv.width=cv.height=W;var ctx=cv.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,W);
+    try{tiles[i][2](ctx,W);}catch(e){}i++;if(i<tiles.length)requestAnimationFrame(step);}
+  requestAnimationFrame(step);}
+var deb;$('lit').addEventListener('input',function(){$('litv').textContent=$('lit').value+'°';lit=+$('lit').value*Math.PI/180;clearTimeout(deb);deb=setTimeout(renderAll,150);});
+segGroup($('ps'),function(v){ps=+v;renderAll();});
+segGroup($('src'),function(v){src=v;renderAll();});
+$('big').addEventListener('click',function(){big=!big;grid.style.gridTemplateColumns=big?'repeat(2,minmax(0,1fr))':'';$('big').textContent=big?'Small tiles':'Large tiles';});
+var lastW=0;new ResizeObserver(function(){var w=grid.getBoundingClientRect().width+(big?1:0);if(w!==lastW){lastW=w;renderAll();}}).observe(grid);
+})();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+//<vac>
+function makeRng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function voidAndCluster(N,sigma){
+  sigma=sigma||1.5;
+  var n=N*N,R=Math.ceil(sigma*3),rng=makeRng(12345);
+  var kx=[],ky=[],kw=[];
+  for(var dy=-R;dy<=R;dy++)for(var dx=-R;dx<=R;dx++){kx.push(dx);ky.push(dy);kw.push(Math.exp(-(dx*dx+dy*dy)/(2*sigma*sigma)));}
+  var K=kx.length,E=new Float64Array(n),B=new Uint8Array(n);
+  function splat(i,s){var ix=i%N,iy=(i-ix)/N;for(var k=0;k<K;k++){var x=(ix+kx[k]+N)%N,y=(iy+ky[k]+N)%N;E[y*N+x]+=s*kw[k];}}
+  function tightest(){var bi=-1,bv=-Infinity;for(var i=0;i<n;i++)if(B[i]===1&&E[i]>bv){bv=E[i];bi=i;}return bi;}
+  function largestVoid(){var bi=-1,bv=Infinity;for(var i=0;i<n;i++)if(B[i]===0&&E[i]<bv){bv=E[i];bi=i;}return bi;}
+  var ones0=Math.max(1,Math.round(n*0.1)),placed=0;
+  while(placed<ones0){var p=Math.floor(rng()*n);if(!B[p]){B[p]=1;splat(p,1);placed++;}}
+  for(var it=0;it<n*4;it++){var c=tightest();B[c]=0;splat(c,-1);var v=largestVoid();B[v]=1;splat(v,1);if(v===c)break;}
+  var rank=new Uint32Array(n),B0=B.slice(),E0=E.slice(),ones=ones0;
+  while(ones>0){var t=tightest();B[t]=0;splat(t,-1);ones--;rank[t]=ones;}
+  B.set(B0);E.set(E0);
+  var r=ones0;
+  while(r<n){var w=largestVoid();B[w]=1;splat(w,1);rank[w]=r;r++;}
+  return rank;
+}
+//</vac>
+</script>
+<script>
+/* Demo 6: three.js blue-noise sphere and benchmark */
+(function(){
+  var $=function(id){return document.getElementById('t-'+id);};
+  if(typeof THREE==='undefined'){$('fallback').hidden=false;return;}
+  var renderer;
+  try{renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:false,powerPreference:'high-performance'});}
+  catch(e){$('fallback').hidden=false;return;}
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var S={mask:'blue',N:64,pix:3,temporal:0,space:0,look:'night',exp:1,playing:!reduce};
+  var dirty=true,frame=0,dpr=1,cell=3,bufW=2,bufH=2,rtW=2,rtH=2;
+
+  /* scene */
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(32,1.6,0.1,60);
+  camera.position.set(0,2.1,7.4);camera.lookAt(0,0.8,0);
+  var ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshLambertMaterial({color:0x808080}));
+  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  var ball=new THREE.Mesh(new THREE.SphereGeometry(1,64,48),new THREE.MeshLambertMaterial({color:0xe6e6e6}));
+  ball.position.y=1;ball.castShadow=true;ball.receiveShadow=true;scene.add(ball);
+  var sat=new THREE.Mesh(new THREE.SphereGeometry(0.4,40,30),new THREE.MeshLambertMaterial({color:0xe6e6e6}));
+  sat.castShadow=true;sat.receiveShadow=true;scene.add(sat);
+  var amb=new THREE.AmbientLight(0xffffff,0.07);scene.add(amb);
+  var sun=new THREE.DirectionalLight(0xffffff,1.0);
+  sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.bias=-0.0006;
+  var sc=sun.shadow.camera;sc.left=-5;sc.right=5;sc.top=5;sc.bottom=-5;sc.near=0.5;sc.far=16;
+  scene.add(sun);scene.add(sun.target);
+  var ang=0.9,sa=0.5;
+  function placeLights(){
+    sun.position.set(Math.cos(ang)*5,4.4,Math.sin(ang)*5);
+    sat.position.set(Math.cos(sa)*2.2,0.5+0.07*Math.sin(sa*3),Math.sin(sa)*2.2);
+  }
+  function applyLook(){
+    var night=S.look==='night',bg=night?0.02:0.95;
+    scene.background=new THREE.Color(bg,bg,bg);
+    scene.fog=new THREE.Fog(new THREE.Color(bg,bg,bg),9,26);
+    ground.material.color.setScalar(night?0.45:0.8);
+    ball.material.color.setScalar(night?0.9:0.82);
+    sat.material.color.setScalar(night?0.9:0.82);
+    dirty=true;
+  }
+
+  /* render targets and passes */
+  var RTopt={minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,format:THREE.RGBAFormat,type:THREE.UnsignedByteType};
+  var sceneRT=new THREE.WebGLRenderTarget(2,2,Object.assign({depthBuffer:true},RTopt));
+  var VS='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
+  var FS=[
+    'uniform sampler2D tScene;uniform sampler2D tMask;',
+    'uniform vec2 uRt;uniform float uPixel;uniform float uMaskN;uniform float uCount;',
+    'uniform float uExposure;uniform float uPhase;uniform vec2 uShift;',
+    'uniform int uTemporal;uniform int uSpace;uniform int uIgn;',
+    'uniform vec3 uLight;uniform vec3 uDark;',
+    'void main(){',
+    '  vec2 cell=floor(gl_FragCoord.xy/uPixel);',
+    '  vec3 c=texture2D(tScene,(cell+0.5)/uRt).rgb;',
+    '  float lum=dot(c,vec3(0.2126,0.7152,0.0722))*uExposure;',
+    '  if(uSpace==1)lum=pow(clamp(lum,0.0,1.0),1.0/2.2);',
+    '  vec2 m=cell;',
+    '  if(uTemporal==2)m+=floor(uShift*uMaskN+0.5);',
+    '  float t;',
+    '  if(uIgn==1){t=fract(52.9829189*fract(dot(m,vec2(0.06711056,0.00583715))));}',
+    '  else{',
+    '    m=mod(m,uMaskN);',
+    '    vec4 k=texture2D(tMask,(m+0.5)/uMaskN);',
+    '    float rank=floor(k.r*255.0+0.5)*256.0+floor(k.g*255.0+0.5);',
+    '    t=(rank+0.5)/uCount;',
+    '  }',
+    '  if(uTemporal==1)t=fract(t+uPhase);',
+    '  gl_FragColor=vec4(lum>t?uLight:uDark,1.0);',
+    '}'
+  ].join('\n');
+  var ditherMat=new THREE.ShaderMaterial({
+    uniforms:{
+      tScene:{value:null},tMask:{value:null},uRt:{value:new THREE.Vector2(2,2)},uPixel:{value:3},uMaskN:{value:64},uCount:{value:4096},
+      uExposure:{value:1},uPhase:{value:0},uShift:{value:new THREE.Vector2()},uTemporal:{value:0},uSpace:{value:0},uIgn:{value:0},
+      uLight:{value:new THREE.Vector3(0.95,0.96,0.975)},uDark:{value:new THREE.Vector3(0.035,0.04,0.055)}
+    },
+    vertexShader:VS,fragmentShader:FS,depthTest:false,depthWrite:false
+  });
+  var copyMat=new THREE.ShaderMaterial({
+    uniforms:{tScene:{value:null},uRt:{value:new THREE.Vector2(2,2)},uPixel:{value:3}},
+    vertexShader:VS,
+    fragmentShader:'uniform sampler2D tScene;uniform vec2 uRt;uniform float uPixel;void main(){vec2 c=floor(gl_FragCoord.xy/uPixel);gl_FragColor=vec4(texture2D(tScene,(c+0.5)/uRt).rgb,1.0);}',
+    depthTest:false,depthWrite:false
+  });
+  var quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),ditherMat);
+  quad.frustumCulled=false;
+  var qs=new THREE.Scene();qs.add(quad);
+  var qc=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+  function renderFrame(){
+    renderer.setRenderTarget(sceneRT);renderer.render(scene,camera);
+    renderer.setRenderTarget(null);renderer.render(qs,qc);
+  }
+
+  /* masks */
+  var maskCache={},maskTex=null,curMask=null;
+  function bayer(n){
+    var M=[[0]];
+    while(M.length<n){var s=M.length,o=[];
+      for(var y=0;y<2*s;y++){o.push([]);for(var x=0;x<2*s;x++)o[y].push(4*M[y%s][x%s]+[[0,2],[3,1]][Math.floor(y/s)][Math.floor(x/s)]);}
+      M=o;}
+    var r=new Uint32Array(n*n);
+    for(var y2=0;y2<n;y2++)for(var x2=0;x2<n;x2++)r[y2*n+x2]=M[y2][x2];
+    return r;
+  }
+  function shuffled(n,seed){
+    var r=new Uint32Array(n),i,rng=makeRng(seed);
+    for(i=0;i<n;i++)r[i]=i;
+    for(i=n-1;i>0;i--){var j=Math.floor(rng()*(i+1)),t=r[i];r[i]=r[j];r[j]=t;}
+    return r;
+  }
+  function buildMask(type,N){
+    var key=type+(type==='blue'||type==='white'?N:''),hit=maskCache[key];
+    if(hit)return hit;
+    var t0=performance.now(),rank,size,count;
+    if(type==='blue'){size=N;count=N*N;rank=voidAndCluster(N);}
+    else if(type==='white'){size=N;count=N*N;rank=shuffled(N*N,77);}
+    else if(type==='bayer'){size=8;count=64;rank=bayer(8);}
+    else{
+      size=64;count=4096;rank=new Uint32Array(count);
+      for(var y=0;y<size;y++)for(var x=0;x<size;x++){
+        var a=0.06711056*x+0.00583715*y;a-=Math.floor(a);
+        var v=52.9829189*a;v-=Math.floor(v);
+        rank[y*size+x]=Math.min(count-1,Math.floor(v*count));
+      }
+    }
+    var data=new Uint8Array(size*size*4);
+    for(var i=0;i<size*size;i++){data[i*4]=rank[i]>>8;data[i*4+1]=rank[i]&255;data[i*4+2]=0;data[i*4+3]=255;}
+    return maskCache[key]={rank:rank,size:size,count:count,data:data,ms:performance.now()-t0,type:type};
+  }
+  var NAMES={blue:'Blue noise',ign:'Interleaved gradient noise',bayer:'Bayer',white:'White noise'};
+  function drawPreview(m){
+    var cv=$('maskprev');cv.width=m.size;cv.height=m.size;
+    var ctx=cv.getContext('2d'),img=ctx.createImageData(m.size,m.size);
+    for(var i=0;i<m.size*m.size;i++){var g=Math.round(255*(m.rank[i]+0.5)/m.count);img.data[i*4]=g;img.data[i*4+1]=g;img.data[i*4+2]=g;img.data[i*4+3]=255;}
+    ctx.putImageData(img,0,0);
+  }
+  function applyMask(m){
+    curMask=m;
+    if(maskTex)maskTex.dispose();
+    maskTex=new THREE.DataTexture(m.data,m.size,m.size,THREE.RGBAFormat,THREE.UnsignedByteType);
+    maskTex.minFilter=maskTex.magFilter=THREE.NearestFilter;maskTex.generateMipmaps=false;maskTex.needsUpdate=true;
+    var u=ditherMat.uniforms;
+    u.tMask.value=maskTex;u.uMaskN.value=m.size;u.uCount.value=m.count;u.uIgn.value=m.type==='ign'?1:0;
+    drawPreview(m);
+    var built=m.type==='ign'?'computed in the shader':(m.type==='bayer'?'fixed table':'built in '+Math.round(m.ms)+' ms');
+    var line=NAMES[m.type]+(m.type==='ign'?'':' · '+m.size+'×'+m.size)+' · '+built;
+    $('maskinfo').textContent=line;
+    $('h-mask').textContent=NAMES[m.type]+(m.type==='ign'?'':' '+m.size+'²');
+    dirty=true;
+  }
+  var maskToken=0;
+  function setMask(){
+    var type=S.mask,N=S.N;
+    $('masksize').disabled=(type==='ign'||type==='bayer');
+    var key=type+(type==='blue'||type==='white'?N:'');
+    if(maskCache[key]){applyMask(maskCache[key]);return;}
+    var my=++maskToken;
+    $('maskinfo').textContent='Building '+N+'×'+N+' mask…';
+    setTimeout(function(){if(my!==maskToken)return;applyMask(buildMask(type,N));},30);
+  }
+
+  /* sizing */
+  var stage=$('stage');var TV=watchVisible(stage);
+  function resize(){
+    var r=stage.getBoundingClientRect();
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    bufW=Math.max(2,Math.round(r.width*dpr));bufH=Math.max(2,Math.round(r.height*dpr));
+    renderer.setPixelRatio(1);renderer.setSize(bufW,bufH,false);
+    cell=Math.max(1,Math.round(S.pix*dpr));
+    rtW=Math.ceil(bufW/cell);rtH=Math.ceil(bufH/cell);
+    sceneRT.setSize(rtW,rtH);
+    camera.aspect=rtW/rtH;camera.updateProjectionMatrix();
+    var u=ditherMat.uniforms;
+    u.tScene.value=sceneRT.texture;u.uRt.value.set(rtW,rtH);u.uPixel.value=cell;
+    $('h-buf').textContent=bufW+' × '+bufH;
+    $('h-cells').textContent=rtW+' × '+rtH+' ('+Math.round(rtW*rtH/1000)+'k)';
+    dirty=true;
+  }
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(stage);else window.addEventListener('resize',resize);
+
+  /* controls */
+  function seg(id,cb){
+    var box=$(id),btns=box.querySelectorAll('button');
+    for(var i=0;i<btns.length;i++)(function(b){b.addEventListener('click',function(){
+      for(var j=0;j<btns.length;j++)btns[j].setAttribute('aria-pressed',btns[j]===b?'true':'false');
+      cb(b.getAttribute('data-v'));
+    });})(btns[i]);
+  }
+  $('mask').addEventListener('change',function(){S.mask=this.value;setMask();});
+  $('masksize').addEventListener('change',function(){S.N=+this.value;setMask();});
+  $('pix').addEventListener('input',function(){S.pix=+this.value;$('pixv').textContent=S.pix+' px';resize();});
+  $('temporal').addEventListener('change',function(){S.temporal=+this.value;ditherMat.uniforms.uTemporal.value=S.temporal;dirty=true;});
+  $('exp').addEventListener('input',function(){S.exp=+this.value;$('expv').textContent=S.exp.toFixed(2);ditherMat.uniforms.uExposure.value=S.exp;dirty=true;});
+  seg('space',function(v){S.space=+v;ditherMat.uniforms.uSpace.value=S.space;dirty=true;});
+  seg('look',function(v){S.look=v;applyLook();});
+  function syncPlay(){$('play').textContent=S.playing?'Pause':'Play';}
+  $('play').addEventListener('click',function(){S.playing=!S.playing;syncPlay();});
+
+  /* loop */
+  var last=performance.now(),fpsAvg=60,hudT=0,idle=false;
+  function loop(now){
+    var dt=Math.min(0.1,(now-last)/1000);last=now;
+    if(bench.running||!TV.v){requestAnimationFrame(loop);return;}
+    var animating=S.playing||S.temporal!==0;
+    if(!animating&&!dirty){idle=true;hudSet(now);requestAnimationFrame(loop);return;}
+    idle=false;
+    if(S.playing){ang+=dt*0.45;sa+=dt*0.9;}
+    placeLights();
+    frame++;
+    var u=ditherMat.uniforms;
+    u.uPhase.value=(frame*0.6180339887)%1;
+    u.uShift.value.set((frame*0.7548776662)%1,(frame*0.5698402910)%1);
+    renderFrame();
+    dirty=false;
+    if(dt>0)fpsAvg+=(1/dt-fpsAvg)*0.08;
+    hudSet(now);
+    requestAnimationFrame(loop);
+  }
+  function hudSet(now){
+    if(now-hudT<400)return;hudT=now;
+    $('h-fps').textContent=idle?'idle (nothing changing)':Math.round(fpsAvg)+' fps (vsync limited)';
+  }
+
+  /* benchmark */
+  var bench={running:false};
+  function timeIt(fn,target){
+    var px=new Uint8Array(4);
+    function sync(){renderer.readRenderTargetPixels(target,0,0,1,1,px);}
+    for(var i=0;i<3;i++)fn();sync();
+    var reps=4,ms=0;
+    for(;;){
+      var t0=performance.now();
+      for(var k=0;k<reps;k++)fn();
+      sync();ms=performance.now()-t0;
+      if(ms>=40||reps>=1024)break;
+      reps*=2;
+    }
+    return ms/reps;
+  }
+  function fmt(v){return v<1?v.toFixed(2)+' ms':v.toFixed(1)+' ms';}
+  function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  function runBench(){
+    if(bench.running)return;
+    bench.running=true;
+    var btn=$('runbench');btn.disabled=true;btn.textContent='Running…';
+    var rows=$('benchbody').rows,sizes=[[1280,720],[1920,1080],[2560,1440],[3840,2160]],cellPx=Math.max(1,Math.round(S.pix*dpr));
+    var tmp=[];
+    function cleanup(){
+      for(var i=0;i<tmp.length;i++)tmp[i].dispose();
+      renderer.setRenderTarget(null);resize();
+      bench.running=false;btn.disabled=false;btn.textContent='Run benchmark';dirty=true;
+    }
+    (async function(){
+      try{
+        for(var i=0;i<sizes.length;i++){
+          var w=sizes[i][0],h=sizes[i][1];
+          $('benchstatus').textContent='Timing '+w+' × '+h+'…';
+          await wait(40);
+          var out=new THREE.WebGLRenderTarget(w,h,Object.assign({depthBuffer:false},RTopt));
+          var rw=Math.ceil(w/cellPx),rh=Math.ceil(h/cellPx);
+          var srt=new THREE.WebGLRenderTarget(rw,rh,Object.assign({depthBuffer:true},RTopt));
+          tmp.push(out,srt);
+          camera.aspect=rw/rh;camera.updateProjectionMatrix();
+          var u=ditherMat.uniforms;
+          u.tScene.value=srt.texture;u.uRt.value.set(rw,rh);u.uPixel.value=cellPx;
+          copyMat.uniforms.tScene.value=srt.texture;copyMat.uniforms.uRt.value.set(rw,rh);copyMat.uniforms.uPixel.value=cellPx;
+          var tScene=timeIt(function(){renderer.setRenderTarget(srt);renderer.render(scene,camera);},srt);
+          quad.material=ditherMat;
+          var tDither=timeIt(function(){frame++;u.uPhase.value=(frame*0.6180339887)%1;u.uShift.value.set((frame*0.7548776662)%1,(frame*0.5698402910)%1);renderer.setRenderTarget(out);renderer.render(qs,qc);},out);
+          quad.material=copyMat;
+          var tCopy=timeIt(function(){renderer.setRenderTarget(out);renderer.render(qs,qc);},out);
+          quad.material=ditherMat;
+          var c=rows[i].cells;
+          c[1].textContent=fmt(tScene);c[2].textContent=fmt(tDither);c[3].textContent=fmt(tCopy);c[4].textContent=fmt(tScene+tDither);
+        }
+        $('benchstatus').textContent='Done. Cell size '+S.pix+' px, '+NAMES[S.mask]+', temporal mode '+$('temporal').selectedOptions[0].textContent.toLowerCase()+'.';
+      }catch(e){
+        $('benchstatus').textContent='The benchmark stopped early: '+(e&&e.message?e.message:'the browser refused a large render target')+'.';
+      }
+      cleanup();
+    })();
+  }
+  $('runbench').addEventListener('click',runBench);
+
+  /* start */
+  syncPlay();applyLook();placeLights();resize();setMask();
+  requestAnimationFrame(loop);
+})();
+</script>
