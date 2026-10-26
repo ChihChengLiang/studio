@@ -1,0 +1,993 @@
+{
+ "render": {
+  "size": 112,
+  "scale": 34,
+  "pitch": 20,
+  "pivot": [
+   0,
+   1.35,
+   0
+  ]
+ },
+ "palette": {
+  "outline": "20140c",
+  "patch0": "3a3018",
+  "patch1": "5a4a28",
+  "patch2": "7a6638",
+  "patch3": "9c8450",
+  "line0": "8a8472",
+  "line1": "b0aa96",
+  "line2": "d4cfbc",
+  "line3": "ece8d8",
+  "mane0": "6a3a14",
+  "mane1": "a05a1c",
+  "mane2": "d08a30",
+  "mane3": "eab05a",
+  "dark0": "1c1410",
+  "dark1": "33271e",
+  "dark2": "4f4034",
+  "dark3": "6e5c4c",
+  "red0": "5a1410",
+  "red1": "8a2218",
+  "red2": "b8402a",
+  "red3": "d86a48"
+ },
+ "materials": {
+  "patch": [
+   "patch0",
+   "patch1",
+   "patch2",
+   "patch3"
+  ],
+  "line": [
+   "line0",
+   "line1",
+   "line2",
+   "line3"
+  ],
+  "leg": [
+   "line0",
+   "line1",
+   "line2",
+   "line3"
+  ],
+  "mane": [
+   "mane0",
+   "mane1",
+   "mane2",
+   "mane3"
+  ],
+  "dark": [
+   "dark0",
+   "dark1",
+   "dark2",
+   "dark3"
+  ],
+  "red": [
+   "red0",
+   "red1",
+   "red2",
+   "red3"
+  ],
+  "eye": [
+   "outline",
+   "outline",
+   "outline",
+   "outline"
+  ]
+ },
+ "skeleton": [
+  {
+   "name": "body",
+   "parent": null,
+   "offset": [
+    0,
+    1.05,
+    0
+   ]
+  },
+  {
+   "name": "neck1",
+   "parent": "body",
+   "offset": [
+    0,
+    0.25,
+    0.38
+   ]
+  },
+  {
+   "name": "neck2",
+   "parent": "neck1",
+   "offset": [
+    0,
+    0.4,
+    0
+   ]
+  },
+  {
+   "name": "neck3",
+   "parent": "neck2",
+   "offset": [
+    0,
+    0.4,
+    0
+   ]
+  },
+  {
+   "name": "head",
+   "parent": "neck3",
+   "offset": [
+    0,
+    0.38,
+    0
+   ]
+  },
+  {
+   "name": "tail1",
+   "parent": "body",
+   "offset": [
+    0,
+    0.12,
+    -0.46
+   ]
+  },
+  {
+   "name": "tail2",
+   "parent": "tail1",
+   "offset": [
+    0,
+    -0.45,
+    0
+   ]
+  },
+  {
+   "name": "fup_L",
+   "parent": "body",
+   "offset": [
+    0.13,
+    -0.2,
+    0.34
+   ]
+  },
+  {
+   "name": "flo_L",
+   "parent": "fup_L",
+   "offset": [
+    0,
+    -0.42,
+    0
+   ]
+  },
+  {
+   "name": "fhoof_L",
+   "parent": "flo_L",
+   "offset": [
+    0,
+    -0.43,
+    0
+   ]
+  },
+  {
+   "name": "fup_R",
+   "parent": "body",
+   "offset": [
+    -0.13,
+    -0.2,
+    0.34
+   ]
+  },
+  {
+   "name": "flo_R",
+   "parent": "fup_R",
+   "offset": [
+    0,
+    -0.42,
+    0
+   ]
+  },
+  {
+   "name": "fhoof_R",
+   "parent": "flo_R",
+   "offset": [
+    0,
+    -0.43,
+    0
+   ]
+  },
+  {
+   "name": "bup_L",
+   "parent": "body",
+   "offset": [
+    0.13,
+    -0.2,
+    -0.34
+   ]
+  },
+  {
+   "name": "blo_L",
+   "parent": "bup_L",
+   "offset": [
+    0,
+    -0.42,
+    0
+   ]
+  },
+  {
+   "name": "bhoof_L",
+   "parent": "blo_L",
+   "offset": [
+    0,
+    -0.43,
+    0
+   ]
+  },
+  {
+   "name": "bup_R",
+   "parent": "body",
+   "offset": [
+    -0.13,
+    -0.2,
+    -0.34
+   ]
+  },
+  {
+   "name": "blo_R",
+   "parent": "bup_R",
+   "offset": [
+    0,
+    -0.42,
+    0
+   ]
+  },
+  {
+   "name": "bhoof_R",
+   "parent": "blo_R",
+   "offset": [
+    0,
+    -0.43,
+    0
+   ]
+  }
+ ],
+ "shapes": [
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    0
+   ],
+   "size": [
+    0.42,
+    0.5,
+    0.95
+   ],
+   "rot": [
+    -8,
+    0,
+    0
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.16,
+    0.28
+   ],
+   "size": [
+    0.3,
+    0.3,
+    0.4
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "neck1",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.2,
+    0
+   ],
+   "size": [
+    0.31,
+    0.52,
+    0.32
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "neck1",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.2,
+    -0.12
+   ],
+   "size": [
+    0.05,
+    0.5,
+    0.06
+   ],
+   "mat": "mane"
+  },
+  {
+   "bone": "neck2",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.2,
+    0
+   ],
+   "size": [
+    0.24,
+    0.48,
+    0.25
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "neck2",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.2,
+    -0.09
+   ],
+   "size": [
+    0.045,
+    0.46,
+    0.05
+   ],
+   "mat": "mane"
+  },
+  {
+   "bone": "neck3",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.2,
+    0
+   ],
+   "size": [
+    0.19,
+    0.46,
+    0.2
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "neck3",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.2,
+    -0.07
+   ],
+   "size": [
+    0.04,
+    0.44,
+    0.045
+   ],
+   "mat": "mane"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.0,
+    0.052,
+    0.104
+   ],
+   "size": [
+    0.156,
+    0.208,
+    0.338
+   ],
+   "mat": "patch",
+   "speckle": 36
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.0,
+    -0.026,
+    0.286
+   ],
+   "size": [
+    0.117,
+    0.117,
+    0.221
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.0,
+    -0.026,
+    0.273
+   ],
+   "size": [
+    0.13,
+    0.13,
+    0.0325
+   ],
+   "mat": "red"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.078,
+    0.0715,
+    0.1495
+   ],
+   "size": [
+    0.0325,
+    0.0455,
+    0.039
+   ],
+   "mat": "eye"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    -0.078,
+    0.0715,
+    0.1495
+   ],
+   "size": [
+    0.0325,
+    0.0455,
+    0.039
+   ],
+   "mat": "eye"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.0455,
+    0.182,
+    0.0
+   ],
+   "size": [
+    0.039,
+    0.117,
+    0.039
+   ],
+   "mat": "patch"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.0455,
+    0.2535,
+    0.0
+   ],
+   "size": [
+    0.052,
+    0.039,
+    0.052
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    -0.0455,
+    0.182,
+    0.0
+   ],
+   "size": [
+    0.039,
+    0.117,
+    0.039
+   ],
+   "mat": "patch"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    -0.0455,
+    0.2535,
+    0.0
+   ],
+   "size": [
+    0.052,
+    0.039,
+    0.052
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.117,
+    0.117,
+    -0.052
+   ],
+   "size": [
+    0.091,
+    0.052,
+    0.0325
+   ],
+   "rot": [
+    0,
+    0,
+    25
+   ],
+   "mat": "patch"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    -0.117,
+    0.117,
+    -0.052
+   ],
+   "size": [
+    0.091,
+    0.052,
+    0.0325
+   ],
+   "rot": [
+    0,
+    0,
+    -25
+   ],
+   "mat": "patch"
+  },
+  {
+   "bone": "tail1",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.22,
+    -0.02
+   ],
+   "size": [
+    0.04,
+    0.5,
+    0.04
+   ],
+   "mat": "patch"
+  },
+  {
+   "bone": "tail2",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.07,
+    0
+   ],
+   "size": [
+    0.09,
+    0.18,
+    0.09
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "fup_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.14,
+    0.5,
+    0.16
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "flo_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.075,
+    0.5,
+    0.085
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "fhoof_L",
+   "type": "box",
+   "center": [
+    0,
+    0.03,
+    0.02
+   ],
+   "size": [
+    0.08,
+    0.08,
+    0.11
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "fup_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.14,
+    0.5,
+    0.16
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "flo_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.075,
+    0.5,
+    0.085
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "fhoof_R",
+   "type": "box",
+   "center": [
+    0,
+    0.03,
+    0.02
+   ],
+   "size": [
+    0.08,
+    0.08,
+    0.11
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "bup_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.17,
+    0.5,
+    0.19
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "blo_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.075,
+    0.5,
+    0.085
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "bhoof_L",
+   "type": "box",
+   "center": [
+    0,
+    0.03,
+    0.02
+   ],
+   "size": [
+    0.08,
+    0.08,
+    0.11
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "bup_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.17,
+    0.5,
+    0.19
+   ],
+   "mat": "patch",
+   "mat2": "line",
+   "reticulate": [
+    9,
+    0.13
+   ]
+  },
+  {
+   "bone": "blo_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.21,
+    0
+   ],
+   "size": [
+    0.075,
+    0.5,
+    0.085
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "bhoof_R",
+   "type": "box",
+   "center": [
+    0,
+    0.03,
+    0.02
+   ],
+   "size": [
+    0.08,
+    0.08,
+    0.11
+   ],
+   "mat": "dark"
+  }
+ ],
+ "animations": {
+  "walk": {
+   "frames": 8,
+   "bones": {
+    "body": [
+     {
+      "axis": "ty",
+      "wave": "abs",
+      "freq": 2,
+      "amp": 0.015
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 2,
+      "phase": 0.1
+     }
+    ],
+    "neck1": [
+     {
+      "axis": "x",
+      "base": 10,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 2
+     }
+    ],
+    "neck2": [
+     {
+      "axis": "x",
+      "base": 8,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 3,
+      "phase": 0.1
+     }
+    ],
+    "neck3": [
+     {
+      "axis": "x",
+      "base": -6,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 3,
+      "phase": 0.2
+     }
+    ],
+    "head": [
+     {
+      "axis": "x",
+      "base": -5,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 4,
+      "phase": 0.3
+     }
+    ],
+    "tail1": [
+     {
+      "axis": "x",
+      "base": 5,
+      "wave": "sin",
+      "amp": 6,
+      "phase": 0.3
+     },
+     {
+      "axis": "z",
+      "wave": "sin",
+      "amp": 6,
+      "phase": 0.1
+     }
+    ],
+    "tail2": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.5
+     }
+    ],
+    "bup_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -20,
+      "phase": 0.0
+     }
+    ],
+    "blo_R": [
+     {
+      "axis": "x",
+      "base": 12,
+      "wave": "relu",
+      "amp": 35,
+      "phase": 0.2
+     }
+    ],
+    "bhoof_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.0
+     }
+    ],
+    "fup_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -20,
+      "phase": 0.25
+     }
+    ],
+    "flo_R": [
+     {
+      "axis": "x",
+      "base": 4,
+      "wave": "relu",
+      "amp": 50,
+      "phase": 0.45
+     }
+    ],
+    "fhoof_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.25
+     }
+    ],
+    "bup_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -20,
+      "phase": 0.5
+     }
+    ],
+    "blo_L": [
+     {
+      "axis": "x",
+      "base": 12,
+      "wave": "relu",
+      "amp": 35,
+      "phase": 0.7
+     }
+    ],
+    "bhoof_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.5
+     }
+    ],
+    "fup_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -20,
+      "phase": 0.75
+     }
+    ],
+    "flo_L": [
+     {
+      "axis": "x",
+      "base": 4,
+      "wave": "relu",
+      "amp": 50,
+      "phase": 0.95
+     }
+    ],
+    "fhoof_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.75
+     }
+    ]
+   }
+  }
+ }
+}

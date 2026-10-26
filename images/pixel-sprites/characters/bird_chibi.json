@@ -1,0 +1,836 @@
+{
+ "render": {
+  "size": 64,
+  "scale": 54,
+  "pitch": 18,
+  "pivot": [
+   0,
+   0.4,
+   0
+  ]
+ },
+ "palette": {
+  "outline": "1a1210",
+  "brown0": "2a1c14",
+  "brown1": "55392a",
+  "brown2": "80603f",
+  "brown3": "ad8a5e",
+  "wing0": "22160f",
+  "wing1": "3f2a1d",
+  "wing2": "5f4630",
+  "wing3": "85654a",
+  "buff0": "8f6f4e",
+  "buff1": "bd9a6e",
+  "buff2": "e2c597",
+  "buff3": "f6e6c4",
+  "bill0": "5a5a2a",
+  "bill1": "8f9040",
+  "bill2": "c4c85a",
+  "bill3": "e4e68a",
+  "leg0": "4a5a4a",
+  "leg1": "6f8470",
+  "leg2": "98ae94",
+  "leg3": "c0d0b8",
+  "dark0": "15100e",
+  "dark1": "2a1f1a",
+  "dark2": "453730",
+  "dark3": "5f4f44",
+  "eye": "f0b81c"
+ },
+ "materials": {
+  "brown": [
+   "brown0",
+   "brown1",
+   "brown2",
+   "brown3"
+  ],
+  "wing": [
+   "wing0",
+   "wing1",
+   "wing2",
+   "wing3"
+  ],
+  "buff": [
+   "buff0",
+   "buff1",
+   "buff2",
+   "buff3"
+  ],
+  "bill": [
+   "bill0",
+   "bill1",
+   "bill2",
+   "bill3"
+  ],
+  "leg": [
+   "leg0",
+   "leg1",
+   "leg2",
+   "leg3"
+  ],
+  "dark": [
+   "dark0",
+   "dark1",
+   "dark2",
+   "dark3"
+  ],
+  "eye": [
+   "eye",
+   "eye",
+   "eye",
+   "eye"
+  ],
+  "pupil": [
+   "outline",
+   "outline",
+   "outline",
+   "outline"
+  ],
+  "spark": [
+   "buff3",
+   "buff3",
+   "buff3",
+   "buff3"
+  ]
+ },
+ "skeleton": [
+  {
+   "name": "body",
+   "parent": null,
+   "offset": [
+    0,
+    0.32,
+    0
+   ]
+  },
+  {
+   "name": "head",
+   "parent": "body",
+   "offset": [
+    0,
+    0.19,
+    0.08
+   ]
+  },
+  {
+   "name": "tail",
+   "parent": "body",
+   "offset": [
+    0,
+    -0.02,
+    -0.17
+   ]
+  },
+  {
+   "name": "hip_L",
+   "parent": "body",
+   "offset": [
+    0.08,
+    -0.1,
+    0.01
+   ]
+  },
+  {
+   "name": "ank_L",
+   "parent": "hip_L",
+   "offset": [
+    0,
+    -0.09,
+    0
+   ]
+  },
+  {
+   "name": "foot_L",
+   "parent": "ank_L",
+   "offset": [
+    0,
+    -0.09,
+    0
+   ]
+  },
+  {
+   "name": "hip_R",
+   "parent": "body",
+   "offset": [
+    -0.08,
+    -0.1,
+    0.01
+   ]
+  },
+  {
+   "name": "ank_R",
+   "parent": "hip_R",
+   "offset": [
+    0,
+    -0.09,
+    0
+   ]
+  },
+  {
+   "name": "foot_R",
+   "parent": "ank_R",
+   "offset": [
+    0,
+    -0.09,
+    0
+   ]
+  }
+ ],
+ "shapes": [
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    0
+   ],
+   "size": [
+    0.36,
+    0.34,
+    0.38
+   ],
+   "rot": [
+    15,
+    0,
+    0
+   ],
+   "mat": "brown",
+   "speckle": 34
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.01,
+    0.1
+   ],
+   "size": [
+    0.24,
+    0.26,
+    0.2
+   ],
+   "rot": [
+    15,
+    0,
+    0
+   ],
+   "mat": "buff",
+   "speckle": 34
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0.165,
+    -0.01,
+    -0.04
+   ],
+   "size": [
+    0.08,
+    0.26,
+    0.3
+   ],
+   "rot": [
+    15,
+    0,
+    0
+   ],
+   "mat": "wing",
+   "speckle": 36
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    -0.165,
+    -0.01,
+    -0.04
+   ],
+   "size": [
+    0.08,
+    0.26,
+    0.3
+   ],
+   "rot": [
+    15,
+    0,
+    0
+   ],
+   "mat": "wing",
+   "speckle": 36
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.17,
+    0.08
+   ],
+   "size": [
+    0.2,
+    0.16,
+    0.2
+   ],
+   "mat": "buff",
+   "speckle": 34
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.09,
+    0.0
+   ],
+   "size": [
+    0.42,
+    0.38,
+    0.4
+   ],
+   "mat": "brown",
+   "speckle": 38
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.19,
+    -0.02
+   ],
+   "size": [
+    0.35,
+    0.18,
+    0.33
+   ],
+   "mat": "dark",
+   "speckle": 44
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.03,
+    0.11
+   ],
+   "size": [
+    0.26,
+    0.2,
+    0.2
+   ],
+   "mat": "buff",
+   "speckle": 38
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.07,
+    0.19
+   ],
+   "size": [
+    0.13,
+    0.09,
+    0.1
+   ],
+   "mat": "bill"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0,
+    0.055,
+    0.25
+   ],
+   "size": [
+    0.055,
+    0.05,
+    0.1
+   ],
+   "mat": "bill"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0,
+    -0.010000000000000002,
+    0.31
+   ],
+   "size": [
+    0.04,
+    0.028000000000000004,
+    0.05
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.12,
+    0.11,
+    0.15
+   ],
+   "size": [
+    0.11,
+    0.12,
+    0.07
+   ],
+   "mat": "eye"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    -0.12,
+    0.11,
+    0.15
+   ],
+   "size": [
+    0.11,
+    0.12,
+    0.07
+   ],
+   "mat": "eye"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.125,
+    0.11,
+    0.18
+   ],
+   "size": [
+    0.06,
+    0.075,
+    0.04
+   ],
+   "mat": "pupil"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    -0.125,
+    0.11,
+    0.18
+   ],
+   "size": [
+    0.06,
+    0.075,
+    0.04
+   ],
+   "mat": "pupil"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.135,
+    0.145,
+    0.205
+   ],
+   "size": [
+    0.025,
+    0.025,
+    0.02
+   ],
+   "mat": "spark"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    -0.115,
+    0.145,
+    0.205
+   ],
+   "size": [
+    0.025,
+    0.025,
+    0.02
+   ],
+   "mat": "spark"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0,
+    0.28,
+    -0.14
+   ],
+   "size": [
+    0.06,
+    0.096,
+    0.08
+   ],
+   "rot": [
+    -35,
+    0,
+    0
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "head",
+   "type": "box",
+   "center": [
+    0.045,
+    0.26,
+    -0.13
+   ],
+   "size": [
+    0.04,
+    0.08000000000000002,
+    0.06
+   ],
+   "rot": [
+    -35,
+    0,
+    -12
+   ],
+   "mat": "dark"
+  },
+  {
+   "bone": "tail",
+   "type": "box",
+   "center": [
+    0,
+    0,
+    -0.05
+   ],
+   "size": [
+    0.14,
+    0.04,
+    0.14
+   ],
+   "rot": [
+    -12,
+    0,
+    0
+   ],
+   "mat": "wing"
+  },
+  {
+   "bone": "tail",
+   "type": "box",
+   "center": [
+    0,
+    0.0,
+    -0.12
+   ],
+   "size": [
+    0.1,
+    0.03,
+    0.04
+   ],
+   "rot": [
+    -12,
+    0,
+    0
+   ],
+   "mat": "buff"
+  },
+  {
+   "bone": "hip_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.03,
+    0
+   ],
+   "size": [
+    0.11,
+    0.13,
+    0.13
+   ],
+   "mat": "buff",
+   "speckle": 34
+  },
+  {
+   "bone": "ank_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.045,
+    0
+   ],
+   "size": [
+    0.05,
+    0.13,
+    0.055
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "foot_L",
+   "type": "box",
+   "center": [
+    0,
+    0.0,
+    0.05
+   ],
+   "size": [
+    0.04,
+    0.03,
+    0.12
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "foot_L",
+   "type": "box",
+   "center": [
+    0.04,
+    0.0,
+    0.04
+   ],
+   "size": [
+    0.03,
+    0.025,
+    0.09
+   ],
+   "rot": [
+    0,
+    25,
+    0
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "foot_L",
+   "type": "box",
+   "center": [
+    -0.04,
+    0.0,
+    0.04
+   ],
+   "size": [
+    0.03,
+    0.025,
+    0.09
+   ],
+   "rot": [
+    0,
+    -25,
+    0
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "hip_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.03,
+    0
+   ],
+   "size": [
+    0.11,
+    0.13,
+    0.13
+   ],
+   "mat": "buff",
+   "speckle": 34
+  },
+  {
+   "bone": "ank_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.045,
+    0
+   ],
+   "size": [
+    0.05,
+    0.13,
+    0.055
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "foot_R",
+   "type": "box",
+   "center": [
+    0,
+    0.0,
+    0.05
+   ],
+   "size": [
+    0.04,
+    0.03,
+    0.12
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "foot_R",
+   "type": "box",
+   "center": [
+    0.04,
+    0.0,
+    0.04
+   ],
+   "size": [
+    0.03,
+    0.025,
+    0.09
+   ],
+   "rot": [
+    0,
+    25,
+    0
+   ],
+   "mat": "leg"
+  },
+  {
+   "bone": "foot_R",
+   "type": "box",
+   "center": [
+    -0.04,
+    0.0,
+    0.04
+   ],
+   "size": [
+    0.03,
+    0.025,
+    0.09
+   ],
+   "rot": [
+    0,
+    -25,
+    0
+   ],
+   "mat": "leg"
+  }
+ ],
+ "animations": {
+  "walk": {
+   "frames": 8,
+   "bones": {
+    "body": [
+     {
+      "axis": "ty",
+      "wave": "abs",
+      "freq": 2,
+      "amp": 0.025
+     },
+     {
+      "axis": "z",
+      "wave": "sin",
+      "amp": 5
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 4,
+      "phase": 0.1
+     }
+    ],
+    "head": [
+     {
+      "axis": "tz",
+      "wave": "sin",
+      "freq": 2,
+      "amp": 0.012,
+      "phase": 0.15
+     },
+     {
+      "axis": "z",
+      "wave": "sin",
+      "amp": -4
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": -4,
+      "phase": 0.1
+     },
+     {
+      "axis": "x",
+      "base": 3,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 2,
+      "phase": 0.1
+     }
+    ],
+    "tail": [
+     {
+      "axis": "x",
+      "base": 8,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 5,
+      "phase": 0.2
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.3
+     }
+    ],
+    "hip_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -30,
+      "phase": 0.0
+     }
+    ],
+    "ank_R": [
+     {
+      "axis": "x",
+      "base": 8,
+      "wave": "relu",
+      "amp": 50,
+      "phase": 0.2
+     }
+    ],
+    "foot_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 14,
+      "phase": 0.0
+     }
+    ],
+    "hip_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -30,
+      "phase": 0.5
+     }
+    ],
+    "ank_L": [
+     {
+      "axis": "x",
+      "base": 8,
+      "wave": "relu",
+      "amp": 50,
+      "phase": 0.7
+     }
+    ],
+    "foot_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 14,
+      "phase": 0.5
+     }
+    ]
+   }
+  }
+ }
+}

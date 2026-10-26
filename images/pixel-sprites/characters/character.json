@@ -1,0 +1,98 @@
+{
+  "render": { "size": 64, "scale": 26, "pitch": 18, "pivot": [0, 0.96, 0] },
+
+  "palette": {
+    "outline": "1b1423",
+    "skin0": "8a4f3a", "skin1": "c07a56", "skin2": "e8a77c", "skin3": "ffd2a6",
+    "hair0": "2a1a1a", "hair1": "4a2c20", "hair2": "6e4630", "hair3": "94643f",
+    "tun0": "1e4a3a", "tun1": "2f7a4f", "tun2": "4aa860", "tun3": "86d47a",
+    "pant0": "2e2c48", "pant1": "46426c", "pant2": "625c92", "pant3": "867fb8",
+    "boot0": "2a1e18", "boot1": "4a3226", "boot2": "6e4a34", "boot3": "94694a"
+  },
+
+  "materials": {
+    "skin": ["skin0", "skin1", "skin2", "skin3"],
+    "hair": ["hair0", "hair1", "hair2", "hair3"],
+    "tunic": ["tun0", "tun1", "tun2", "tun3"],
+    "pants": ["pant0", "pant1", "pant2", "pant3"],
+    "leather": ["boot0", "boot1", "boot2", "boot3"],
+    "eye": ["outline", "outline", "outline", "outline"]
+  },
+
+  "skeleton": [
+    { "name": "hips",     "parent": null,    "offset": [0, 1.0, 0] },
+    { "name": "torso",    "parent": "hips",  "offset": [0, 0.05, 0] },
+    { "name": "head",     "parent": "torso", "offset": [0, 0.52, 0] },
+
+    { "name": "arm_L",    "parent": "torso", "offset": [0.30, 0.44, 0] },
+    { "name": "forearm_L","parent": "arm_L", "offset": [0, -0.32, 0] },
+    { "name": "arm_R",    "parent": "torso", "offset": [-0.30, 0.44, 0] },
+    { "name": "forearm_R","parent": "arm_R", "offset": [0, -0.32, 0] },
+
+    { "name": "thigh_L",  "parent": "hips",    "offset": [0.12, -0.05, 0] },
+    { "name": "shin_L",   "parent": "thigh_L", "offset": [0, -0.42, 0] },
+    { "name": "foot_L",   "parent": "shin_L",  "offset": [0, -0.42, 0] },
+    { "name": "thigh_R",  "parent": "hips",    "offset": [-0.12, -0.05, 0] },
+    { "name": "shin_R",   "parent": "thigh_R", "offset": [0, -0.42, 0] },
+    { "name": "foot_R",   "parent": "shin_R",  "offset": [0, -0.42, 0] }
+  ],
+
+  "shapes": [
+    { "bone": "hips",  "type": "box",       "center": [0, 0.0, 0],     "size": [0.44, 0.2, 0.27],  "mat": "pants" },
+    { "bone": "torso", "type": "box",       "center": [0, 0.27, 0],    "size": [0.46, 0.5, 0.28],  "mat": "tunic" },
+    { "bone": "torso", "type": "box",       "center": [0, 0.03, 0],    "size": [0.48, 0.07, 0.30], "mat": "leather" },
+
+    { "bone": "head",  "type": "ellipsoid", "center": [0, 0.17, 0],    "size": [0.36, 0.38, 0.34], "mat": "skin" },
+    { "bone": "head",  "type": "ellipsoid", "center": [0, 0.24, -0.03], "size": [0.40, 0.34, 0.38], "mat": "hair" },
+    { "bone": "head",  "type": "box",       "center": [0.08, 0.19, 0.16],  "size": [0.05, 0.05, 0.04], "mat": "eye" },
+    { "bone": "head",  "type": "box",       "center": [-0.08, 0.19, 0.16], "size": [0.05, 0.05, 0.04], "mat": "eye" },
+
+    { "bone": "arm_L",     "type": "box",       "center": [0, -0.15, 0], "size": [0.13, 0.36, 0.14], "mat": "tunic" },
+    { "bone": "forearm_L", "type": "box",       "center": [0, -0.13, 0], "size": [0.11, 0.30, 0.12], "mat": "skin" },
+    { "bone": "forearm_L", "type": "ellipsoid", "center": [0, -0.30, 0], "size": [0.13, 0.13, 0.13], "mat": "skin" },
+    { "bone": "arm_R",     "type": "box",       "center": [0, -0.15, 0], "size": [0.13, 0.36, 0.14], "mat": "tunic" },
+    { "bone": "forearm_R", "type": "box",       "center": [0, -0.13, 0], "size": [0.11, 0.30, 0.12], "mat": "skin" },
+    { "bone": "forearm_R", "type": "ellipsoid", "center": [0, -0.30, 0], "size": [0.13, 0.13, 0.13], "mat": "skin" },
+
+    { "bone": "thigh_L", "type": "box", "center": [0, -0.20, 0],  "size": [0.17, 0.48, 0.19], "mat": "pants" },
+    { "bone": "shin_L",  "type": "box", "center": [0, -0.20, 0],  "size": [0.14, 0.44, 0.16], "mat": "pants" },
+    { "bone": "shin_L",  "type": "box", "center": [0, -0.32, 0],  "size": [0.16, 0.20, 0.18], "mat": "leather" },
+    { "bone": "foot_L",  "type": "box", "center": [0, -0.04, 0.06], "size": [0.16, 0.10, 0.30], "mat": "leather" },
+    { "bone": "thigh_R", "type": "box", "center": [0, -0.20, 0],  "size": [0.17, 0.48, 0.19], "mat": "pants" },
+    { "bone": "shin_R",  "type": "box", "center": [0, -0.20, 0],  "size": [0.14, 0.44, 0.16], "mat": "pants" },
+    { "bone": "shin_R",  "type": "box", "center": [0, -0.32, 0],  "size": [0.16, 0.20, 0.18], "mat": "leather" },
+    { "bone": "foot_R",  "type": "box", "center": [0, -0.04, 0.06], "size": [0.16, 0.10, 0.30], "mat": "leather" }
+  ],
+
+  "animations": {
+    "walk": {
+      "frames": 8,
+      "bones": {
+        "hips": [
+          { "axis": "ty", "wave": "abs", "amp": -0.05 },
+          { "axis": "y",  "wave": "sin", "amp": -5 }
+        ],
+        "torso": [
+          { "axis": "x", "base": 4 },
+          { "axis": "y", "wave": "sin", "amp": 8 }
+        ],
+        "head": [
+          { "axis": "x", "base": -3 },
+          { "axis": "y", "wave": "sin", "amp": -4 }
+        ],
+
+        "thigh_L": [ { "axis": "x", "wave": "sin", "amp": -30, "phase": 0.0 } ],
+        "thigh_R": [ { "axis": "x", "wave": "sin", "amp": -30, "phase": 0.5 } ],
+        "shin_L":  [ { "axis": "x", "wave": "relu", "amp": 50, "phase": 0.2, "base": 4 } ],
+        "shin_R":  [ { "axis": "x", "wave": "relu", "amp": 50, "phase": 0.7, "base": 4 } ],
+        "foot_L":  [ { "axis": "x", "wave": "sin", "amp": 10, "phase": 0.0 } ],
+        "foot_R":  [ { "axis": "x", "wave": "sin", "amp": 10, "phase": 0.5 } ],
+
+        "arm_L": [ { "axis": "x", "wave": "sin", "amp": -24, "phase": 0.5 } ],
+        "arm_R": [ { "axis": "x", "wave": "sin", "amp": -24, "phase": 0.0 } ],
+        "forearm_L": [ { "axis": "x", "base": -22, "wave": "sin", "amp": -10, "phase": 0.5 } ],
+        "forearm_R": [ { "axis": "x", "base": -22, "wave": "sin", "amp": -10, "phase": 0.0 } ]
+      }
+    }
+  }
+}

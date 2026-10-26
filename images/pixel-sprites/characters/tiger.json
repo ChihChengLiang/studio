@@ -1,0 +1,999 @@
+{
+ "render": {
+  "size": 88,
+  "scale": 34,
+  "pitch": 22,
+  "pivot": [
+   0,
+   0.5,
+   -0.2
+  ]
+ },
+ "palette": {
+  "outline": "1a1018",
+  "fur0": "7a4636",
+  "fur1": "b06a54",
+  "fur2": "d89478",
+  "fur3": "efbc9c",
+  "belly0": "9a7080",
+  "belly1": "c496a2",
+  "belly2": "e0b8bc",
+  "belly3": "f4d8d4",
+  "stripe0": "0a0a16",
+  "stripe1": "161628",
+  "stripe2": "26263c",
+  "stripe3": "3a3a52",
+  "eye": "d8a828"
+ },
+ "materials": {
+  "fur": [
+   "fur0",
+   "fur1",
+   "fur2",
+   "fur3"
+  ],
+  "belly": [
+   "belly0",
+   "belly1",
+   "belly2",
+   "belly3"
+  ],
+  "stripe": [
+   "stripe0",
+   "stripe1",
+   "stripe2",
+   "stripe3"
+  ],
+  "eye": [
+   "eye",
+   "eye",
+   "eye",
+   "eye"
+  ]
+ },
+ "skeleton": [
+  {
+   "name": "body",
+   "parent": null,
+   "offset": [
+    0,
+    0.55,
+    0
+   ]
+  },
+  {
+   "name": "head",
+   "parent": "body",
+   "offset": [
+    0,
+    -0.05,
+    0.58
+   ]
+  },
+  {
+   "name": "tail1",
+   "parent": "body",
+   "offset": [
+    0,
+    0.12,
+    -0.56
+   ]
+  },
+  {
+   "name": "tail2",
+   "parent": "tail1",
+   "offset": [
+    0,
+    0,
+    -0.26
+   ]
+  },
+  {
+   "name": "tail3",
+   "parent": "tail2",
+   "offset": [
+    0,
+    0,
+    -0.26
+   ]
+  },
+  {
+   "name": "tail4",
+   "parent": "tail3",
+   "offset": [
+    0,
+    0,
+    -0.26
+   ]
+  },
+  {
+   "name": "fup_L",
+   "parent": "body",
+   "offset": [
+    0.2,
+    -0.12,
+    0.38
+   ]
+  },
+  {
+   "name": "flo_L",
+   "parent": "fup_L",
+   "offset": [
+    0,
+    -0.22,
+    0
+   ]
+  },
+  {
+   "name": "fpaw_L",
+   "parent": "flo_L",
+   "offset": [
+    0,
+    -0.2,
+    0
+   ]
+  },
+  {
+   "name": "fup_R",
+   "parent": "body",
+   "offset": [
+    -0.2,
+    -0.12,
+    0.38
+   ]
+  },
+  {
+   "name": "flo_R",
+   "parent": "fup_R",
+   "offset": [
+    0,
+    -0.22,
+    0
+   ]
+  },
+  {
+   "name": "fpaw_R",
+   "parent": "flo_R",
+   "offset": [
+    0,
+    -0.2,
+    0
+   ]
+  },
+  {
+   "name": "bup_L",
+   "parent": "body",
+   "offset": [
+    0.2,
+    -0.12,
+    -0.38
+   ]
+  },
+  {
+   "name": "blo_L",
+   "parent": "bup_L",
+   "offset": [
+    0,
+    -0.22,
+    0
+   ]
+  },
+  {
+   "name": "bpaw_L",
+   "parent": "blo_L",
+   "offset": [
+    0,
+    -0.2,
+    0
+   ]
+  },
+  {
+   "name": "bup_R",
+   "parent": "body",
+   "offset": [
+    -0.2,
+    -0.12,
+    -0.38
+   ]
+  },
+  {
+   "name": "blo_R",
+   "parent": "bup_R",
+   "offset": [
+    0,
+    -0.22,
+    0
+   ]
+  },
+  {
+   "name": "bpaw_R",
+   "parent": "blo_R",
+   "offset": [
+    0,
+    -0.2,
+    0
+   ]
+  }
+ ],
+ "shapes": [
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    0
+   ],
+   "size": [
+    0.55,
+    0.5,
+    1.15
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    2,
+    0.5
+   ]
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.1,
+    0.3
+   ],
+   "size": [
+    0.56,
+    0.42,
+    0.5
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    2,
+    0.5
+   ]
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.04,
+    -0.3
+   ],
+   "size": [
+    0.56,
+    0.5,
+    0.5
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    2,
+    0.5
+   ]
+  },
+  {
+   "bone": "body",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.13,
+    0.02
+   ],
+   "size": [
+    0.4,
+    0.28,
+    0.95
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.03,
+    -0.1
+   ],
+   "size": [
+    0.4,
+    0.4,
+    0.4
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    2,
+    0.5
+   ]
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    0.1
+   ],
+   "size": [
+    0.36,
+    0.3,
+    0.34
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    12,
+    0.45,
+    2,
+    0.4
+   ]
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.16,
+    -0.04,
+    0.06
+   ],
+   "size": [
+    0.12,
+    0.2,
+    0.2
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    -0.16,
+    -0.04,
+    0.06
+   ],
+   "size": [
+    0.12,
+    0.2,
+    0.2
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.06,
+    0.27
+   ],
+   "size": [
+    0.18,
+    0.14,
+    0.18
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.13,
+    0.22
+   ],
+   "size": [
+    0.14,
+    0.06,
+    0.18
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.02,
+    0.36
+   ],
+   "size": [
+    0.06,
+    0.04,
+    0.04
+   ],
+   "mat": "stripe"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.11,
+    0.05,
+    0.205
+   ],
+   "size": [
+    0.07,
+    0.07,
+    0.05
+   ],
+   "mat": "eye"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    -0.11,
+    0.05,
+    0.205
+   ],
+   "size": [
+    0.07,
+    0.07,
+    0.05
+   ],
+   "mat": "eye"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    0.14,
+    0.17,
+    -0.02
+   ],
+   "size": [
+    0.1,
+    0.1,
+    0.06
+   ],
+   "mat": "fur"
+  },
+  {
+   "bone": "head",
+   "type": "ellipsoid",
+   "center": [
+    -0.14,
+    0.17,
+    -0.02
+   ],
+   "size": [
+    0.1,
+    0.1,
+    0.06
+   ],
+   "mat": "fur"
+  },
+  {
+   "bone": "tail1",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    -0.12
+   ],
+   "size": [
+    0.11,
+    0.11,
+    0.3
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    12,
+    0.55,
+    2,
+    0.1
+   ]
+  },
+  {
+   "bone": "tail2",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    -0.12
+   ],
+   "size": [
+    0.1,
+    0.1,
+    0.3
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    12,
+    0.55,
+    2,
+    0.1
+   ]
+  },
+  {
+   "bone": "tail3",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    -0.12
+   ],
+   "size": [
+    0.09,
+    0.09,
+    0.3
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    12,
+    0.55,
+    2,
+    0.1
+   ]
+  },
+  {
+   "bone": "tail4",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0,
+    -0.12
+   ],
+   "size": [
+    0.09,
+    0.09,
+    0.32
+   ],
+   "mat": "stripe"
+  },
+  {
+   "bone": "fup_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.11,
+    0
+   ],
+   "size": [
+    0.2,
+    0.3,
+    0.22
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "flo_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.1,
+    0
+   ],
+   "size": [
+    0.15,
+    0.28,
+    0.17
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "fpaw_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.02,
+    0.05
+   ],
+   "size": [
+    0.18,
+    0.09,
+    0.24
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "fup_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.11,
+    0
+   ],
+   "size": [
+    0.2,
+    0.3,
+    0.22
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "flo_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.1,
+    0
+   ],
+   "size": [
+    0.15,
+    0.28,
+    0.17
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "fpaw_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.02,
+    0.05
+   ],
+   "size": [
+    0.18,
+    0.09,
+    0.24
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "bup_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.11,
+    0
+   ],
+   "size": [
+    0.24,
+    0.34,
+    0.26
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "blo_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.1,
+    0
+   ],
+   "size": [
+    0.15,
+    0.28,
+    0.17
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "bpaw_L",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.02,
+    0.05
+   ],
+   "size": [
+    0.18,
+    0.09,
+    0.24
+   ],
+   "mat": "belly"
+  },
+  {
+   "bone": "bup_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.11,
+    0
+   ],
+   "size": [
+    0.24,
+    0.34,
+    0.26
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "blo_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    -0.1,
+    0
+   ],
+   "size": [
+    0.15,
+    0.28,
+    0.17
+   ],
+   "mat": "fur",
+   "mat2": "stripe",
+   "stripes": [
+    9,
+    0.5,
+    1,
+    0.4
+   ]
+  },
+  {
+   "bone": "bpaw_R",
+   "type": "ellipsoid",
+   "center": [
+    0,
+    0.02,
+    0.05
+   ],
+   "size": [
+    0.18,
+    0.09,
+    0.24
+   ],
+   "mat": "belly"
+  }
+ ],
+ "animations": {
+  "walk": {
+   "frames": 8,
+   "bones": {
+    "body": [
+     {
+      "axis": "ty",
+      "wave": "abs",
+      "freq": 2,
+      "amp": 0.012
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 3,
+      "phase": 0.1
+     },
+     {
+      "axis": "z",
+      "wave": "sin",
+      "amp": 2,
+      "phase": 0.0
+     }
+    ],
+    "head": [
+     {
+      "axis": "x",
+      "base": 12,
+      "wave": "sin",
+      "freq": 2,
+      "amp": 3
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": -5,
+      "phase": 0.1
+     }
+    ],
+    "tail1": [
+     {
+      "axis": "x",
+      "base": 35,
+      "wave": "sin",
+      "amp": 5,
+      "phase": 0.3
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 8,
+      "phase": 0.2
+     }
+    ],
+    "tail2": [
+     {
+      "axis": "x",
+      "base": 35,
+      "wave": "sin",
+      "amp": 6,
+      "phase": 0.4
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.35
+     }
+    ],
+    "tail3": [
+     {
+      "axis": "x",
+      "base": -40,
+      "wave": "sin",
+      "amp": 6,
+      "phase": 0.5
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 12,
+      "phase": 0.5
+     }
+    ],
+    "tail4": [
+     {
+      "axis": "x",
+      "base": -40,
+      "wave": "sin",
+      "amp": 8,
+      "phase": 0.6
+     },
+     {
+      "axis": "y",
+      "wave": "sin",
+      "amp": 14,
+      "phase": 0.65
+     }
+    ],
+    "bup_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -24,
+      "phase": 0.0
+     }
+    ],
+    "blo_R": [
+     {
+      "axis": "x",
+      "base": 10,
+      "wave": "relu",
+      "amp": 45,
+      "phase": 0.2
+     }
+    ],
+    "bpaw_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.0
+     }
+    ],
+    "fup_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -24,
+      "phase": 0.25
+     }
+    ],
+    "flo_R": [
+     {
+      "axis": "x",
+      "base": 4,
+      "wave": "relu",
+      "amp": 50,
+      "phase": 0.45
+     }
+    ],
+    "fpaw_R": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.25
+     }
+    ],
+    "bup_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -24,
+      "phase": 0.5
+     }
+    ],
+    "blo_L": [
+     {
+      "axis": "x",
+      "base": 10,
+      "wave": "relu",
+      "amp": 45,
+      "phase": 0.7
+     }
+    ],
+    "bpaw_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.5
+     }
+    ],
+    "fup_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": -24,
+      "phase": 0.75
+     }
+    ],
+    "flo_L": [
+     {
+      "axis": "x",
+      "base": 4,
+      "wave": "relu",
+      "amp": 50,
+      "phase": 0.95
+     }
+    ],
+    "fpaw_L": [
+     {
+      "axis": "x",
+      "wave": "sin",
+      "amp": 10,
+      "phase": 0.75
+     }
+    ]
+   }
+  }
+ }
+}
