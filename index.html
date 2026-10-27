@@ -28,6 +28,7 @@ nav button[aria-pressed="true"]{background:var(--accent);border-color:var(--acce
 #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .card{display:flex;flex-direction:column;gap:8px;padding:18px;background:var(--surface);border:1px solid var(--line);color:inherit;text-decoration:none}
 .card:hover{border-color:var(--accent)}
+.card .cover{display:block;width:calc(100% + 36px);max-width:none;margin:-18px -18px 6px;aspect-ratio:16/9;object-fit:cover;background:var(--line);border-bottom:1px solid var(--line)}
 .card .tag{font:500 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 .card h2{margin:0;font:600 20px/1.2 var(--font-display)}
 .card p{margin:0;color:var(--muted);font-size:14px}
@@ -47,6 +48,7 @@ nav button[aria-pressed="true"]{background:var(--accent);border-color:var(--acce
 
 <script>
 // To add an exploration: put it in <category>/<slug>/index.html and add one line here.
+// A 960x540 <category>/<slug>/cover.webp next to it becomes the card image.
 var CATEGORIES = ['images', '3d', 'music', 'video', 'games'];
 var EXPLORATIONS = [
   {
@@ -140,6 +142,12 @@ function render() {
   items.forEach(function (x) {
     var a = el('a', 'card');
     a.href = x.path;
+    var img = el('img', 'cover');
+    img.src = x.path + 'cover.webp';
+    img.alt = '';
+    img.loading = 'lazy';
+    img.onerror = function () { img.remove(); };
+    a.appendChild(img);
     a.appendChild(el('span', 'tag', x.category));
     a.appendChild(el('h2', '', x.title));
     a.appendChild(el('p', '', x.description));

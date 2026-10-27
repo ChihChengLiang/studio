@@ -15,6 +15,7 @@ Categories: `images`, `3d`, `music`, `video`, `games`.
 
 1. Create `<category>/<slug>/index.html` (plus any assets next to it, using relative paths).
 2. Add an entry to `EXPLORATIONS` in the root `index.html`.
+3. Optionally add a 960×540 `cover.webp` next to the page; the landing card shows it.
 
 ## Preview locally
 
