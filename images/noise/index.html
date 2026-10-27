@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Randomness With a Shape</title>
+<meta name="description" content="Procedural noise beyond terrain: why gradient noise is band-limited, why fBm looks natural, noise as camera shake, wander and curl flow, domain warping, and seamless loops, with every spectrum measured live.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Sections are static HTML; every canvas is drawn by the script at the bottom (2D canvas only). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#F6F3EC;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards a{font:500 12px/1 var(--font-mono)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+table.plain th,table.plain td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td{color:var(--muted)}
+table.plain td:first-child{font-weight:600;white-space:nowrap;color:var(--fg)}
+
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px 10px}
+.tiles.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile{display:flex;flex-direction:column;margin:0;min-width:0}
+.tile canvas{display:block;width:100%;height:auto;aspect-ratio:1;background:var(--stage);border:1px solid var(--line)}
+.tile canvas+canvas{margin-top:6px}
+.tile .tn{font:600 13.5px/1.25 var(--font-display);margin:8px 0 0}
+.tile .ts{font:400 11px/1.35 var(--font-mono);color:var(--accent);margin:3px 0 0}
+.tile .td{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.42}
+.pick canvas{cursor:pointer;aspect-ratio:2/1}
+.pick canvas:hover{outline:2px solid var(--accent)}
+
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel canvas{display:block;width:100%;height:auto;background:var(--stage);border:1px solid var(--line);touch-action:none}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.bar input[type=range]{flex:1 1 160px;accent-color:var(--accent);margin:0}
+.bar label,.lbl{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.bar label.tg{display:flex;align-items:center;gap:6px;cursor:pointer}
+.bar label.tg input{accent-color:var(--accent);margin:0}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.desc b{color:var(--accent);font-weight:500}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:20px;align-items:start}
+.ctlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 12px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;flex-direction:column;gap:5px;min-width:0}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.labout{display:block;width:100%;max-width:520px;aspect-ratio:1;background:var(--stage);border:1px solid var(--line)}
+
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .split{grid-template-columns:minmax(0,1fr)}
+  .desc{font-size:11.5px}
+}
+@media (max-width:560px){ .tiles,.tiles.three{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Images · canvas · signal processing</p>
+  <h1>Randomness with a shape</h1>
+  <p class="lede">Ken Perlin built his noise in 1983 so that computer-generated surfaces would stop looking machine-made. The trick was not randomness but <i>controlled</i> randomness: noise whose detail lives at one chosen size. Stack it at several sizes and you can dial how rough a thing is, which turns out to be how nature varies too. This page measures that with a Fourier transform at every step, then puts noise to work beyond terrain: camera shake, wandering, flowing particles, marble and smoke, and loops with no seam.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#borrow">Elements to borrow</a></li>
+    <li><a href="#kinds">What makes it Perlin</a></li>
+    <li><a href="#fbm">fBm and nature</a></li>
+    <li><a href="#motion">Noise as motion</a></li>
+    <li><a href="#warp">Domain warping</a></li>
+    <li><a href="#loops">Seamless loops</a></li>
+    <li><a href="#lab">Lab</a></li>
+    <li><a href="#glossary">Glossary and sources</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="borrow" aria-labelledby="borrow-h">
+  <header><p class="eyebrow">Overview</p><h2 id="borrow-h">Elements to borrow</h2></header>
+  <div class="cards">
+    <div><h3>One dial for roughness</h3><p>How fast the fine layers fade decides whether a coastline looks smooth, natural or jagged. <a href="#fbm">fBm</a></p></div>
+    <div><h3>Shake that feels like a blow</h3><p>Smooth noise scaled by a decaying "trauma" reads as impact; random jitter reads as a broken camera. <a href="#motion">Shake</a></p></div>
+    <div><h3>Wandering with intent</h3><p>Turning by noise gives lazy, readable arcs instead of nervous zigzags. <a href="#motion">Wander</a></p></div>
+    <div><h3>Smoke without a fluid solver</h3><p>The curl of a noise field swirls particles without ever piling them up. <a href="#motion">Curl flow</a></p></div>
+    <div><h3>Marble, wood and gas giants</h3><p>Feed noise into its own coordinates and texture starts to flow. <a href="#warp">Domain warping</a></p></div>
+    <div><h3>Loops with no seam</h3><p>Wrap the noise lattice in time and the last frame flows into the first. <a href="#loops">Loops</a></p></div>
+  </div>
+</section>
+
+<section class="demo" id="kinds" aria-labelledby="kinds-h">
+  <header><p class="eyebrow">1 · Perlin, 1985 and 2002</p><h2 id="kinds-h">What makes it Perlin</h2></header>
+  <div class="prose">
+    <p><b>White noise</b> is an independent random value per pixel: every frequency equally, which looks like TV static and gives you nothing to design with. <b>Value noise</b> puts random values on a grid and smooths between them; better, but it keeps a lot of energy at the lowest frequencies and shows the grid. <b>Gradient noise</b>, Perlin's idea, puts random <i>slopes</i> on the grid instead, so every grid point has value zero and the bumps sit between them. That pushes the energy into one band, about one cycle per grid cell: the noise has a size.</p>
+    <p>The bottom row is each pattern's power spectrum: the centre is coarse, the edges are fine, brighter means more energy. Square-grid noises burn a faint <b>cross</b> into the spectrum: leftover fine detail lined up with the grid axes, which the eye reads as a grid. Under each tile, "fine detail" is the share of energy above twice the lattice frequency, and its axis/diagonal ratio says how strongly that detail follows the grid (1 = no preference). Perlin's 2002 blend curve (6t⁵ − 15t⁴ + 10t³ instead of 3t² − 2t³) has no kink in its slope at cell edges, so it leaves less fine detail behind. Simplex noise works on a triangular lattice and has the weakest cross.</p>
+  </div>
+  <div class="tiles" id="k-tiles"></div>
+</section>
+
+<section class="demo" id="fbm" aria-labelledby="fbm-h">
+  <header><p class="eyebrow">2 · Mandelbrot and Van Ness, 1968 · Voss, 1985</p><h2 id="fbm-h">fBm and why it looks natural</h2></header>
+  <div class="prose">
+    <p><b>Fractional Brownian motion</b> (fBm) adds octaves of noise: each one <i>lacunarity</i> times finer and <i>gain</i> times fainter. Because each octave has a size, the sum has a power spectrum that falls as a power law across the octaves it covers, with a slope set by the <b>Hurst exponent</b> H = log(1/gain) / log(lacunarity). For a surface, power ∝ f<sup>−(2H+2)</sup> and the fractal dimension is D = 3 − H. Gain 0.5 with lacunarity 2 gives H = 1, slope −4, a smooth hillside; raise the gain and the detail survives into the fine scales.</p>
+    <p>Photographs of natural scenes have power spectra close to f<sup>−2</sup> (Field 1987; van der Schaaf and van Hateren 1996), and visual neurons seem tuned to exactly that statistic. So "looks natural" has a measurable meaning: the right spectral slope. The chart fits the slope of the image on the left.</p>
+  </div>
+  <div class="split">
+    <div class="tile"><canvas id="f-img" width="256" height="256" aria-label="fBm as a shaded height map"></canvas></div>
+    <div class="panel">
+      <canvas id="f-spec" width="1000" height="420" aria-label="Measured spectrum with the fitted and predicted slopes"></canvas>
+      <div class="row"><div class="lab2"><span>Octaves</span><output id="f-oo"></output></div><input type="range" id="f-o" min="1" max="6" value="5"></div>
+      <div class="row"><div class="lab2"><span>Lacunarity</span><output id="f-lo"></output></div><input type="range" id="f-l" min="150" max="300" value="200"></div>
+      <div class="row"><div class="lab2"><span>Gain</span><output id="f-go"></output></div><input type="range" id="f-g" min="25" max="85" value="50"></div>
+    </div>
+  </div>
+  <p class="desc" id="f-desc"></p>
+  <div class="prose"><p><b>Which roughness do you like?</b> Spehar, Clifford, Newell and Taylor found that people prefer fractal patterns of medium complexity, dimension about 1.3–1.5, whether the pattern is a natural scene, a computer fractal or a Pollock drip painting. Below are six skylines, each a profile with a different dimension D, shuffled. Click the one you like best; play several rounds and compare your peak with theirs.</p></div>
+  <div class="tiles three pick" id="p-tiles"></div>
+  <div class="panel"><canvas id="p-chart" width="1000" height="200" aria-label="Your picks by fractal dimension"></canvas><p class="desc" id="p-desc"></p><div class="bar"><button class="btn" id="p-reset">Clear my picks</button></div></div>
+</section>
+
+<section class="demo" id="motion" aria-labelledby="motion-h">
+  <header><p class="eyebrow">3 · Eiserloh, 2016 · Reynolds, 1999 · Bridson, 2007</p><h2 id="motion-h">Noise as motion</h2></header>
+  <div class="prose">
+    <p>Sample noise along time instead of space and you get a value that wanders smoothly. <b>Camera shake</b> as Squirrel Eiserloh described it: keep a <i>trauma</i> value that jumps when something hits and decays steadily; shake by trauma² times noise. The square makes small hits subtle and big hits violent; the noise makes the motion continuous, so it reads as a physical jolt. The right panel uses a fresh random offset every frame instead. The measurement is how much of the shake's energy is above 10 Hz.</p>
+  </div>
+  <div class="panel">
+    <canvas id="m-shake" width="1000" height="280" aria-label="Noise shake versus random shake"></canvas>
+    <div class="bar"><button class="btn" id="m-hit">Hit</button><label class="tg"><input type="checkbox" id="m-auto" checked> Auto hits</label><label for="m-f">Noise frequency</label><input type="range" id="m-f" min="3" max="30" value="10"><output id="m-fo" class="lbl"></output></div>
+    <p class="desc" id="m-sdesc"></p>
+  </div>
+  <div class="prose"><p><b>Wander.</b> Three agents with the same speed, tuned so their paths are similarly winding. One turns by a random walk, one by Craig Reynolds' wander circle (a target point jittered around a circle ahead of it), one by 1D noise. Straightness is net distance over path length across the last 8 seconds; jitter is how abruptly the turn rate changes.</p></div>
+  <div class="panel">
+    <canvas id="m-wander" width="1000" height="340" aria-label="Three wandering agents"></canvas>
+    <p class="desc" id="m-wdesc"></p>
+  </div>
+  <div class="prose"><p><b>Curl flow.</b> Treat a noise field as a stream function and move particles along its contours (the curl). Such a flow has no sources or sinks, so particles swirl forever without bunching up, which is what makes it look like smoke or water. Moving them along the slope of the same field instead (the gradient) drains them into a few sinks. The measurement is how uneven the particle density gets, against the unevenness of pure chance.</p></div>
+  <div class="panel">
+    <canvas id="m-curl" width="1000" height="500" aria-label="Particles in a curl or gradient noise flow"></canvas>
+    <div class="bar"><label>Flow</label><div class="seg" id="m-cmode" role="group" aria-label="Flow type"></div><button class="btn" id="m-creset">Scatter again</button></div>
+    <p class="desc" id="m-cdesc"></p>
+  </div>
+</section>
+
+<section class="demo" id="warp" aria-labelledby="warp-h">
+  <header><p class="eyebrow">4 · Quilez</p><h2 id="warp-h">Domain warping</h2></header>
+  <div class="prose">
+    <p>Instead of reading noise at a point p, read it at p moved by more noise: f(p + k·q(p)). Do it twice, f(p + k·r(p + k·q(p))), and the pattern looks as if it has been stirred. Inigo Quilez popularised the double warp; marble (a sine bent by turbulence) and wood (rings bent by noise) are older versions of the same idea. The right panel shows the first warp as arrows over the unwarped noise.</p>
+    <p>Warping changes the texture's statistics in a measurable way: it bends structure. The coherence below is computed from the image's local gradients: 1 means perfectly parallel stripes in every neighbourhood, 0 means no preferred direction. Marble and the gas giant start as straight stripes (1.00 with no warp), and the stronger the warp, the more their stripes turn within a short distance, which is what reads as flowing. The double warp folds plain fBm the same way.</p>
+  </div>
+  <div class="panel">
+    <canvas id="w-cv" width="1000" height="500" aria-label="Warped pattern and the warp field"></canvas>
+    <div class="bar"><label>Pattern</label><div class="seg" id="w-pre" role="group" aria-label="Pattern"></div></div>
+    <div class="bar"><label for="w-k">Warp strength</label><input type="range" id="w-k" min="0" max="80" value="40"><output id="w-ko" class="lbl"></output></div>
+    <p class="desc" id="w-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="loops" aria-labelledby="loops-h">
+  <header><p class="eyebrow">5 · Periodic noise</p><h2 id="loops-h">Seamless loops</h2></header>
+  <div class="prose">
+    <p>Running noise forward in time never comes back to where it started, so a "loop" made by cutting it jumps at the cut. Two fixes. For a single value over time, walk around a <b>circle</b> through 2D noise: after one lap you are exactly where you began, and the speed is constant. For images, <b>wrap the lattice</b>: if the random gradients repeat every P cells, so does the noise. Wrap the time axis and the animation loops; wrap x and y and the texture tiles.</p>
+  </div>
+  <div class="panel">
+    <canvas id="l-1d" width="1000" height="240" aria-label="A naive loop and a circle loop, two periods each"></canvas>
+    <p class="desc" id="l-1desc"></p>
+  </div>
+  <div class="tiles two" id="l-tiles"></div>
+  <div class="bar"><button class="btn" id="l-sheet" disabled>Save the loop as a sprite sheet (PNG)</button><span class="lbl" id="l-prog"></span></div>
+  <p class="desc" id="l-desc"></p>
+</section>
+
+<section class="demo" id="lab" aria-labelledby="lab-h">
+  <header><p class="eyebrow">6 · Lab</p><h2 id="lab-h">Noise lab</h2></header>
+  <div class="prose"><p>Periodic Perlin fBm with an optional double warp and a palette. Tiling and looping keep lacunarity at 2 so every octave's lattice still repeats. The readout measures the spectral slope of what you made.</p></div>
+  <div class="split">
+    <div class="panel"><canvas id="lab-cv" class="labout" width="320" height="320" aria-label="Lab output"></canvas><p class="desc" id="lab-desc"></p></div>
+    <div class="ctlgrid">
+      <div class="group">
+        <div class="row"><div class="lab2"><span>Scale (cells)</span><output id="lb-so"></output></div><input type="range" id="lb-s" min="2" max="12" value="4"></div>
+        <div class="row"><div class="lab2"><span>Octaves</span><output id="lb-oo"></output></div><input type="range" id="lb-o" min="1" max="6" value="5"></div>
+        <div class="row"><div class="lab2"><span>Gain</span><output id="lb-go"></output></div><input type="range" id="lb-g" min="25" max="80" value="50"></div>
+        <div class="row"><div class="lab2"><span>Warp</span><output id="lb-wo"></output></div><input type="range" id="lb-w" min="0" max="60" value="0"></div>
+      </div>
+      <div class="group"><h3>Palette</h3><div class="seg" id="lb-pal" role="group" aria-label="Palette"></div>
+        <label class="lbl"><input type="checkbox" id="lb-tile"> Show 2 × 2 tiled</label>
+        <label class="lbl"><input type="checkbox" id="lb-anim"> Animate as a loop</label>
+        <div class="bar"><button class="btn" id="lb-new">New seed</button><button class="btn" id="lb-save">Save PNG</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and sources</h2></header>
+  <div class="tablewrap"><table class="plain">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Lattice</td><td>The integer grid where noise stores its random values or gradients.</td></tr>
+      <tr><td>Value / gradient noise</td><td>Random values at lattice points, smoothed; or random slopes at lattice points, so the value there is zero.</td></tr>
+      <tr><td>Band-limited</td><td>With its energy concentrated around one frequency, so it has a characteristic size.</td></tr>
+      <tr><td>Power spectrum</td><td>How much variance an image has at each spatial frequency.</td></tr>
+      <tr><td>fBm</td><td>Fractional Brownian motion: a sum of octaves, giving a power-law spectrum.</td></tr>
+      <tr><td>Lacunarity, gain</td><td>Frequency ratio and amplitude ratio between successive octaves.</td></tr>
+      <tr><td>Hurst exponent H</td><td>Roughness parameter: H = log(1/gain) / log(lacunarity). Smaller H is rougher.</td></tr>
+      <tr><td>Fractal dimension D</td><td>3 − H for a surface, 2 − H for a profile. 1 is a smooth line, 2 fills the plane.</td></tr>
+      <tr><td>Curl noise</td><td>A velocity field taken as the curl of noise: divergence-free, so it swirls without sources or sinks.</td></tr>
+      <tr><td>Domain warping</td><td>Evaluating noise at coordinates displaced by noise.</td></tr>
+      <tr><td>Periodic noise</td><td>Noise whose lattice repeats, so the pattern tiles in space or loops in time.</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="reading">
+    <li><b>Perlin (1985).</b> An image synthesizer. <i>SIGGRAPH Computer Graphics</i> 19(3), 287–296. <b>Perlin (2002).</b> Improving noise. <i>ACM Transactions on Graphics</i> 21(3), 681–682.</li>
+    <li><b>Gustavson (2005).</b> Simplex noise demystified. Technical note, Linköping University. <b>Lagae et al. (2010).</b> A survey of procedural noise functions. <i>Computer Graphics Forum</i> 29(8), 2579–2600.</li>
+    <li><b>Mandelbrot and Van Ness (1968).</b> Fractional Brownian motions, fractional noises and applications. <i>SIAM Review</i> 10(4), 422–437. <b>Voss (1985).</b> Random fractal forgeries. In <i>Fundamental Algorithms for Computer Graphics</i>.</li>
+    <li><b>Field (1987).</b> Relations between the statistics of natural images and the response properties of cortical cells. <i>JOSA A</i> 4(12), 2379–2394. <b>van der Schaaf and van Hateren (1996).</b> Modelling the power spectra of natural images. <i>Vision Research</i> 36(17), 2759–2770.</li>
+    <li><b>Spehar, Clifford, Newell and Taylor (2003).</b> Universal aesthetic of fractals. <i>Computers &amp; Graphics</i> 27(5), 813–820.</li>
+    <li><b>Eiserloh (2016).</b> Math for game programmers: juicing your cameras with math. Game Developers Conference. <b>Reynolds (1999).</b> Steering behaviors for autonomous characters. Game Developers Conference.</li>
+    <li><b>Bridson, Hourihan and Nordenstam (2007).</b> Curl-noise for procedural fluid flow. <i>ACM Transactions on Graphics</i> 26(3), 46.</li>
+    <li><b>Quilez.</b> Domain warping. iquilezles.org, articles.</li>
+  </ol>
+  <p class="note">All noise, drawings and code on this page are original implementations. Related pages in this notebook: blue noise in the <a href="../halftone-dithering/">halftone notebook</a>, spatial-frequency bands in <a href="../hybrid-images/">two pictures in one</a>, vector-field brushes in the <a href="../p5-brush-gallery/">p5.brush gallery</a>, and wander in <a href="../../games/predator-prey/">hunters and the hunted</a>.</p>
+</section>
+
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PAPER = '#F6F3EC', INK = '#1B1F2A', GRID = '#DDD7CA', MUTED = '#7A7F8C', ACC = '#2B3CD1', HOT = '#D2452F', OK = '#16856F', GOLD = '#C98A00';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function text(x, t, px, py, { align = 'left', size = 12, color = MUTED, base = 'middle', weight = 400 } = {}) { x.fillStyle = color; x.font = `${weight} ${size}px ${MONO}`; x.textAlign = align; x.textBaseline = base; x.fillText(t, px, py); }
+function legend(x, items, px, py) { for (const [lab, col] of items) { x.fillStyle = col; x.fillRect(px, py - 5, 10, 10); text(x, lab, px + 15, py, { size: 11, color: INK }); x.font = `400 11px ${MONO}`; px += x.measureText(lab).width + 34; } }
+function frame(x, W, H, bg = PAPER) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = bg; x.fillRect(0, 0, W, H); }
+function seg(host, items, cur, onPick) {
+  host.textContent = '';
+  return items.map(([v, lab]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.setAttribute('aria-pressed', String(v === cur)); b.onclick = () => { host.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b))); onPick(v); }; host.append(b); return b; });
+}
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function tile(host, name, sub = '', desc = '', w = 256, h = 256, extra = 0) {
+  const f = document.createElement('figure'); f.className = 'tile';
+  const cs = [mk(w, h)]; for (let i = 0; i < extra; i++) cs.push(mk(w, h));
+  cs.forEach(c => c.setAttribute('aria-label', name));
+  const n = document.createElement('p'); n.className = 'tn'; n.textContent = name;
+  const s = document.createElement('p'); s.className = 'ts'; s.textContent = sub;
+  const d = document.createElement('p'); d.className = 'td'; d.textContent = desc;
+  f.append(...cs, n, s); if (desc) f.append(d); host.append(f);
+  return { c: cs[0], ctx: cs[0].getContext('2d'), cs, sub: s, fig: f };
+}
+function runner(el, tick, settle = 3) {
+  let raf = 0, last = 0;
+  const loop = t => { const dt = Math.min(0.05, (t - last) / 1000); last = t; tick(dt); raf = requestAnimationFrame(loop); };
+  if (REDUCE) { for (let i = 0; i < settle * 60; i++) tick(1 / 60, true); tick(0); return; }
+  new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); } }).observe(el);
+  tick(0);
+}
+function download(name, canvas) { canvas.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }); }
+
+/* ------------------------------------------------------------ noise */
+function makePerm(seed) { const r = rng(seed), p = Array.from({ length: 256 }, (_, i) => i); for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } const P = new Uint8Array(512); for (let i = 0; i < 512; i++) P[i] = p[i & 255]; return P; }
+const fade5 = t => t * t * t * (t * (t * 6 - 15) + 10), fade3 = t => t * t * (3 - 2 * t);
+const S2 = Math.SQRT1_2;
+const G_AXIS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const G_8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [S2, S2], [-S2, S2], [S2, -S2], [-S2, -S2]];
+function perlin2(P, grads, fade, scale) {
+  const n = grads.length;
+  return (x, y) => {
+    const X = Math.floor(x), Y = Math.floor(y), xf = x - X, yf = y - Y, xi = X & 255, yi = Y & 255;
+    const g = (i, j, dx, dy) => { const G = grads[P[P[xi + i] + yi + j] % n]; return G[0] * dx + G[1] * dy; };
+    const u = fade(xf), v = fade(yf);
+    return scale * lerp(lerp(g(0, 0, xf, yf), g(1, 0, xf - 1, yf), u), lerp(g(0, 1, xf, yf - 1), g(1, 1, xf - 1, yf - 1), u), v);
+  };
+}
+function value2(P, fade) {
+  return (x, y) => {
+    const X = Math.floor(x), Y = Math.floor(y), xf = x - X, yf = y - Y, xi = X & 255, yi = Y & 255;
+    const v = (i, j) => P[P[xi + i] + yi + j] / 127.5 - 1, u = fade(xf), w = fade(yf);
+    return lerp(lerp(v(0, 0), v(1, 0), u), lerp(v(0, 1), v(1, 1), u), w);
+  };
+}
+function simplex2(P) {
+  const F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
+  const GS = [[1, 1], [-1, 1], [1, -1], [-1, -1], [1, 0], [-1, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0, 1], [0, -1]];
+  return (xin, yin) => {
+    const s = (xin + yin) * F2, i = Math.floor(xin + s), j = Math.floor(yin + s), t = (i + j) * G2, x0 = xin - (i - t), y0 = yin - (j - t);
+    const i1 = x0 > y0 ? 1 : 0, j1 = 1 - i1, x1 = x0 - i1 + G2, y1 = y0 - j1 + G2, x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2, ii = i & 255, jj = j & 255;
+    const c = (x, y, h) => { let q = 0.5 - x * x - y * y; if (q < 0) return 0; q *= q; const g = GS[h % 12]; return q * q * (g[0] * x + g[1] * y); };
+    return 70 * (c(x0, y0, P[ii + P[jj]]) + c(x1, y1, P[ii + i1 + P[jj + j1]]) + c(x2, y2, P[ii + 1 + P[jj + 1]]));
+  };
+}
+const G12 = [[1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0], [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1], [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]];
+/* improved 3D Perlin noise; px, py, pz wrap the lattice so the noise repeats with those periods */
+function perlin3(P) {
+  return (x, y, z, px = 256, py = 256, pz = 256) => {
+    const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z), xf = x - X, yf = y - Y, zf = z - Z;
+    const m = (a, p) => ((a % p) + p) % p & 255;
+    const x0 = m(X, px), x1 = m(X + 1, px), y0 = m(Y, py), y1 = m(Y + 1, py), z0 = m(Z, pz), z1 = m(Z + 1, pz);
+    const d = (a, b, c, dx, dy, dz) => { const G = G12[P[P[P[a] + b] + c] % 12]; return G[0] * dx + G[1] * dy + G[2] * dz; };
+    const u = fade5(xf), v = fade5(yf), w = fade5(zf);
+    return lerp(
+      lerp(lerp(d(x0, y0, z0, xf, yf, zf), d(x1, y0, z0, xf - 1, yf, zf), u), lerp(d(x0, y1, z0, xf, yf - 1, zf), d(x1, y1, z0, xf - 1, yf - 1, zf), u), v),
+      lerp(lerp(d(x0, y0, z1, xf, yf, zf - 1), d(x1, y0, z1, xf - 1, yf, zf - 1), u), lerp(d(x0, y1, z1, xf, yf - 1, zf - 1), d(x1, y1, z1, xf - 1, yf - 1, zf - 1), u), v), w);
+  };
+}
+function noise1(P) { return x => { const X = Math.floor(x), f = x - X, g0 = P[X & 255] / 127.5 - 1, g1 = P[(X + 1) & 255] / 127.5 - 1; return 2 * lerp(g0 * f, g1 * (f - 1), fade5(f)); }; }
+const PERM = makePerm(1337);
+const N_AXIS = perlin2(PERM, G_AXIS, fade3, 1.4), N_IMP = perlin2(PERM, G_8, fade5, 1.4), N_VAL = value2(PERM, fade5), N_SIM = simplex2(PERM), N1 = noise1(PERM);
+let N3 = perlin3(PERM);
+function fbm2(fn, x, y, oct, lac = 2, gain = 0.5) { let s = 0, a = 1, f = 1, nm = 0; for (let o = 0; o < oct; o++) { s += a * fn(x * f + o * 17.13, y * f + o * 31.71); nm += a; a *= gain; f *= lac; } return s / nm; }
+/* periodic fBm: every octave's lattice period is scaled with its frequency, so the sum keeps the period */
+function fbm3(x, y, z, oct, gain = 0.5, px = 256, py = 256, pz = 256, lac = 2) { let s = 0, a = 1, f = 1, nm = 0; for (let o = 0; o < oct; o++) { s += a * N3(x * f + o * 7.31, y * f + o * 3.17, z + o * 5.11, px * f, py * f, pz); nm += a; a *= gain; f *= lac; } return s / nm; }
+function fbm1(x, oct = 3) { let s = 0, a = 1, f = 1, nm = 0; for (let o = 0; o < oct; o++) { s += a * N1(x * f + o * 13.7); nm += a; a *= 0.5; f *= 2; } return s / nm; }
+
+/* ------------------------------------------------------------ spectra */
+function fft(re, im, n) {
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let len = 2; len <= n; len <<= 1) { const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a); for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let k = 0; k < len / 2; k++) { const p = i + k, q = p + len / 2, xr = re[q] * cr - im[q] * ci, xi = re[q] * ci + im[q] * cr; re[q] = re[p] - xr; im[q] = im[p] - xi; re[p] += xr; im[p] += xi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } } }
+}
+function power2d(g, n, hann = true) {
+  let mean = 0; for (let i = 0; i < n * n; i++) mean += g[i]; mean /= n * n;
+  const re = new Float64Array(n * n), im = new Float64Array(n * n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const w = hann ? (0.5 - 0.5 * Math.cos(TAU * x / n)) * (0.5 - 0.5 * Math.cos(TAU * y / n)) : 1; re[y * n + x] = (g[y * n + x] - mean) * w; }
+  for (let y = 0; y < n; y++) fft(re.subarray(y * n, y * n + n), im.subarray(y * n, y * n + n), n);
+  const r = new Float64Array(n), i2 = new Float64Array(n);
+  for (let x = 0; x < n; x++) { for (let y = 0; y < n; y++) { r[y] = re[y * n + x]; i2[y] = im[y * n + x]; } fft(r, i2, n); for (let y = 0; y < n; y++) { re[y * n + x] = r[y]; im[y * n + x] = i2[y]; } }
+  const P = new Float64Array(n * n); for (let i = 0; i < n * n; i++) P[i] = re[i] * re[i] + im[i] * im[i]; return P;
+}
+const fq = (u, n) => u <= n / 2 ? u : u - n;
+function radial(P, n, per = 4) {
+  const nb = Math.ceil(Math.log2(n / 2) * per) + 1, s = new Float64Array(nb), c = new Uint32Array(nb);
+  for (let v = 0; v < n; v++) for (let u = 0; u < n; u++) { const f = Math.hypot(fq(u, n), fq(v, n)); if (f < 1 || f > n / 2) continue; const b = Math.floor(Math.log2(f) * per); s[b] += P[v * n + u]; c[b]++; }
+  return Array.from(s, (v, b) => ({ f: 2 ** ((b + 0.5) / per), p: c[b] ? v / c[b] : 0, k: c[b] })).filter(b => b.k && b.p > 0);
+}
+function fitSlope(bins, f0, f1) { const pts = bins.filter(b => b.f >= f0 && b.f <= f1).map(b => [Math.log10(b.f), Math.log10(b.p)]); const n = pts.length; if (n < 2) return { m: NaN, c: 0 }; const mx = pts.reduce((s, p) => s + p[0], 0) / n, my = pts.reduce((s, p) => s + p[1], 0) / n; let sxy = 0, sxx = 0; for (const [a, b] of pts) { sxy += (a - mx) * (b - my); sxx += (a - mx) ** 2; } const m = sxy / sxx; return { m, c: my - m * mx }; }
+function stats(P, n, fine = 32) {
+  let tot = 0, cen = 0, axis = 0, diag = 0, peak = 0, pk = 0, hi = 0;
+  const rad = new Float64Array(n);
+  for (let v = 0; v < n; v++) for (let u = 0; u < n; u++) {
+    const a = fq(u, n), b = fq(v, n), f = Math.hypot(a, b); if (f < 1 || f > n / 2) continue; const p = P[v * n + u]; tot += p; cen += p * f; rad[Math.round(f)] += p;
+    if (f >= fine) { hi += p; const ang = Math.abs(Math.atan2(b, a)) % (Math.PI / 2), d = Math.min(ang, Math.PI / 2 - ang), e = Math.abs(ang - Math.PI / 4); if (d < Math.PI / 18) axis += p; else if (e < Math.PI / 18) diag += p; }
+  }
+  for (let f = 1; f < n / 2; f++) if (rad[f] > pk) { pk = rad[f]; peak = f; }
+  let band = 0; for (let f = Math.ceil(peak / Math.SQRT2); f <= Math.floor(peak * Math.SQRT2); f++) band += rad[f];
+  return { cen: cen / tot, peak, band: band / tot, hi: hi / tot, axis: axis / Math.max(diag, 1e-12) };
+}
+function specImage(x, P, n) {
+  const id = x.createImageData(n, n); let mx = 0; for (const p of P) mx = Math.max(mx, p); const lmax = Math.log10(mx), lmin = lmax - 6;
+  for (let v = 0; v < n; v++) for (let u = 0; u < n; u++) { const k = clamp((Math.log10(P[v * n + u] + 1e-30) - lmin) / (lmax - lmin), 0, 1), su = (u + n / 2) % n, sv = (v + n / 2) % n, o = (sv * n + su) * 4, c = Math.round(255 * k ** 1.2); id.data[o] = c * 0.95; id.data[o + 1] = c * 0.92; id.data[o + 2] = c; id.data[o + 3] = 255; }
+  x.putImageData(id, 0, 0);
+}
+function putGrey(x, g, w, h, map = v => 0.5 + 0.5 * v) { const id = x.createImageData(w, h); for (let i = 0; i < w * h; i++) { const c = clamp(map(g[i]), 0, 1) * 255; id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = c; id.data[i * 4 + 3] = 255; } x.putImageData(id, 0, 0); }
+function field(n, fn) { const g = new Float32Array(n * n); for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) g[y * n + x] = fn(x, y); return g; }
+
+/* palettes: colour stops, sampled into a 256-entry table */
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function lut(stops) { const t = new Uint8Array(256 * 3); for (let i = 0; i < 256; i++) { const v = i / 255; let k = 0; while (k < stops.length - 2 && v > stops[k + 1][0]) k++; const [a, ca] = stops[k], [b, cb] = stops[k + 1], u = clamp((v - a) / (b - a), 0, 1), A = hex(ca), B = hex(cb); for (let c = 0; c < 3; c++) t[i * 3 + c] = Math.round(lerp(A[c], B[c], u)); } return t; }
+const PAL = {
+  ink: lut([[0, '#14161c'], [1, '#f3efe6']]),
+  ocean: lut([[0, '#071a2e'], [0.45, '#1d5e86'], [0.52, '#d9c99a'], [0.6, '#5f8a3e'], [0.8, '#7c6a52'], [1, '#f4f4f0']]),
+  ember: lut([[0, '#0d0503'], [0.4, '#6b1406'], [0.7, '#e2571a'], [0.9, '#ffcf5c'], [1, '#fff6d8']]),
+  marble: lut([[0, '#3a3f4a'], [0.25, '#c9c4bb'], [0.6, '#f1eee8'], [1, '#ffffff']]),
+  wood: lut([[0, '#5b3518'], [0.5, '#a8692f'], [1, '#e2b06b']]),
+  planet: lut([[0, '#3b2416'], [0.3, '#a8642e'], [0.5, '#e8c590'], [0.7, '#c2783b'], [1, '#f5e6c8']]),
+  smoke: lut([[0, '#10131a'], [0.5, '#4e5a73'], [0.8, '#b6c2d6'], [1, '#f2f5fa']]),
+};
+function putPal(x, g, w, h, pal, map = v => 0.5 + 0.5 * v) { const id = x.createImageData(w, h); for (let i = 0; i < w * h; i++) { const k = Math.round(clamp(map(g[i]), 0, 1) * 255) * 3; id.data[i * 4] = pal[k]; id.data[i * 4 + 1] = pal[k + 1]; id.data[i * 4 + 2] = pal[k + 2]; id.data[i * 4 + 3] = 255; } x.putImageData(id, 0, 0); }
+
+/* ------------------------------------------------------------ 1. kinds of noise */
+function kinds() {
+  const n = 256, C = 16 / n;   // 16 lattice cells across the tile
+  const r = rng(5);
+  const KINDS = [
+    ['White', 'a random value per pixel', () => field(n, () => r() * 2 - 1)],
+    ['Value', 'random values, smoothed', () => field(n, (x, y) => N_VAL(x * C, y * C))],
+    ['Perlin, 1985 style', 'axis gradients, 3t² − 2t³', () => field(n, (x, y) => N_AXIS(x * C, y * C))],
+    ['Perlin, 2002', 'eight gradients, 6t⁵ − 15t⁴ + 10t³', () => field(n, (x, y) => N_IMP(x * C, y * C))],
+    ['Simplex', 'triangular lattice', () => field(n, (x, y) => N_SIM(x * C, y * C))],
+  ];
+  for (const [name, sub, make] of KINDS) {
+    const t = tile($('k-tiles'), name, '', sub, n, n, 1), g = make();
+    putGrey(t.ctx, g, n, n); const P = power2d(g, n); specImage(t.cs[1].getContext('2d'), P, n);
+    const s = stats(P, n);
+    t.sub.textContent = `peak ${s.peak} c/img · ${(s.band * 100).toFixed(0)}% within ±½ octave · fine detail ${(s.hi * 100).toFixed(2)}% · its axis/diagonal ratio ${s.axis.toFixed(1)}`;
+  }
+}
+
+/* ------------------------------------------------------------ 2. fBm */
+function fbmSection() {
+  const n = 256, C = 4 / n, x = $('f-img').getContext('2d'), sx = $('f-spec').getContext('2d');
+  let oct = 5, lac = 2, gain = 0.5;
+  function draw() {
+    const g = field(n, (i, j) => fbm2(N_IMP, i * C, j * C, oct, lac, gain));
+    // hillshade
+    const id = x.createImageData(n, n);
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+      const h = g[j * n + i], dx = g[j * n + Math.min(n - 1, i + 1)] - g[j * n + Math.max(0, i - 1)], dy = g[Math.min(n - 1, j + 1) * n + i] - g[Math.max(0, j - 1) * n + i];
+      const sh = clamp(0.62 - (dx + dy) * 9, 0, 1), k = Math.round(clamp(0.5 + 0.55 * h, 0, 1) * 255) * 3, o = (j * n + i) * 4;
+      id.data[o] = PAL.ocean[k] * (0.45 + 0.75 * sh); id.data[o + 1] = PAL.ocean[k + 1] * (0.45 + 0.75 * sh); id.data[o + 2] = PAL.ocean[k + 2] * (0.45 + 0.75 * sh); id.data[o + 3] = 255;
+    }
+    x.putImageData(id, 0, 0);
+    const P = power2d(g, n), bins = radial(P, n), base = 4, top = Math.min(base * lac ** (oct - 1), 64), fit = fitSlope(bins, base, top);
+    const H = Math.log(1 / gain) / Math.log(lac), pred = -(2 * H + 2);
+    // chart
+    const W = 1000, Hc = 420, L = 64, R = 20, T = 30, B = 44;
+    frame(sx, W, Hc);
+    const lp = bins.map(b => Math.log10(b.p)), ymax = Math.max(...lp) + 0.5, ymin = ymax - 9;
+    const X = f => L + Math.log2(f) / 7 * (W - L - R), Y = v => Hc - B - clamp((v - ymin) / (ymax - ymin), 0, 1) * (Hc - T - B);
+    for (const f of [1, 2, 4, 8, 16, 32, 64, 128]) { sx.strokeStyle = GRID; sx.beginPath(); sx.moveTo(X(f), T); sx.lineTo(X(f), Hc - B); sx.stroke(); text(sx, String(f), X(f), Hc - B + 14, { align: 'center', size: 11 }); }
+    sx.fillStyle = 'rgba(43,60,209,.08)'; sx.fillRect(X(base), T, X(top) - X(base), Hc - T - B);
+    sx.strokeStyle = INK; sx.lineWidth = 2.5; sx.beginPath(); bins.forEach((b, i) => i ? sx.lineTo(X(b.f), Y(Math.log10(b.p))) : sx.moveTo(X(b.f), Y(Math.log10(b.p)))); sx.stroke();
+    const line = (m, c, col, dash) => { sx.strokeStyle = col; sx.lineWidth = 2; sx.setLineDash(dash); sx.beginPath(); sx.moveTo(X(base), Y(m * Math.log10(base) + c)); sx.lineTo(X(top), Y(m * Math.log10(top) + c)); sx.stroke(); sx.setLineDash([]); };
+    if (isFinite(fit.m)) { line(fit.m, fit.c, HOT, []); const mid = Math.sqrt(base * top); line(pred, fit.m * Math.log10(mid) + fit.c - pred * Math.log10(mid), ACC, [6, 5]); }
+    legend(sx, [['measured spectrum', INK], ['fitted slope', HOT], ['predicted −(2H+2)', ACC], ['octaves present', 'rgba(43,60,209,.35)']], L, 14);
+    text(sx, 'cycles per image →', W - R, Hc - 10, { align: 'right', size: 11 }); text(sx, 'power (log)', 6, T + 8, { size: 10.5 });
+    $('f-oo').textContent = oct; $('f-lo').textContent = lac.toFixed(2); $('f-go').textContent = gain.toFixed(2);
+    $('f-desc').innerHTML = `H = log(1/${gain.toFixed(2)}) / log(${lac.toFixed(2)}) = <b>${H.toFixed(2)}</b> · fractal dimension D = 3 − H = <b>${(3 - H).toFixed(2)}</b><br>Spectral slope over ${base}–${top.toFixed(0)} cycles/image: measured <b>${fit.m.toFixed(2)}</b>, predicted <b>${pred.toFixed(2)}</b>${oct === 1 ? ' (one octave is not a power law: the slope only means something with several octaves)' : ''} · natural photographs ≈ −2`;
+  }
+  const bind = (id, f) => { $(id).oninput = () => { f(+$(id).value); clearTimeout(bind.t); bind.t = setTimeout(draw, 40); }; };
+  bind('f-o', v => oct = v); bind('f-l', v => lac = v / 100); bind('f-g', v => gain = v / 100);
+  draw();
+  preference();
+}
+
+/* the skyline preference test: profiles synthesised with power spectrum f^-beta, beta = 5 - 2D */
+function preference() {
+  const DS = [1.1, 1.25, 1.4, 1.55, 1.7, 1.85], host = $('p-tiles'), W = 400, H = 200, NPTS = 512;
+  const key = 'noise.picks';
+  let picks; try { picks = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { picks = {}; }
+  const save = () => { try { localStorage.setItem(key, JSON.stringify(picks)); } catch (e) { /* private mode */ } };
+  let round = 0, order = [];
+  const tiles = DS.map(() => { const t = tile(host, '', '', '', W, H); t.fig.querySelector('.tn').remove(); t.c.style.aspectRatio = '2 / 1'; return t; });
+  function profile(D, r) {
+    const beta = 5 - 2 * D, y = new Float64Array(NPTS);
+    for (let k = 1; k <= NPTS / 2; k++) { const a = k ** (-beta / 2), ph = r() * TAU; for (let i = 0; i < NPTS; i++) y[i] += a * Math.cos(TAU * k * i / NPTS + ph); }
+    let m = 0, s = 0; for (const v of y) m += v; m /= NPTS; for (const v of y) s += (v - m) ** 2; s = Math.sqrt(s / NPTS);
+    return Array.from(y, v => (v - m) / s);
+  }
+  function deal() {
+    const r = rng(9000 + round);
+    order = DS.map((d, i) => [r(), i]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
+    tiles.forEach((t, k) => {
+      const D = DS[order[k]], y = profile(D, rng(500 + round * 7 + order[k])), x = t.ctx;
+      const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#dfe7ee'); g.addColorStop(1, '#f6efe3'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+      x.fillStyle = '#3a4252'; x.beginPath(); x.moveTo(0, H); y.forEach((v, i) => x.lineTo(i / (NPTS - 1) * W, H * 0.58 - v * H * 0.16)); x.lineTo(W, H); x.closePath(); x.fill();
+      t.c.onclick = () => { picks[D] = (picks[D] || 0) + 1; save(); round++; deal(); chart(); };
+      t.sub.textContent = '';
+    });
+  }
+  function chart() {
+    const c = $('p-chart').getContext('2d'), Wc = 1000, Hc = 200, L = 50, B = 32, T = 26; frame(c, Wc, Hc);
+    const total = DS.reduce((s, d) => s + (picks[d] || 0), 0), mx = Math.max(1, ...DS.map(d => picks[d] || 0));
+    const X = i => L + (i + 0.5) / DS.length * (Wc - L - 20);
+    c.fillStyle = 'rgba(22,133,111,.12)'; c.fillRect(X(1.3) - 40, T, X(2.7) - X(1.3) + 80, Hc - T - B);
+    DS.forEach((d, i) => { const v = picks[d] || 0, h = v / mx * (Hc - T - B); c.fillStyle = ACC; c.fillRect(X(i) - 30, Hc - B - h, 60, h); text(c, `D ${d}`, X(i), Hc - B + 14, { align: 'center', size: 11 }); if (v) text(c, String(v), X(i), Hc - B - h - 9, { align: 'center', color: INK }); });
+    legend(c, [['your picks', ACC], ['published preference, D ≈ 1.3–1.5', 'rgba(22,133,111,.45)']], L, 12);
+    const mean = total ? DS.reduce((s, d) => s + d * (picks[d] || 0), 0) / total : null;
+    $('p-desc').innerHTML = total ? `${total} pick${total === 1 ? '' : 's'} · your mean preferred dimension <b>D = ${mean.toFixed(2)}</b> · Spehar et al. report a peak around 1.3–1.5` : 'Click the skyline you like best to start. Picks are kept in this browser only.';
+  }
+  $('p-reset').onclick = () => { picks = {}; save(); chart(); };
+  deal(); chart();
+}
+
+/* ------------------------------------------------------------ 3. motion */
+function shake() {
+  const x = $('m-shake').getContext('2d'), W = 1000, H = 280, VW = 480, VH = 240;
+  let trauma = 0, t = 0, freq = 10, auto = true, sinceHit = 0, acc = 0;
+  const hist = { n: [], r: [] }, STEP = 1 / 60, rnd = rng(3);
+  let cur = { n: [0, 0, 0], r: [0, 0, 0] };
+  function scene(ox, oy, ang, col) {
+    x.save(); x.beginPath(); x.rect(0, 0, VW, VH); x.clip();
+    x.fillStyle = '#dfe7ee'; x.fillRect(0, 0, VW, VH);
+    x.translate(VW / 2, VH / 2); x.rotate(ang); x.translate(-VW / 2 + ox, -VH / 2 + oy);
+    x.fillStyle = '#f2d39a'; x.beginPath(); x.arc(370, 60, 26, 0, TAU); x.fill();
+    x.fillStyle = '#b8c4b0'; x.fillRect(-60, 170, VW + 120, 120);
+    x.fillStyle = '#5a6578'; for (const [bx, bw, bh] of [[60, 70, 90], [160, 40, 130], [220, 90, 70], [330, 60, 110]]) x.fillRect(bx, 170 - bh, bw, bh);
+    x.strokeStyle = col; x.lineWidth = 2; x.strokeRect(VW / 2 - 18, VH / 2 - 18, 36, 36);
+    x.restore();
+  }
+  function hf(sig) {   // share of the signal's energy above 10 Hz, by DFT over the last 128 samples at 60 Hz
+    if (sig.length < 128) return null; const s = sig.slice(-128), m = s.reduce((a, v) => a + v, 0) / 128; let tot = 0, hi = 0;
+    for (let k = 1; k < 64; k++) { let re = 0, im = 0; for (let i = 0; i < 128; i++) { re += (s[i] - m) * Math.cos(TAU * k * i / 128); im -= (s[i] - m) * Math.sin(TAU * k * i / 128); } const p = re * re + im * im; tot += p; if (k * 60 / 128 > 10) hi += p; }
+    return tot > 1e-9 ? hi / tot : null;
+  }
+  function step() {
+    t += STEP; sinceHit += STEP; trauma = Math.max(0, trauma - 0.8 * STEP);
+    if (auto && sinceHit > 2.6) { trauma = Math.min(1, trauma + 0.7); sinceHit = 0; }
+    const s = trauma * trauma;
+    cur.n = [24 * s * N1(t * freq + 10), 24 * s * N1(t * freq + 60), 0.07 * s * N1(t * freq + 120)];
+    cur.r = [24 * s * (rnd() * 2 - 1), 24 * s * (rnd() * 2 - 1), 0.07 * s * (rnd() * 2 - 1)];
+    hist.n.push(cur.n[0]); hist.r.push(cur.r[0]); if (hist.n.length > 600) { hist.n.shift(); hist.r.shift(); }
+  }
+  function draw() {
+    frame(x, W, H);
+    x.save(); x.translate(10, 30); scene(cur.n[0], cur.n[1], cur.n[2], OK); x.restore();
+    x.save(); x.translate(510, 30); scene(cur.r[0], cur.r[1], cur.r[2], HOT); x.restore();
+    text(x, 'trauma² × noise', 14, 16, { color: OK, weight: 500 }); text(x, 'trauma² × random per frame', 514, 16, { color: HOT, weight: 500 });
+    x.fillStyle = GRID; x.fillRect(10, H - 8, VW, 4); x.fillStyle = HOT; x.fillRect(10, H - 8, VW * trauma, 4);
+    const a = hf(hist.n), b = hf(hist.r);
+    $('m-fo').textContent = freq + ' Hz';
+    $('m-sdesc').innerHTML = `trauma <b>${trauma.toFixed(2)}</b> (shake = trauma²) · energy above 10 Hz: noise <b>${a === null ? '—' : (a * 100).toFixed(0) + '%'}</b> · random <b>${b === null ? '—' : (b * 100).toFixed(0) + '%'}</b> · last 128 frames`;
+  }
+  $('m-hit').onclick = () => { trauma = Math.min(1, trauma + 0.6); sinceHit = 0; };
+  $('m-auto').onchange = () => { auto = $('m-auto').checked; };
+  $('m-f').oninput = () => { freq = +$('m-f').value; };
+  runner($('m-shake'), dt => { acc += dt; while (acc >= STEP) { step(); acc -= STEP; } draw(); }, 4);
+}
+function wander() {
+  const x = $('m-wander').getContext('2d'), W = 1000, H = 340, V = 80, STEP = 1 / 60;
+  const A = [['Random walk', HOT], ['Wander circle', GOLD], ['Noise steering', ACC]].map(([name, col], i) => ({ name, col, x: 200 + i * 300, y: H / 2, h: i, w: 0, wa: 0, trail: [], log: [], t: 0, seed: i * 50 }));
+  const rnd = rng(11);
+  let acc = 0;
+  function step(a, k) {
+    a.t += STEP;
+    let w;
+    if (k === 0) { const gauss = Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(TAU * rnd()); w = 1.1 * gauss / Math.sqrt(STEP); }   // Brownian heading: a fresh random turn each step
+    else if (k === 1) { a.wa += (rnd() * 2 - 1) * 9 * STEP; a.wa = clamp(a.wa, -1.4, 1.4); const tx = 60 + 30 * Math.cos(a.wa), ty = 30 * Math.sin(a.wa); w = 2.4 * Math.atan2(ty, tx); }
+    else w = 3.2 * N1(a.t * 0.45 + a.seed);
+    a.h += w * STEP; a.x += Math.cos(a.h) * V * STEP; a.y += Math.sin(a.h) * V * STEP;
+    if (a.x < 0) a.x += W; if (a.x > W) a.x -= W; if (a.y < 0) a.y += H; if (a.y > H) a.y -= H;
+    a.trail.push([a.x, a.y]); if (a.trail.length > 480) a.trail.shift();
+    a.log.push({ w, x: a.x, y: a.y }); if (a.log.length > 480) a.log.shift();
+  }
+  function metrics(a) {
+    if (a.log.length < 480) return null;
+    let path = 0, ux = 0, uy = 0, prev = a.log[0];
+    for (const p of a.log.slice(1)) { let dx = p.x - prev.x, dy = p.y - prev.y; if (Math.abs(dx) > W / 2) dx -= Math.sign(dx) * W; if (Math.abs(dy) > H / 2) dy -= Math.sign(dy) * H; path += Math.hypot(dx, dy); ux += dx; uy += dy; prev = p; }
+    let j = 0; for (let i = 1; i < a.log.length; i++) j += ((a.log[i].w - a.log[i - 1].w) / STEP) ** 2;
+    const mw = Math.sqrt(a.log.reduce((s, p) => s + p.w * p.w, 0) / a.log.length);
+    return { straight: Math.hypot(ux, uy) / path, jitter: Math.sqrt(j / (a.log.length - 1)), turn: mw };
+  }
+  function draw() {
+    frame(x, W, H, '#EEF2F6');
+    for (const a of A) {
+      x.strokeStyle = a.col; x.lineWidth = 2; x.beginPath(); let pv = null;
+      for (const p of a.trail) { if (pv && (Math.abs(p[0] - pv[0]) > 50 || Math.abs(p[1] - pv[1]) > 50)) x.moveTo(p[0], p[1]); else if (pv) x.lineTo(p[0], p[1]); else x.moveTo(p[0], p[1]); pv = p; }
+      x.stroke(); x.fillStyle = a.col; x.beginPath(); x.arc(a.x, a.y, 5, 0, TAU); x.fill();
+    }
+    legend(x, A.map(a => [a.name, a.col]), 12, 14);
+    const ms = A.map(metrics);
+    $('m-wdesc').innerHTML = ms[0] ? A.map((a, i) => `<span style="color:${a.col}">${a.name}</span>: straightness <b>${ms[i].straight.toFixed(2)}</b>, mean turn ${ms[i].turn.toFixed(2)} rad/s, jitter <b>${ms[i].jitter.toFixed(0)}</b> rad/s²`).join('<br>') : 'Collecting 8 seconds of motion…';
+  }
+  runner($('m-wander'), dt => { acc += dt; while (acc >= STEP) { A.forEach(step); acc -= STEP; } draw(); }, 9);
+}
+function curl() {
+  const cv = $('m-curl'), x = cv.getContext('2d'), W = 1000, H = 500, CELL = 10, GW = W / CELL + 1, GH = H / CELL + 1, NP = 2400, SC = 6 / W;   // the field repeats every 6 × 3 lattice cells, like the wrap-around canvas
+  let mode = 'curl', t = 0, frameN = 0, Pp = [], vel = new Float32Array(GW * GH * 2), hist = [];
+  const rnd = rng(77);
+  function scatter() { Pp = Array.from({ length: NP }, () => [rnd() * W, rnd() * H]); hist = []; t = 0; frame(x, W, H, '#0f1420'); }
+  function rebuild() {
+    const psi = new Float32Array(GW * GH);
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) psi[j * GW + i] = fbm3(i * CELL * SC, j * CELL * SC, t * 0.05, 2, 0.5, 6, 3);
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+      const ip = i === GW - 1 ? 1 : i + 1, im = i === 0 ? GW - 2 : i - 1, jp = j === GH - 1 ? 1 : j + 1, jm = j === 0 ? GH - 2 : j - 1;
+      const dx = (psi[j * GW + ip] - psi[j * GW + im]) / (2 * CELL), dy = (psi[jp * GW + i] - psi[jm * GW + i]) / (2 * CELL);
+      const k = (j * GW + i) * 2; if (mode === 'curl') { vel[k] = dy; vel[k + 1] = -dx; } else { vel[k] = dx; vel[k + 1] = dy; }
+    }
+  }
+  function v(px, py) { const fx = px / CELL, fy = py / CELL, i = clamp(Math.floor(fx), 0, GW - 2), j = clamp(Math.floor(fy), 0, GH - 2), u = fx - i, w = fy - j, k = (a, b) => (b * GW + a) * 2; const vx = lerp(lerp(vel[k(i, j)], vel[k(i + 1, j)], u), lerp(vel[k(i, j + 1)], vel[k(i + 1, j + 1)], u), w), vy = lerp(lerp(vel[k(i, j) + 1], vel[k(i + 1, j) + 1], u), lerp(vel[k(i, j + 1) + 1], vel[k(i + 1, j + 1) + 1], u), w); return [vx, vy]; }
+  function cv2() { const GX = 25, GY = 10, c = new Float64Array(GX * GY); for (const [px, py] of Pp) c[Math.min(GY - 1, Math.floor(py / H * GY)) * GX + Math.min(GX - 1, Math.floor(px / W * GX))]++; const m = NP / (GX * GY); let s = 0; for (const v of c) s += (v - m) ** 2; return { cv: Math.sqrt(s / c.length) / m, base: 1 / Math.sqrt(m) }; }
+  function tick(dt) {
+    if (dt > 0) {
+      t += dt; if (frameN++ % 4 === 0) rebuild();
+      const GAIN = 9000;
+      const wrap = (a, m) => (a % m + m) % m;
+      for (const p of Pp) { const [ax, ay] = v(p[0], p[1]), [bx, by] = v(wrap(p[0] + ax * GAIN * dt / 2, W), wrap(p[1] + ay * GAIN * dt / 2, H)); p[0] += bx * GAIN * dt; p[1] += by * GAIN * dt; if (p[0] < 0) p[0] += W; if (p[0] >= W) p[0] -= W; if (p[1] < 0) p[1] += H; if (p[1] >= H) p[1] -= H; }
+      if (frameN % 15 === 0) hist.push([t, cv2().cv]);
+    }
+    x.fillStyle = 'rgba(15,20,32,0.08)'; x.fillRect(0, 0, W, H);
+    x.fillStyle = mode === 'curl' ? 'rgba(170,205,255,.85)' : 'rgba(255,190,140,.85)'; for (const [px, py] of Pp) x.fillRect(px, py, 1.6, 1.6);
+    const s = cv2();
+    $('m-cdesc').innerHTML = `${mode === 'curl' ? 'Curl (divergence-free)' : 'Gradient'} flow · t = ${t.toFixed(0)} s · density unevenness (coefficient of variation per cell) <b>${s.cv.toFixed(2)}</b> · pure chance would give ${s.base.toFixed(2)}`;
+  }
+  seg($('m-cmode'), [['curl', 'Curl'], ['gradient', 'Gradient']], mode, k => { mode = k; scatter(); rebuild(); });
+  $('m-creset').onclick = () => { scatter(); rebuild(); };
+  scatter(); rebuild(); runner(cv, tick, 12);
+}
+
+/* ------------------------------------------------------------ 4. domain warping */
+function warp() {
+  const cv = $('w-cv'), x = cv.getContext('2d'), N = 240, S = 3 / N;
+  const PRE = { plain: ['Plain fBm', 'ink'], one: ['One warp', 'smoke'], two: ['Double warp', 'ember'], marble: ['Marble', 'marble'], wood: ['Wood', 'wood'], planet: ['Gas giant', 'planet'] };
+  let pre = 'two', k = 4;
+  const f = (px, py) => fbm2(N_IMP, px, py, 5);
+  function value(px, py) {
+    if (pre === 'plain') return f(px, py);
+    const qx = f(px, py), qy = f(px + 5.2, py + 1.3);
+    if (pre === 'one') return f(px + k * qx, py + k * qy);
+    if (pre === 'marble') { let tb = 0, a = 1, fr = 1; for (let o = 0; o < 5; o++) { tb += a * Math.abs(N_IMP(px * fr, py * fr)); a *= 0.5; fr *= 2; } return Math.sin(px * 6 + k * 2 * tb); }
+    if (pre === 'wood') { const d = Math.hypot(px - 1.5, py - 1.5) * 9 + k * 0.6 * qx; return 2 * (d - Math.floor(d)) ** 3 - 1; }
+    const rx = f(px + k * qx + 1.7, py + k * qy + 9.2), ry = f(px + k * qx + 8.3, py + k * qy + 2.8);
+    if (pre === 'planet') return Math.sin(py * 9 + k * 1.2 * rx);
+    return f(px + k * rx, py + k * ry) * 1.6;
+  }
+  function coherence(g) {   // structure tensor coherence, averaged over the image
+    const Jxx = new Float32Array(N * N), Jyy = new Float32Array(N * N), Jxy = new Float32Array(N * N);
+    for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) { const gx = g[j * N + i + 1] - g[j * N + i - 1], gy = g[(j + 1) * N + i] - g[(j - 1) * N + i], o = j * N + i; Jxx[o] = gx * gx; Jyy[o] = gy * gy; Jxy[o] = gx * gy; }
+    const R = 4; let sum = 0, cnt = 0;
+    for (let j = R + 1; j < N - R - 1; j += 3) for (let i = R + 1; i < N - R - 1; i += 3) { let a = 0, b = 0, c = 0; for (let v = -R; v <= R; v++) for (let u = -R; u <= R; u++) { const o = (j + v) * N + i + u; a += Jxx[o]; b += Jyy[o]; c += Jxy[o]; } const tr = a + b; if (tr < 1e-9) continue; sum += Math.sqrt((a - b) ** 2 + 4 * c * c) / tr; cnt++; }
+    return sum / cnt;
+  }
+  function draw() {
+    const g = field(N, (i, j) => value(i * S, j * S));
+    const t1 = mk(N, N); putPal(t1.getContext('2d'), g, N, N, PAL[PRE[pre][1]]);
+    const base = field(N, (i, j) => f(i * S, j * S)), t2 = mk(N, N); putGrey(t2.getContext('2d'), base, N, N, v => 0.5 + 0.35 * v);
+    frame(x, 1000, 500);
+    x.imageSmoothingQuality = 'high'; x.drawImage(t1, 10, 10, 480, 480); x.drawImage(t2, 510, 10, 480, 480);
+    x.save(); x.beginPath(); x.rect(510, 10, 480, 480); x.clip();
+    x.strokeStyle = HOT; x.fillStyle = HOT; x.lineWidth = 1.3;
+    for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) {
+      const px = (i + 0.5) / 16 * N * S, py = (j + 0.5) / 16 * N * S, qx = f(px, py), qy = f(px + 5.2, py + 1.3);
+      const ax = 510 + (i + 0.5) * 30, ay = 10 + (j + 0.5) * 30, dx = qx * k * 30 / (S * N / 16) * 0.12, dy = qy * k * 30 / (S * N / 16) * 0.12;
+      x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + dx, ay + dy); x.stroke(); x.beginPath(); x.arc(ax + dx, ay + dy, 1.8, 0, TAU); x.fill();
+    }
+    x.restore();
+    text(x, PRE[pre][0], 18, 24, { color: '#fff', weight: 500 }); text(x, 'the first warp, over plain fBm (arrows scaled down)', 518, 24, { color: INK, weight: 500 });
+    $('w-ko').textContent = k.toFixed(1);
+    $('w-desc').innerHTML = `${PRE[pre][0]} · warp k = ${k.toFixed(1)} · mean orientation coherence <b>${coherence(g).toFixed(2)}</b> (plain fBm: ${coherence(base).toFixed(2)})`;
+  }
+  seg($('w-pre'), Object.entries(PRE).map(([a, b]) => [a, b[0]]), pre, v => { pre = v; draw(); });
+  $('w-k').oninput = () => { k = +$('w-k').value / 10; clearTimeout(draw.t); draw.t = setTimeout(draw, 60); };
+  draw();
+}
+
+/* ------------------------------------------------------------ 5. loops */
+function loops() {
+  // 1D: a naive loop against a circle through 2D noise
+  const x = $('l-1d').getContext('2d'), W = 1000, H = 240, T = 4, F = 1.5, NS = 400;
+  const naive = Array.from({ length: NS }, (_, i) => fbm1(i / NS * T * F + 3.3));
+  const R = T * F / TAU, circ = Array.from({ length: NS }, (_, i) => { const a = i / NS * TAU; return fbm2(N_IMP, 20 + R * Math.cos(a), 40 + R * Math.sin(a), 3); });
+  frame(x, W, H);
+  const draw = (sig, y0, col, label) => {
+    const both = [...sig, ...sig], m = Math.max(...both.map(Math.abs)) || 1;
+    x.strokeStyle = col; x.lineWidth = 2; x.beginPath(); both.forEach((v, i) => { const px = 20 + i / (both.length - 1) * (W - 40), py = y0 - v / m * 38; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke();
+    text(x, label, 24, y0 - 52, { color: col, weight: 500 });
+  };
+  draw(naive, 75, HOT, 'cut from running noise, played twice'); draw(circ, 185, ACC, 'one lap around a circle, played twice');
+  x.strokeStyle = INK; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(W / 2, 14); x.lineTo(W / 2, H - 8); x.stroke(); x.setLineDash([]); text(x, 'seam', W / 2 + 6, H - 14, { color: INK });
+  const jump = s => Math.abs(s[0] - s[s.length - 1] - (s[s.length - 1] - s[s.length - 2])), step = s => { let a = 0; for (let i = 1; i < s.length; i++) a += Math.abs(s[i] - s[i - 1]); return a / (s.length - 1); };
+  $('l-1desc').innerHTML = `Jump across the seam, in units of a typical step: cut <b>${(jump(naive) / step(naive)).toFixed(1)}×</b> · circle <b>${(jump(circ) / step(circ)).toFixed(2)}×</b>`;
+
+  // 2D: an animated loop by wrapping the time lattice, a naive one, and tiling
+  const n = 96, FR = 32, PZ = 4, SC = 4 / n, host = $('l-tiles');
+  const tA = tile(host, 'Running noise', '', 'Time moves straight through the noise; the loop jumps at the end.', n, n);
+  const tB = tile(host, 'Wrapped time lattice', '', 'The time axis repeats every 4 lattice cells; the last frame flows into the first.', n, n);
+  const tC = tile(host, 'Plain noise, tiled 2 × 2', '', 'Copies of an ordinary patch: the edges do not match.', n * 2, n * 2);
+  const tD = tile(host, 'Wrapped lattice, tiled 2 × 2', '', 'x and y lattice periods of 4 cells: the copies join seamlessly.', n * 2, n * 2);
+  const framesA = [], framesB = [];
+  let k = 0;
+  const build = () => {
+    if (k >= FR) { finish(); return; }
+    const z = k / FR * PZ;
+    framesA.push(field(n, (i, j) => fbm3(i * SC, j * SC, z * 0.9, 3, 0.5, 256, 256, 256)));
+    framesB.push(field(n, (i, j) => fbm3(i * SC, j * SC, z, 3, 0.5, 256, 256, PZ)));
+    $('l-prog').textContent = `building frames ${k + 1}/${FR}`; k++; setTimeout(build, 0);
+  };
+  function rms(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2; return Math.sqrt(s / a.length); }
+  function seamRatio(fr) { let s = 0; for (let i = 1; i < fr.length; i++) s += rms(fr[i], fr[i - 1]); const typ = s / (fr.length - 1); return rms(fr[0], fr[fr.length - 1]) / typ; }
+  function finish() {
+    $('l-prog').textContent = ''; $('l-sheet').disabled = false;
+    tA.sub.textContent = `seam ${seamRatio(framesA).toFixed(1)}× a normal frame step`;
+    tB.sub.textContent = `seam ${seamRatio(framesB).toFixed(2)}× a normal frame step`;
+    // tiling
+    const P = 4, plain = field(n, (i, j) => fbm3(i * SC + 0.37, j * SC + 0.61, 0.5, 3)), per = field(n, (i, j) => fbm3(i * SC, j * SC, 0.5, 3, 0.5, P, P, 256));
+    const half = mk(n, n), hx = half.getContext('2d');
+    for (const [t, g] of [[tC, plain], [tD, per]]) { putGrey(hx, g, n, n); for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) t.ctx.drawImage(half, a * n, b * n); }
+    const edge = g => { let s = 0, t = 0; for (let j = 0; j < n; j++) { s += (g[j * n] - g[j * n + n - 1]) ** 2; t += (g[j * n + 1] - g[j * n]) ** 2; } return Math.sqrt(s / t); };
+    tC.sub.textContent = `edge mismatch ${edge(plain).toFixed(1)}× a normal pixel step`; tD.sub.textContent = `edge mismatch ${edge(per).toFixed(2)}× a normal pixel step`;
+    $('l-desc').innerHTML = `Seam = RMS change from the last frame to the first, divided by the average change between neighbouring frames. Around 1 means invisible.`;
+    let f = 0, last = 0;
+    const play = now => { if (now - last > 70) { last = now; putGrey(tA.ctx, framesA[f], n, n); putGrey(tB.ctx, framesB[f], n, n); f = (f + 1) % FR; } requestAnimationFrame(play); };
+    if (REDUCE) { putGrey(tA.ctx, framesA[0], n, n); putGrey(tB.ctx, framesB[0], n, n); } else requestAnimationFrame(play);
+  }
+  $('l-sheet').onclick = () => { const c = mk(n * 8, n * 4), cx = c.getContext('2d'), t = mk(n, n), tx = t.getContext('2d'); framesB.forEach((g, i) => { putGrey(tx, g, n, n); cx.drawImage(t, (i % 8) * n, Math.floor(i / 8) * n); }); download('noise-loop-8x4.png', c); };
+  build();
+}
+
+/* ------------------------------------------------------------ 6. lab */
+function lab() {
+  const cv = $('lab-cv'), x = cv.getContext('2d'), N = 160;
+  let S = { s: 4, o: 5, g: 0.5, w: 0, pal: 'ocean', tile: false, anim: false, seed: 1337 }, frames = null, job = 0, raf = 0;
+  const per = () => S.s;
+  function val(i, j, z, pz) {
+    const px = i / N * S.s, py = j / N * S.s, P = per();
+    if (!S.w) return fbm3(px, py, z, S.o, S.g, P, P, pz);
+    const k = S.w / 10, qx = fbm3(px, py, z, 4, 0.5, P, P, pz), qy = fbm3(px + 5.2, py + 1.3, z, 4, 0.5, P, P, pz);
+    const rx = fbm3(px + k * qx + 1.7, py + k * qy + 9.2, z, 4, 0.5, P, P, pz), ry = fbm3(px + k * qx + 8.3, py + k * qy + 2.8, z, 4, 0.5, P, P, pz);
+    return fbm3(px + k * rx, py + k * ry, z, S.o, S.g, P, P, pz) * 1.4;
+  }
+  // lattice wrapping is exact only where warped coordinates stay periodic; integer offsets keep x and y periodic, warps shift within the period
+  function paint(g) {
+    const t = mk(N, N); putPal(t.getContext('2d'), g, N, N, PAL[S.pal], v => 0.5 + 0.6 * v);
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 320, 320); x.imageSmoothingQuality = 'high';
+    if (S.tile) for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) x.drawImage(t, a * 160, b * 160, 160, 160); else x.drawImage(t, 0, 0, 320, 320);
+  }
+  function measure(g) { const n = 128, h = new Float32Array(n * n); for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) h[j * n + i] = g[Math.floor(j * N / n) * N + Math.floor(i * N / n)]; const bins = radial(power2d(h, n), n), fit = fitSlope(bins, S.s, Math.min(S.s * 2 ** (S.o - 1), 32)); return fit.m; }
+  function render() {
+    const my = ++job; cancelAnimationFrame(raf);
+    N3 = perlin3(makePerm(S.seed));
+    ['so', 'oo', 'go', 'wo'].forEach((id, i) => $('lb-' + id).textContent = [S.s, S.o, S.g.toFixed(2), (S.w / 10).toFixed(1)][i]);
+    if (!S.anim) {
+      const g = field(N, (i, j) => val(i, j, 0.5, 256)); paint(g);
+      $('lab-desc').innerHTML = `Spectral slope (measured) <b>${measure(g).toFixed(2)}</b> · predicted for plain fBm −(2H+2) = ${(-(2 * Math.log2(1 / S.g) + 2)).toFixed(2)} · period ${S.s} cells${S.tile ? ' · tiled 2 × 2: no seams' : ''}`;
+      N3 = perlin3(PERM); return;
+    }
+    frames = []; const FR = 24, PZ = 3; let k = 0;
+    const step = () => {
+      if (my !== job) return;
+      N3 = perlin3(makePerm(S.seed)); frames.push(field(N, (i, j) => val(i, j, k / FR * PZ, PZ))); N3 = perlin3(PERM);
+      paint(frames[k]); $('lab-desc').innerHTML = `Building loop frame ${k + 1}/${FR}…`; k++;
+      if (k < FR) { setTimeout(step, 0); return; }
+      $('lab-desc').innerHTML = `Looping ${FR} frames, time lattice period ${PZ} · spectral slope of frame 1 <b>${measure(frames[0]).toFixed(2)}</b>`;
+      let f = 0, last = 0; const play = now => { if (my !== job) return; if (now - last > 80) { last = now; paint(frames[f]); f = (f + 1) % FR; } raf = requestAnimationFrame(play); }; raf = requestAnimationFrame(play);
+    };
+    step();
+  }
+  const bind = (id, key, f = v => v) => { $(id).oninput = () => { S[key] = f(+$(id).value); clearTimeout(bind.t); bind.t = setTimeout(render, 120); }; };
+  bind('lb-s', 's'); bind('lb-o', 'o'); bind('lb-g', 'g', v => v / 100); bind('lb-w', 'w');
+  seg($('lb-pal'), Object.keys(PAL).map(k => [k, k[0].toUpperCase() + k.slice(1)]), S.pal, v => { S.pal = v; render(); });
+  $('lb-tile').onchange = () => { S.tile = $('lb-tile').checked; render(); };
+  $('lb-anim').onchange = () => { S.anim = $('lb-anim').checked; render(); };
+  $('lb-new').onclick = () => { S.seed = (S.seed * 7 + 13) % 100000; render(); };
+  $('lb-save').onclick = () => download('noise.png', cv);
+  render();
+}
+
+/* ------------------------------------------------------------ boot */
+try { await Promise.all([document.fonts.load('600 20px "Bricolage Grotesque"'), document.fonts.load('500 13px "JetBrains Mono"')]); } catch (e) { /* fall back to system fonts */ }
+for (const f of [kinds, fbmSection, shake, wander, curl, warp, loops, lab]) {
+  try { f(); } catch (e) { console.error(f.name, e); }
+}
+</script>
+</body>
+</html>
