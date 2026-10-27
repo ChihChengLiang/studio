@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Notes Get Along</title>
+<meta name="description" content="Sensory consonance from the inner ear up: the cochlea as a filter bank, the Plomp–Levelt roughness curve, why overtones decide which intervals sound smooth, scales derived from timbres, tension curves, the missing fundamental, Shepard tones, and a tuning lab that exports Scala files.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Sections are static HTML; canvases are drawn and sounds are made by the script at the bottom (2D canvas + Web Audio). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#F6F3EC;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 110px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards a{font:500 12px/1 var(--font-mono)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+table.plain th,table.plain td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td{color:var(--muted);font-variant-numeric:tabular-nums}
+table.plain td:first-child{font-weight:600;white-space:nowrap;color:var(--fg)}
+table.num td{font-family:var(--font-mono);font-size:12.5px}
+
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel canvas,canvas.plot{display:block;width:100%;height:auto;background:var(--stage);border:1px solid var(--line);touch-action:none}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.bar input[type=range]{flex:1 1 160px;accent-color:var(--accent);margin:0}
+.bar label,.lbl{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.play::before{content:'▶ ';font-size:.8em}
+.btn.play[aria-pressed="true"]::before{content:'■ '}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.desc b{color:var(--accent);font-weight:500}
+.split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:24px;align-items:start}
+.split .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button,.chips span{font:500 12px/1.2 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:6px 8px;border-radius:2px}
+.chips button{cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+.chips .off{color:var(--muted)}
+
+.ctlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 12px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.row{display:flex;flex-direction:column;gap:5px;min-width:0}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+
+.dock{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:16px;z-index:20;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);padding:8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-width:calc(100vw - 32px)}
+.dock label{display:flex;align-items:center;gap:8px;font:500 11px/1 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.dock input{width:110px;accent-color:var(--accent);margin:0}
+.dock .state{font:500 11px/1 var(--font-mono);color:var(--muted);min-width:7ch}
+
+@media (max-width:900px){
+  .split{grid-template-columns:minmax(0,1fr)}
+  .desc{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Music · Web Audio · psychoacoustics</p>
+  <h1>Why notes get along</h1>
+  <p class="lede">Some pairs of notes sound smooth and others grind. A large part of that is not taste but mechanics: the inner ear splits sound into overlapping frequency bands, and two components that land in the same band beat against each other. Add up that beating over all the overtones of two notes and the familiar intervals fall out, as do new ones for instruments with unusual overtones. Every curve on this page is computed live from a published model, and everything plays. Sound starts only when you press a button; the volume and a stop button sit in the corner.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#borrow">Elements to borrow</a></li>
+    <li><a href="#ear">The ear is a filter bank</a></li>
+    <li><a href="#pl">The roughness curve</a></li>
+    <li><a href="#partials">Overtones make intervals</a></li>
+    <li><a href="#timbre">Timbre to scale</a></li>
+    <li><a href="#tension">Tension and release</a></li>
+    <li><a href="#missing">Missing fundamental</a></li>
+    <li><a href="#shepard">Endless rise</a></li>
+    <li><a href="#lab">Lab</a></li>
+    <li><a href="#glossary">Glossary and sources</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="borrow" aria-labelledby="borrow-h">
+  <header><p class="eyebrow">Overview</p><h2 id="borrow-h">Elements to borrow</h2></header>
+  <div class="prose"><p>Each idea below is a lever a composer, sound designer or game audio person can pull on purpose, with a mechanism behind it.</p></div>
+  <div class="cards">
+    <div><h3>Roughness is a texture dial</h3><p>Two tones a few hertz apart pulse; a little further apart they buzz; further still they separate. One slider spans calm, unease and grit. <a href="#ear">The ear</a></p></div>
+    <div><h3>Low chords get muddy for a reason</h3><p>The ear's bands are wider at low pitch, so a third that is sweet in the treble grinds in the bass. Voice wide below, close above. <a href="#pl">The curve</a></p></div>
+    <div><h3>The instrument picks the intervals</h3><p>Smooth intervals sit where overtones line up. Change the overtones and the sweet spots move. <a href="#partials">Overtones</a></p></div>
+    <div><h3>A tuning made for a sound</h3><p>Bells, bars and stretched tones each have their own scale in which they sound in tune. <a href="#timbre">Timbre to scale</a></p></div>
+    <div><h3>Tension you can plot</h3><p>Roughness per chord is a curve, like the intensity curve of a story. Plan the climb and the release. <a href="#tension">Tension</a></p></div>
+    <div><h3>Bass that isn't there</h3><p>Remove the lowest frequency and the pitch stays; the brain fills it in. Small speakers rely on it. <a href="#missing">Missing fundamental</a></p></div>
+    <div><h3>A staircase with no top</h3><p>A tone that rises forever, for dread, drive or a loop that never resolves. <a href="#shepard">Endless rise</a></p></div>
+  </div>
+</section>
+
+<section class="demo" id="ear" aria-labelledby="ear-h">
+  <header><p class="eyebrow">1 · Physiology</p><h2 id="ear-h">The ear is a filter bank</h2></header>
+  <div class="prose">
+    <p>The basilar membrane in the cochlea is stiff at one end and floppy at the other, so each place along it resonates with a different frequency. The hair cells at each place act like one band-pass filter in a bank of thousands. The width of one such filter is the <b>critical band</b>; Glasberg and Moore measured it as the <b>equivalent rectangular bandwidth</b>, ERB = 24.7 × (4.37 f/kHz + 1) Hz. That is about 50 Hz wide at 200 Hz and about 130 Hz at 1 kHz, so the bank is roughly evenly spaced on a log-like scale, which is how the x-axis below is drawn.</p>
+    <p>Two pure tones far apart excite different filters and are heard as two notes. Two tones within one band excite the same filters, and that filter's output swells and fades at the difference frequency. A few hertz apart you hear slow <b>beats</b>; from roughly 15 Hz up to a fraction of the band the beats blur into <b>roughness</b>; past the band, the tones separate and the roughness goes away.</p>
+  </div>
+  <div class="panel">
+    <canvas id="earcv" width="1000" height="330" aria-label="Auditory filters along the cochlea and the excitation of two tones"></canvas>
+    <canvas id="beatcv" width="1000" height="130" aria-label="The summed waveform of the two tones over a quarter second"></canvas>
+    <div class="bar"><label for="ear-f">Lower tone</label><input type="range" id="ear-f" min="0" max="1000" value="500"><output id="ear-fo" class="lbl"></output></div>
+    <div class="bar"><label for="ear-d">Gap</label><input type="range" id="ear-d" min="0" max="1000" value="160"><output id="ear-do" class="lbl"></output></div>
+    <div class="bar"><button class="btn play" id="ear-play" aria-pressed="false">Listen</button><div class="seg" id="ear-pre" role="group" aria-label="Gap presets"></div></div>
+    <p class="desc" id="ear-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="pl" aria-labelledby="pl-h">
+  <header><p class="eyebrow">2 · Plomp and Levelt, 1965</p><h2 id="pl-h">The roughness curve</h2></header>
+  <div class="prose">
+    <p>Plomp and Levelt played pairs of pure tones to listeners and asked how pleasant each pair was. The answer depended only on how far apart the tones were <b>measured in critical bands</b>: smooth at unison, roughest at about a quarter of a band, smooth again past one band. Sethares fitted that curve with two exponentials, and this page uses his fit throughout.</p>
+    <p>Plotted against musical interval, the curves for different registers look different: the roughest interval in the bass is several semitones wide, and in the treble it is less than one. Switch the x-axis to critical bands and the five curves collapse into one. That collapse is the whole claim of the theory.</p>
+  </div>
+  <div class="panel">
+    <canvas id="plcv" width="1000" height="360" aria-label="Roughness of two pure tones against their separation, for five registers"></canvas>
+    <div class="bar"><label>X-axis</label><div class="seg" id="pl-axis" role="group" aria-label="X-axis unit"></div><label>Listen at</label><div class="seg" id="pl-base" role="group" aria-label="Register"></div></div>
+    <div class="bar"><button class="btn play" id="pl-play" aria-pressed="false">Listen</button><span class="lbl">Drag on the plot to move the second tone</span></div>
+    <div class="tablewrap"><table class="plain num" id="pl-table"></table></div>
+  </div>
+</section>
+
+<section class="demo" id="partials" aria-labelledby="partials-h">
+  <header><p class="eyebrow">3 · Sethares, 1993</p><h2 id="partials-h">Overtones make the intervals</h2></header>
+  <div class="prose">
+    <p>Real notes are not pure tones. A string or a voice sounds a fundamental plus overtones at 2, 3, 4… times its frequency. To score an interval between two such notes, add up the roughness of <b>every pair of overtones</b>, one from each note. The total dips wherever the two sets of overtones line up, because coinciding overtones do not beat. With harmonic overtones those dips land on the ratios 6:5, 5:4, 4:3, 3:2, 5:3 and 2:1: the minor and major thirds, the fourth, the fifth, the major sixth and the octave. With seven or more overtones, shallower dips at 7:6, 7:5 and 7:4 appear too: "blue" intervals that standard tuning misses by about 30 cents.</p>
+    <p>Start with one overtone (a pure tone): the curve has no dips at all. Add overtones one at a time and watch each dip appear. The lower plot shows the two notes' overtones and the pairs that are beating at the interval under the cursor.</p>
+  </div>
+  <div class="panel">
+    <canvas id="dcv" width="1000" height="340" aria-label="Dissonance curve of two harmonic notes across an octave"></canvas>
+    <canvas id="paircv" width="1000" height="170" aria-label="Overtones of both notes and the pairs that beat"></canvas>
+    <div class="bar"><label>Overtones</label><div class="seg" id="d-n" role="group" aria-label="Number of overtones"></div></div>
+    <div class="bar"><label for="d-decay">Brightness</label><input type="range" id="d-decay" min="40" max="100" value="88"><output id="d-decayo" class="lbl"></output><label>Root</label><div class="seg" id="d-root" role="group" aria-label="Root note"></div></div>
+    <div class="bar"><button class="btn play" id="d-play" aria-pressed="false">Listen</button><span class="lbl">Drag on the plot; the readout names the nearest interval</span></div>
+    <p class="desc" id="d-desc"></p>
+    <div class="chips" id="d-dips" aria-label="Measured dips"></div>
+  </div>
+</section>
+
+<section class="demo" id="timbre" aria-labelledby="timbre-h">
+  <header><p class="eyebrow">4 · Tuning, timbre, spectrum, scale</p><h2 id="timbre-h">Every timbre has its own scale</h2></header>
+  <div class="prose">
+    <p>If smooth intervals come from overtones lining up, then an instrument with different overtones has different smooth intervals. A struck metal bar has overtones at 2.76, 5.40 and 8.93 times its fundamental (the modes of a free bar), not 2, 3 and 4. A <b>stretched</b> tone, whose "octave" overtone sits at 2.1 instead of 2, has its whole set of dips stretched with it.</p>
+    <p>Sethares' best-known demonstration follows. Take a stretched timbre and play an ordinary cadence in standard tuning: it sounds sour. Stretch the tuning by the same amount and it sounds in tune again, even though no interval in it is a "correct" one any more. Pick a preset or drag the overtones (the fundamental is fixed), then play the cadence both ways. The roughness numbers under the buttons are computed, not quoted.</p>
+  </div>
+  <div class="panel">
+      <canvas id="tedcv" width="1000" height="220" aria-label="Overtone editor: drag a bar sideways to change its frequency ratio, up and down to change its level"></canvas>
+      <canvas id="tcv" width="1000" height="300" aria-label="The dissonance curve of this timbre, with the derived scale"></canvas>
+      <div class="chips" id="t-keys" aria-label="Play each scale step against the root"></div>
+  </div>
+    <div class="ctlgrid">
+      <div class="group"><h3>Timbre</h3><div class="seg" id="t-pre" role="group" aria-label="Timbre preset"></div>
+        <div class="bar"><button class="btn" id="t-add">Add overtone</button><button class="btn" id="t-del">Remove last</button><button class="btn" id="t-note">Play one note</button></div>
+        <p class="gnote" id="t-info"></p></div>
+      <div class="group"><h3>Cadence test</h3><p class="gnote">I–IV–V–I, with each step 1/12 of a "period". Standard tuning uses the octave 2:1; matched tuning uses this timbre's own pseudo-octave, the deepest dip near the octave.</p>
+        <div class="bar"><button class="btn play" id="t-std" aria-pressed="false">Standard tuning</button><button class="btn play" id="t-mat" aria-pressed="false">Matched tuning</button></div>
+        <p class="desc" id="t-test"></p></div>
+    </div>
+  <div class="tablewrap"><table class="plain num" id="t-table"></table></div>
+</section>
+
+<section class="demo" id="tension" aria-labelledby="tension-h">
+  <header><p class="eyebrow">5 · Harmony as a curve</p><h2 id="tension-h">Tension and release</h2></header>
+  <div class="prose">
+    <p>Sum the roughness over every pair of notes in a chord and you get one number per chord. Run it along a progression and you get a tension curve, the musical twin of a story's intensity curve. Two things show up immediately: added and clashing notes raise it, and <b>the same chord gets rougher as it moves down</b>, because the critical bands are wider in the bass. That is the physical reason arrangers spread chords out below and pack them close above.</p>
+    <p>Numbers are in units of one semitone at middle C (C4 with C♯4 = 1.00), with a six-overtone harmonic timbre. Click keys to build a chord; choose a progression to see and hear its curve.</p>
+  </div>
+  <div class="split">
+    <div class="panel">
+      <canvas id="kbcv" width="1000" height="170" aria-label="Two-octave keyboard; click keys to build a chord"></canvas>
+      <div class="bar"><label>Octave shift</label><div class="seg" id="kb-oct" role="group" aria-label="Octave shift"></div><button class="btn" id="kb-play">Play chord</button><button class="btn" id="kb-clear">Clear</button></div>
+    </div>
+    <div class="side"><p class="desc" id="kb-desc"></p></div>
+  </div>
+  <div class="panel">
+    <canvas id="prcv" width="1000" height="260" aria-label="Roughness of each chord in the progression"></canvas>
+    <div class="bar"><label>Progression</label><div class="seg" id="pr-pick" role="group" aria-label="Progression"></div><button class="btn play" id="pr-play" aria-pressed="false">Play</button></div>
+  </div>
+</section>
+
+<section class="demo" id="missing" aria-labelledby="missing-h">
+  <header><p class="eyebrow">6 · Virtual pitch</p><h2 id="missing-h">The missing fundamental</h2></header>
+  <div class="prose">
+    <p>Take a 220 Hz tone and delete the 220 Hz component. You still hear 220 Hz. The overtones that remain (440, 660, 880…) all repeat together every 4.55 ms, and the auditory system reads pitch from that shared period, not from the lowest component. Terhardt called this <b>virtual pitch</b>. It is why a phone speaker that cannot reproduce 100 Hz still plays a bass line you can hum.</p>
+    <p>The last option shifts the overtones up by 40 Hz so they are no longer a harmonic series. The waveform no longer repeats exactly, and the pitch you hear moves by only a few hertz, not by 40: one of the classic experiments that ruled out "pitch = lowest frequency" (Schouten, de Boer). The pitch below is measured from the waveform's autocorrelation.</p>
+  </div>
+  <div class="panel">
+    <canvas id="mfcv" width="1000" height="180" aria-label="Spectrum: which components are present"></canvas>
+    <canvas id="mwcv" width="1000" height="150" aria-label="Waveform over 15 milliseconds"></canvas>
+    <div class="bar"><div class="seg" id="mf-pick" role="group" aria-label="Which components"></div><button class="btn play" id="mf-play" aria-pressed="false">Listen</button></div>
+    <p class="desc" id="mf-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="shepard" aria-labelledby="shepard-h">
+  <header><p class="eyebrow">7 · Shepard, 1964 · Risset</p><h2 id="shepard-h">A staircase with no top</h2></header>
+  <div class="prose">
+    <p>Build a tone from components spaced exactly an octave apart and weight them with a fixed bell curve over log frequency. Raise every component a semitone. After twelve steps each component sits where the one above it started, so the sound is identical to where it began, yet every step sounded like a step up. The components leaving at the top are inaudibly quiet, and new ones fade in at the bottom. Pitch has two parts, height and chroma (which note of the octave), and this sound has chroma without a fixed height. Risset's glide version slides continuously. It is the sound version of the Shepard gradient in the <a href="../../images/halftone-dithering/">halftone notebook</a>.</p>
+  </div>
+  <div class="panel">
+    <canvas id="shcv" width="1000" height="240" aria-label="Octave-spaced components under a fixed loudness envelope"></canvas>
+    <div class="bar"><button class="btn play" id="sh-step" aria-pressed="false">Steps</button><button class="btn play" id="sh-glide" aria-pressed="false">Glide</button><label>Direction</label><div class="seg" id="sh-dir" role="group" aria-label="Direction"></div></div>
+    <p class="desc" id="sh-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="lab" aria-labelledby="lab-h">
+  <header><p class="eyebrow">8 · Lab</p><h2 id="lab-h">Timbre, tuning and a sequencer</h2></header>
+  <div class="prose"><p>Pick a timbre and a tuning, click cells to place notes (rows are the tuning's steps from the root, two or more in a column make a chord), and play. The strip under the grid is each step's roughness, so you can see the tension curve of what you write. "Timbre from the editor" uses whatever you built in section 4. Export the tuning as a Scala <code>.scl</code> file, the format most software synths import, or everything as JSON.</p></div>
+  <div class="panel">
+      <canvas id="seqcv" width="1000" height="460" aria-label="Step sequencer grid with a roughness lane"></canvas>
+      <div class="bar"><button class="btn play" id="sq-play" aria-pressed="false">Play</button><button class="btn" id="sq-demo">Demo pattern</button><button class="btn" id="sq-clear">Clear</button></div>
+  </div>
+    <div class="ctlgrid">
+      <div class="group"><h3>Timbre</h3><div class="seg" id="sq-tim" role="group" aria-label="Timbre"></div></div>
+      <div class="group"><h3>Tuning</h3><div class="seg" id="sq-tun" role="group" aria-label="Tuning"></div><p class="gnote" id="sq-tinfo"></p></div>
+      <div class="group"><div class="row"><div class="lab2"><span>Tempo</span><output id="sq-bpmo"></output></div><input type="range" id="sq-bpm" min="50" max="180" value="96"></div></div>
+      <div class="group"><h3>Export</h3><div class="bar"><button class="btn" id="sq-scl">Tuning (.scl)</button><button class="btn" id="sq-json">Everything (.json)</button></div></div>
+    </div>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and sources</h2></header>
+  <div class="tablewrap"><table class="plain">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Partial / overtone</td><td>One sine component of a sound. The fundamental is the first partial.</td></tr>
+      <tr><td>Harmonic</td><td>Partials at whole-number multiples of the fundamental, as in strings, winds and voices.</td></tr>
+      <tr><td>Critical band</td><td>The bandwidth of one auditory filter. Tones within one band interact; tones further apart are heard separately.</td></tr>
+      <tr><td>ERB</td><td>Equivalent rectangular bandwidth, Glasberg and Moore's measurement of the critical band: 24.7 × (4.37 f/kHz + 1) Hz.</td></tr>
+      <tr><td>Beats</td><td>Slow loudness fluctuation at the difference frequency of two close tones.</td></tr>
+      <tr><td>Roughness</td><td>The buzzy sensation when beats are too fast to follow, from roughly 15 Hz to a fraction of a critical band.</td></tr>
+      <tr><td>Sensory consonance</td><td>Smoothness explained by roughness alone. Harmonicity (how much a chord resembles one harmonic tone), familiarity and context also shape what sounds consonant; this page models only the first.</td></tr>
+      <tr><td>Dissonance curve</td><td>Total roughness of two notes as a function of the interval between them. Its dips are candidate scale steps.</td></tr>
+      <tr><td>Cent</td><td>1/100 of an equal-tempered semitone; 1200 cents to the octave.</td></tr>
+      <tr><td>Pseudo-octave</td><td>The interval that plays the octave's role for a non-harmonic timbre, such as 2.1:1 for a stretched tone.</td></tr>
+      <tr><td>Virtual pitch</td><td>Pitch heard from the common period of the partials, even with the fundamental absent.</td></tr>
+      <tr><td>Chroma and height</td><td>The two parts of pitch: which note of the octave, and how high. Shepard tones keep chroma and blur height.</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="reading">
+    <li><b>Plomp and Levelt (1965).</b> Tonal consonance and critical bandwidth. <i>Journal of the Acoustical Society of America</i> 38, 548–560. The roughness curve.</li>
+    <li><b>Sethares (1993).</b> Local consonance and the relationship between timbre and scale. <i>JASA</i> 94, 1218–1228. The parameterised curve used here (d* = 0.24, s₁ = 0.0207, s₂ = 18.96, b₁ = 3.51, b₂ = 5.75) and the timbre-to-scale idea.</li>
+    <li><b>Sethares (2005).</b> <i>Tuning, Timbre, Spectrum, Scale</i>, 2nd ed., Springer. The stretched-timbre demonstrations.</li>
+    <li><b>Glasberg and Moore (1990).</b> Derivation of auditory filter shapes from notched-noise data. <i>Hearing Research</i> 47, 103–138. The ERB formula and the rounded-exponential filter shape drawn in section 1.</li>
+    <li><b>Zwicker and Terhardt (1980).</b> Analytical expressions for critical-band rate and critical bandwidth. <i>JASA</i> 68, 1523–1525.</li>
+    <li><b>Terhardt (1974).</b> Pitch, consonance, and harmony. <i>JASA</i> 55, 1061–1069. Virtual pitch.</li>
+    <li><b>Schouten (1940); de Boer (1956).</b> The residue and the pitch shift of inharmonic complexes.</li>
+    <li><b>Shepard (1964).</b> Circularity in judgments of relative pitch. <i>JASA</i> 36, 2346–2353. <b>Risset (1969)</b>, the continuous glide.</li>
+    <li><b>Fletcher and Rossing (1998).</b> <i>The Physics of Musical Instruments.</i> Free-bar mode ratios 1 : 2.756 : 5.404 : 8.933 : 13.34.</li>
+  </ol>
+  <p class="note">All diagrams, sounds and code on this page are original. The model is a fit to average listeners and pure-tone data; it predicts sensory roughness well and does not claim to predict musical preference.</p>
+</section>
+
+</div>
+
+<div class="dock" role="group" aria-label="Sound">
+  <span class="state" id="snd-state">Silent</span>
+  <label>Volume <input type="range" id="snd-vol" min="0" max="100" value="45"></label>
+  <button class="btn" id="snd-stop">Stop</button>
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const PAPER = '#F6F3EC', INK = '#1B1F2A', GRID = '#DDD7CA', MUTED = '#7A7F8C', ACC = '#2B3CD1', HOT = '#D2452F', OK = '#16856F';
+const SERIES = ['#2B3CD1', '#16856F', '#C98A00', '#D2452F', '#8A3FC1'];
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const mtof = m => 440 * 2 ** ((m - 69) / 12);
+const cents = r => 1200 * Math.log2(r);
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const noteName = m => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const INTS = ['unison', 'minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', 'fourth', 'tritone', 'fifth', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th', 'octave'];
+function ctx(id) { const c = $(id); return c.getContext('2d'); }
+function paper(x) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = PAPER; x.fillRect(0, 0, x.canvas.width, x.canvas.height); }
+function text(x, t, px, py, { align = 'left', size = 12, color = MUTED, base = 'middle', weight = 400 } = {}) {
+  x.fillStyle = color; x.font = `${weight} ${size}px ${MONO}`; x.textAlign = align; x.textBaseline = base; x.fillText(t, px, py);
+}
+function seg(host, items, cur, onPick) {
+  host.textContent = '';
+  const bs = items.map(([v, lab]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.setAttribute('aria-pressed', String(v === cur)); b.onclick = () => { bs.forEach(o => o.setAttribute('aria-pressed', String(o === b))); onPick(v); }; host.append(b); return b; });
+  return bs;
+}
+function canvasPoint(cv, e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+function drag(cv, cb, up) {
+  let on = false;
+  cv.addEventListener('pointerdown', e => { on = true; cv.setPointerCapture(e.pointerId); cb(...canvasPoint(cv, e), 'down'); });
+  cv.addEventListener('pointermove', e => { if (on) cb(...canvasPoint(cv, e), 'move'); });
+  const end = () => { if (on && up) up(); on = false; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+}
+function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+
+/* ------------------------------------------------------------ the model (Sethares 1993 fit to Plomp–Levelt) */
+const DSTAR = 0.24, S1 = 0.0207, S2 = 18.96, B1 = 3.51, B2 = 5.75;
+const XMAX = Math.log(B2 / B1) / (B2 - B1);                  // where a pair is roughest, in the fit's units
+const PEAK = Math.exp(-B1 * XMAX) - Math.exp(-B2 * XMAX);    // roughness there, so one pure-tone pair peaks at 1
+function dPair(f1, f2, a1, a2) {
+  const x = DSTAR / (S1 * Math.min(f1, f2) + S2) * Math.abs(f2 - f1);
+  return Math.min(a1, a2) * (Math.exp(-B1 * x) - Math.exp(-B2 * x)) / PEAK;
+}
+const cbOf = f => XMAX / 0.25 * (S1 * f + S2) / DSTAR;       // the fit's critical band: the roughest gap is a quarter of it
+const erbOf = f => 24.7 * (4.37 * f / 1000 + 1);
+const zwickerCB = f => 25 + 75 * (1 + 1.4 * (f / 1000) ** 2) ** 0.69;
+const erbNum = f => 21.4 * Math.log10(4.37 * f / 1000 + 1);
+const erbInv = e => (10 ** (e / 21.4) - 1) * 1000 / 4.37;
+
+/* a timbre is { p: partial ratios, a: amplitudes }; roughness of notes = sum over every pair of partials from different notes */
+function cross(T, fA, fB) { let d = 0; for (let i = 0; i < T.p.length; i++) for (let j = 0; j < T.p.length; j++) d += dPair(fA * T.p[i], fB * T.p[j], T.a[i], T.a[j]); return d; }
+function notesRough(f0s, T) { let d = 0; for (let i = 0; i < f0s.length; i++) for (let j = i + 1; j < f0s.length; j++) d += cross(T, f0s[i], f0s[j]); return d; }
+function dissCurve(T, f0, c1 = 1320) { const D = new Float64Array(c1 + 1); for (let c = 0; c <= c1; c++) D[c] = cross(T, f0, f0 * 2 ** (c / 1200)); return D; }
+function findDips(D, prom = 0.02) {
+  let mx = 0; for (const v of D) mx = Math.max(mx, v);
+  const out = [];
+  for (let c = 4; c < D.length - 4; c++) {
+    if (!(D[c] <= D[c - 1] && D[c] < D[c + 1])) continue;
+    let l = D[c], r = D[c]; for (let k = 1; k <= 80; k++) { if (c - k >= 0) l = Math.max(l, D[c - k]); if (c + k < D.length) r = Math.max(r, D[c + k]); }
+    if (Math.min(l, r) - D[c] > prom * mx) out.push(c);
+  }
+  return out;
+}
+function gcd(a, b) { while (b) [a, b] = [b, a % b]; return a; }
+function nearestRatio(c, maxQ = 9, tol = 12) {
+  const r = 2 ** (c / 1200);
+  for (let q = 1; q <= maxQ; q++) { const p = Math.round(r * q); if (p < q || gcd(p, q) !== 1) continue; const e = c - cents(p / q); if (Math.abs(e) <= tol) return { p, q, e }; }
+  return null;
+}
+const ratioLabel = c => { const n = nearestRatio(c); return n ? `${n.p}/${n.q}` : '—'; };
+
+const harmonic = (n, decay) => ({ p: Array.from({ length: n }, (_, k) => k + 1), a: Array.from({ length: n }, (_, k) => decay ** k) });
+const PRESETS = {
+  harmonic:   { name: 'Harmonic', ...harmonic(7, 0.88) },
+  odd:        { name: 'Odd harmonics', p: [1, 3, 5, 7, 9], a: [1, 0.6, 0.4, 0.3, 0.22] },
+  stretched:  { name: 'Stretched 2.1', p: [1, 2, 3, 4, 5, 6, 7].map(k => 2.1 ** Math.log2(k)), a: harmonic(7, 0.88).a },
+  compressed: { name: 'Compressed 1.9', p: [1, 2, 3, 4, 5, 6, 7].map(k => 1.9 ** Math.log2(k)), a: harmonic(7, 0.88).a },
+  bar:        { name: 'Metal bar', p: [1, 2.756, 5.404, 8.933, 13.34], a: [1, 0.75, 0.55, 0.4, 0.3], perc: true },
+};
+const copyT = T => ({ name: T.name, p: [...T.p], a: [...T.a], perc: !!T.perc });
+function pseudoOctave(T, f0) { const D = dissCurve(T, f0, 1400); let best = 1200, bv = Infinity; for (const c of findDips(D)) if (c >= 1000 && c <= 1400 && D[c] < bv) { bv = D[c]; best = c; } return best; }
+
+/* ------------------------------------------------------------ audio: one context, a master gain and a limiter */
+let AC = null, master = null, current = null;
+const live = new Set();
+function audio() {
+  if (!AC) {
+    AC = new AudioContext();
+    const lim = AC.createDynamicsCompressor();
+    lim.threshold.value = -10; lim.knee.value = 4; lim.ratio.value = 16; lim.attack.value = 0.003; lim.release.value = 0.2;
+    master = AC.createGain(); master.gain.value = vol();
+    master.connect(lim).connect(AC.destination);
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+const vol = () => (+$('snd-vol').value / 100) ** 2 * 0.9;
+$('snd-vol').oninput = () => { if (master) master.gain.setTargetAtTime(vol(), AC.currentTime, 0.03); };
+/* only one thing sounds at a time: claim() stops the previous owner */
+function claim(stop) { if (current && current !== stop) current(); current = stop; $('snd-state').textContent = stop ? 'Playing' : 'Silent'; }
+function release(stop) { if (current === stop) { current = null; $('snd-state').textContent = 'Silent'; } }
+$('snd-stop').onclick = () => { if (current) current(); current = null; $('snd-state').textContent = 'Silent'; for (const g of live) { try { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setTargetAtTime(0, AC.currentTime, 0.02); } catch (e) { /* already gone */ } } };
+
+/* a held sound whose partials can be retuned while it plays */
+function drone(level = 0.25) {
+  const a = audio(), g = a.createGain(); g.gain.value = 0; g.connect(master);
+  const oscs = [];
+  return {
+    set(fs, amps) {
+      while (oscs.length < fs.length) { const o = a.createOscillator(), og = a.createGain(); og.gain.value = 0; o.connect(og).connect(g); o.start(); oscs.push({ o, og, f: 0 }); }
+      const sum = amps.reduce((s, v) => s + v, 0) || 1, ny = a.sampleRate / 2 - 200;
+      oscs.forEach((v, i) => {
+        const on = i < fs.length && fs[i] < ny;
+        if (on) { if (v.f && (fs[i] < v.f / 1.9 || fs[i] > v.f * 1.9)) v.o.frequency.setValueAtTime(fs[i], a.currentTime); else v.o.frequency.setTargetAtTime(fs[i], a.currentTime, 0.012); v.f = fs[i]; }
+        v.og.gain.setTargetAtTime(on ? amps[i] / sum : 0, a.currentTime, 0.02);
+      });
+    },
+    on() { g.gain.setTargetAtTime(level, a.currentTime, 0.04); },
+    off() { g.gain.setTargetAtTime(0, a.currentTime, 0.05); const os = oscs.splice(0); setTimeout(() => { os.forEach(v => v.o.stop()); g.disconnect(); }, 400); },
+  };
+}
+/* notes with an envelope, scheduled at t0 */
+function playNotes(f0s, T, t0, dur, level = 0.3) {
+  const a = audio(), g = a.createGain(), sum = T.a.reduce((s, v) => s + v, 0), peak = level / Math.sqrt(f0s.length), ny = a.sampleRate / 2 - 200;
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(peak, t0 + 0.015);
+  if (T.perc) g.gain.setTargetAtTime(0, t0 + 0.015, dur * 0.45); else { g.gain.setTargetAtTime(peak * 0.75, t0 + 0.015, 0.25); g.gain.setTargetAtTime(0, t0 + dur, 0.07); }
+  g.connect(master); live.add(g);
+  for (const f0 of f0s) T.p.forEach((p, i) => { if (f0 * p >= ny) return; const o = a.createOscillator(), og = a.createGain(); o.frequency.value = f0 * p; og.gain.value = T.a[i] / sum; o.connect(og).connect(g); o.start(t0); o.stop(t0 + dur + 0.6); });
+  setTimeout(() => { live.delete(g); g.disconnect(); }, (t0 - a.currentTime + dur + 0.8) * 1000);
+}
+/* wire a toggle button to start/stop functions, sharing the one-at-a-time rule */
+function toggle(btn, start, stop) {
+  const halt = () => { btn.setAttribute('aria-pressed', 'false'); stop(); release(halt); };
+  btn.onclick = () => { if (btn.getAttribute('aria-pressed') === 'true') { halt(); return; } claim(halt); btn.setAttribute('aria-pressed', 'true'); start(); };
+  return halt;
+}
+
+/* ------------------------------------------------------------ 1. the ear */
+function ear() {
+  const x = ctx('earcv'), xb = ctx('beatcv'), W = 1000, H = 330, L = 50, R = 16, T = 22, B = 46;
+  const F0 = 60, F1 = 6000, e0 = erbNum(F0), e1 = erbNum(F1);
+  const X = f => L + (erbNum(f) - e0) / (e1 - e0) * (W - L - R), Y = v => H - B - v * (H - T - B);
+  const roex = (f, fc) => { const g = Math.abs(f - fc) / fc, p = 4 * fc / erbOf(fc); return (1 + p * g) * Math.exp(-p * g); };
+  const fMap = v => 100 * 20 ** (v / 1000), dMap = v => 400 * (v / 1000) ** 2;
+  let f1 = 0, df = 0, dr = null;
+  function draw() {
+    const f2 = f1 + df;
+    paper(x);
+    x.strokeStyle = GRID; x.lineWidth = 1;
+    for (let e = Math.ceil(e0); e <= e1; e++) {               // one faint filter per ERB
+      const fc = erbInv(e); x.beginPath();
+      for (let px = L; px <= W - R; px += 2) { const f = erbInv(e0 + (px - L) / (W - L - R) * (e1 - e0)); const v = roex(f, fc); px === L ? x.moveTo(px, Y(v)) : x.lineTo(px, Y(v)); }
+      x.stroke();
+    }
+    const exc = f => { const ys = []; for (let px = L; px <= W - R; px += 2) { const fc = erbInv(e0 + (px - L) / (W - L - R) * (e1 - e0)); ys.push(roex(f, fc)); } return ys; };
+    const A = exc(f1), Bx = exc(f2);
+    const fillC = (ys, col) => { x.beginPath(); x.moveTo(L, Y(0)); ys.forEach((v, i) => x.lineTo(L + i * 2, Y(v))); x.lineTo(L + (ys.length - 1) * 2, Y(0)); x.closePath(); x.fillStyle = col; x.fill(); };
+    fillC(A, 'rgba(43,60,209,.22)'); fillC(Bx, 'rgba(22,133,111,.22)'); fillC(A.map((v, i) => Math.min(v, Bx[i])), 'rgba(210,69,47,.55)');
+    for (const [f, c] of [[f1, ACC], [f2, OK]]) { x.strokeStyle = c; x.lineWidth = 2; x.beginPath(); x.moveTo(X(f), Y(0)); x.lineTo(X(f), Y(1.05)); x.stroke(); }
+    x.strokeStyle = INK; x.lineWidth = 1; x.beginPath(); x.moveTo(L, Y(0) + .5); x.lineTo(W - R, Y(0) + .5); x.stroke();
+    for (const f of [100, 200, 500, 1000, 2000, 5000]) { x.beginPath(); x.moveTo(X(f), Y(0)); x.lineTo(X(f), Y(0) + 5); x.stroke(); text(x, f >= 1000 ? f / 1000 + ' kHz' : f + ' Hz', X(f), Y(0) + 16, { align: 'center' }); }
+    text(x, 'place along the cochlea (ERB-number scale) →', W - R, H - 10, { align: 'right', size: 11 });
+    text(x, 'filter response', L, 12, { size: 11 });
+    x.fillStyle = 'rgba(210,69,47,.55)'; x.fillRect(W - 280, 8, 12, 10); text(x, 'filters excited by both tones', W - 262, 13, { size: 11, color: INK });
+    // waveform: 250 ms of the sum, drawn as a min/max envelope per pixel
+    paper(xb); const h = 130, mid = h / 2;
+    xb.fillStyle = INK;
+    for (let px = 0; px < W; px++) {
+      let lo = 2, hi = -2; for (let k = 0; k < 24; k++) { const t = (px + k / 24) / W * 0.25; const s = (Math.sin(2 * Math.PI * f1 * t) + Math.sin(2 * Math.PI * f2 * t)) / 2; lo = Math.min(lo, s); hi = Math.max(hi, s); }
+      xb.fillRect(px, mid - hi * (mid - 12), 1, Math.max(1, (hi - lo) * (mid - 12)));
+    }
+    xb.fillStyle = PAPER; xb.fillRect(4, 3, 290, 18); text(xb, '250 ms of the two tones added together', 10, 12, { size: 11 });
+    // readout
+    const cb = cbOf(f1 + df / 2), r = dPair(f1, f2, 1, 1), erb = erbOf(f1 + df / 2);
+    const verdict = df < 0.5 ? 'one tone' : df < 15 ? `one tone that beats ${df.toFixed(1)} times a second` : df < cb * 0.8 ? 'rough: beats too fast to count' : df < cb * 1.2 ? 'near one critical band: roughness fading' : 'two separate, smooth tones';
+    $('ear-fo').textContent = `${f1.toFixed(0)} Hz`; $('ear-do').textContent = `${df.toFixed(1)} Hz`;
+    $('ear-desc').innerHTML = `Δf <b>${df.toFixed(1)} Hz</b> · ERB at the mean ${erb.toFixed(0)} Hz · gap = <b>${(df / erb).toFixed(2)} ERB</b> · roughness <b>${r.toFixed(2)}</b> of the peak<br>Heard as: <b>${verdict}</b>`;
+    if (dr) dr.set([f1, f2], [1, 1]);
+  }
+  const read = () => { f1 = fMap(+$('ear-f').value); df = dMap(+$('ear-d').value); draw(); };
+  $('ear-f').oninput = read; $('ear-d').oninput = read;
+  const setDf = d => { $('ear-d').value = Math.round(Math.sqrt(d / 400) * 1000); read(); };
+  seg($('ear-pre'), [['beat', 'Slow beats'], ['rough', 'Roughest'], ['cb', 'One band'], ['far', 'Far apart']], null, v => {
+    const c = cbOf(f1); setDf(v === 'beat' ? 3 : v === 'rough' ? c / 4 : v === 'cb' ? c : Math.min(400, c * 2.2));
+  });
+  toggle($('ear-play'), () => { dr = drone(0.22); dr.set([f1, f1 + df], [1, 1]); dr.on(); }, () => { dr && dr.off(); dr = null; });
+  read();
+}
+
+/* ------------------------------------------------------------ 2. the Plomp–Levelt curve */
+function plCurve() {
+  const x = ctx('plcv'), W = 1000, H = 360, L = 50, R = 16, T = 20, B = 44, BASES = [125, 250, 500, 1000, 2000];
+  let axis = 'semi', base = 500, cur = 3, dr = null;
+  const xmax = () => axis === 'semi' ? 12 : 1.2;
+  const X = v => L + v / xmax() * (W - L - R), Y = v => H - B - v * (H - T - B) / 1.08;
+  const df = (f, v) => axis === 'semi' ? f * (2 ** (v / 12) - 1) : v * cbOf(f);
+  function draw() {
+    paper(x);
+    x.strokeStyle = GRID; x.lineWidth = 1;
+    const ticks = axis === 'semi' ? [...Array(13).keys()] : [0, .25, .5, .75, 1, 1.2];
+    for (const t of ticks) { x.beginPath(); x.moveTo(X(t), T); x.lineTo(X(t), H - B); x.stroke(); text(x, axis === 'semi' ? String(t) : t.toFixed(2), X(t), H - B + 14, { align: 'center' }); }
+    text(x, axis === 'semi' ? 'interval between two pure tones, semitones →' : 'gap in critical bands →', W - R, H - 10, { align: 'right', size: 11 });
+    text(x, 'roughness (peak = 1)', L, 10, { size: 11 });
+    BASES.forEach((f, i) => {
+      x.strokeStyle = SERIES[i]; x.lineWidth = f === base ? 3 : 1.6; x.beginPath();
+      for (let px = 0; px <= W - L - R; px += 2) { const v = px / (W - L - R) * xmax(), d = df(f, v), y = Y(dPair(f, f + d, 1, 1)); px ? x.lineTo(L + px, y) : x.moveTo(L, y); }
+      x.stroke();
+      text(x, `${f} Hz`, W - R - 10 - (4 - i) * 74, 16, { align: 'right', color: SERIES[i], weight: 500 });
+    });
+    x.strokeStyle = INK; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(X(cur), T); x.lineTo(X(cur), H - B); x.stroke(); x.setLineDash([]);
+    const d = df(base, cur);
+    text(x, `${base} Hz + ${d.toFixed(1)} Hz → roughness ${dPair(base, base + d, 1, 1).toFixed(2)}`, clamp(X(cur) + 8, L, W - 330), T + 22, { color: INK, weight: 500 });
+    if (dr) dr.set([base, base + d], [1, 1]);
+  }
+  // measured table: roughest gap and where it falls below 10%
+  const rows = BASES.map(f => {
+    let best = 0, bv = 0, end = 0;
+    for (let c = 0; c <= 2400; c++) { const v = dPair(f, f * 2 ** (c / 1200), 1, 1); if (v > bv) { bv = v; best = c; } if (best && !end && c > best && v < 0.1) end = c; }
+    const hz = f * (2 ** (best / 1200) - 1);
+    return `<tr><td>${f} Hz</td><td>${(best / 100).toFixed(2)} st</td><td>${hz.toFixed(1)} Hz</td><td>${(end / 100).toFixed(1)} st</td><td>${cbOf(f).toFixed(0)} Hz</td><td>${erbOf(f).toFixed(0)} Hz</td><td>${zwickerCB(f).toFixed(0)} Hz</td></tr>`;
+  });
+  $('pl-table').innerHTML = `<thead><tr><th>Lower tone</th><th>Roughest at</th><th>= gap</th><th>Smooth (&lt;10%) beyond</th><th>Fit's band</th><th>ERB</th><th>Zwicker band</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  seg($('pl-axis'), [['semi', 'Semitones'], ['cb', 'Critical bands']], axis, v => { const d = df(base, cur); axis = v; cur = axis === 'semi' ? 12 * Math.log2(1 + d / base) : d / cbOf(base); cur = clamp(cur, 0, xmax()); draw(); });
+  seg($('pl-base'), BASES.map(f => [f, `${f}`]), base, v => { base = v; draw(); });
+  drag($('plcv'), px => { cur = clamp((px - L) / (W - L - R) * xmax(), 0, xmax()); draw(); });
+  toggle($('pl-play'), () => { dr = drone(0.22); dr.on(); draw(); }, () => { dr && dr.off(); dr = null; });
+  draw();
+}
+
+/* ------------------------------------------------------------ 3. overtones make the intervals */
+function partials() {
+  const x = ctx('dcv'), xp = ctx('paircv'), W = 1000, H = 340, L = 50, R = 16, T = 34, B = 44, C1 = 1320;
+  let n = 7, decay = 0.88, root = 60, cur = 702, D = null, dips = [], dr = null;
+  const timbre = () => harmonic(n, decay);
+  const X = c => L + c / C1 * (W - L - R);
+  function compute() { D = dissCurve(timbre(), mtof(root), C1); dips = findDips(D); }
+  function draw() {
+    const Tm = timbre(), f0 = mtof(root); let mx = 0; for (const v of D) mx = Math.max(mx, v);
+    const Y = v => H - B - v / mx * (H - T - B);
+    paper(x);
+    for (let s = 0; s <= 13; s++) { const c = s * 100; if (c > C1) break; x.strokeStyle = GRID; x.lineWidth = 1; x.beginPath(); x.moveTo(X(c), T); x.lineTo(X(c), H - B); x.stroke(); text(x, String(s), X(c), H - B + 14, { align: 'center' }); }
+    text(x, 'interval, semitones of standard tuning →', W - R, H - 10, { align: 'right', size: 11 });
+    text(x, `total roughness of two ${n === 1 ? 'pure tones' : n + '-partial notes'}`, L, 12, { size: 11 });
+    x.strokeStyle = INK; x.lineWidth = 2; x.beginPath(); for (let c = 0; c <= C1; c++) c ? x.lineTo(X(c), Y(D[c])) : x.moveTo(X(c), Y(D[c])); x.stroke();
+    for (const c of dips) { x.fillStyle = ACC; x.beginPath(); x.arc(X(c), Y(D[c]), 4, 0, 7); x.fill(); text(x, ratioLabel(c), X(c) + (Y(D[c]) > H - B - 24 ? 22 : 0), Y(D[c]) + (Y(D[c]) > H - B - 24 ? -2 : 16), { align: 'center', color: ACC, weight: 500 }); }
+    x.strokeStyle = HOT; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(X(cur), T - 6); x.lineTo(X(cur), H - B); x.stroke(); x.setLineDash([]);
+    // pairs view
+    const r = 2 ** (cur / 1200), f2 = f0 * r, lo = Math.log2(f0 * 0.9), hi = Math.log2(f0 * r * Tm.p[Tm.p.length - 1] * 1.08);
+    const PX = f => L + (Math.log2(f) - lo) / (hi - lo) * (W - L - R), yA = 52, yB = 128;
+    paper(xp);
+    text(xp, `note 1: ${noteName(root)}`, 10, yA - 30, { size: 11, color: ACC }); text(xp, `note 2: ${cur} cents above`, 10, yB + 30, { size: 11, color: OK });
+    const pairs = [];
+    Tm.p.forEach((p, i) => Tm.p.forEach((q, j) => { const d = dPair(f0 * p, f2 * q, Tm.a[i], Tm.a[j]); if (Math.abs(f0 * p - f2 * q) < 0.004 * f0 * p) pairs.push([i, j, -1]); else if (d > 0.04) pairs.push([i, j, d]); }));
+    for (const [i, j, d] of pairs) { xp.strokeStyle = d < 0 ? OK : `rgba(210,69,47,${clamp(d, .15, 1)})`; xp.lineWidth = d < 0 ? 2.5 : 1 + 3 * d; xp.beginPath(); xp.moveTo(PX(f0 * Tm.p[i]), yA); xp.lineTo(PX(f2 * Tm.p[j]), yB); xp.stroke(); }
+    Tm.p.forEach((p, i) => { xp.fillStyle = ACC; xp.fillRect(PX(f0 * p) - 2, yA - 30 * Tm.a[i], 4, 30 * Tm.a[i]); xp.fillStyle = OK; xp.fillRect(PX(f2 * p) - 2, yB, 4, 30 * Tm.a[i]); });
+    const rough = pairs.filter(p => p[2] > 0).length, fused = pairs.filter(p => p[2] < 0).length;
+    text(xp, `${fused} pairs coincide (green, no beating) · ${rough} pairs beat (red, darker = rougher)`, W - R, 12, { align: 'right', size: 11, color: INK });
+    const nr = nearestRatio(cur), st = Math.round(cur / 100);
+    $('d-desc').innerHTML = `Cursor <b>${cur} cents</b> (${nr ? `near ${nr.p}/${nr.q}, ${nr.e >= 0 ? '+' : ''}${nr.e.toFixed(1)} c` : 'no simple ratio nearby'}; nearest standard step: ${INTS[st] || '—'}) · roughness <b>${D[cur].toFixed(2)}</b> · ${noteName(root)} = ${f0.toFixed(1)} Hz`;
+    if (dr) { dr.set([...Tm.p.map(p => f0 * p), ...Tm.p.map(p => f2 * p)], [...Tm.a, ...Tm.a]); }
+  }
+  function dipChips() {
+    const host = $('d-dips'); host.textContent = '';
+    const lab = document.createElement('span'); lab.className = 'off'; lab.textContent = dips.length ? 'Measured dips:' : 'No dips: pure tones only get rough, never "consonant"'; host.append(lab);
+    for (const c of dips) { const nr = nearestRatio(c); const b = document.createElement('button'); b.type = 'button'; b.textContent = `${nr ? nr.p + '/' + nr.q : '?'} · ${c} c${nr ? ` (${nr.e >= 0 ? '+' : ''}${nr.e.toFixed(1)})` : ''}`; b.onclick = () => { cur = c; draw(); playNotes([mtof(root), mtof(root) * 2 ** (c / 1200)], timbre(), audio().currentTime + 0.02, 1.2); }; host.append(b); }
+  }
+  const all = () => { compute(); draw(); dipChips(); };
+  seg($('d-n'), [1, 2, 3, 4, 5, 6, 7, 8, 10].map(k => [k, String(k)]), n, v => { n = v; all(); });
+  seg($('d-root'), [[48, 'C3'], [60, 'C4'], [72, 'C5']], root, v => { root = v; all(); });
+  $('d-decay').oninput = () => { decay = +$('d-decay').value / 100; $('d-decayo').textContent = decay.toFixed(2) + ' per partial'; all(); };
+  $('d-decayo').textContent = decay.toFixed(2) + ' per partial';
+  drag($('dcv'), px => { cur = Math.round(clamp((px - L) / (W - L - R) * C1, 0, C1)); draw(); });
+  toggle($('d-play'), () => { dr = drone(0.26); dr.on(); draw(); }, () => { dr && dr.off(); dr = null; });
+  all();
+}
+
+/* ------------------------------------------------------------ 4. timbre editor -> scale */
+let EDITOR = copyT(PRESETS.harmonic);
+function timbreLab() {
+  const xe = ctx('tedcv'), x = ctx('tcv'), W = 1000, L = 50, R = 16, C1 = 1400, f0 = mtof(60);
+  const RMAX = 16, EX = r => L + Math.log2(r) / Math.log2(RMAX) * (W - L - R), EH = 220, ET = 24, EB = 34;
+  const EY = a => EH - EB - a * (EH - ET - EB), H = 300, T = 30, B = 40;
+  let D = null, dips = [], P = 1200, sel = -1;
+  const X = c => L + c / C1 * (W - L - R);
+  function drawEditor() {
+    paper(xe);
+    for (let k = 1; k <= RMAX; k++) { xe.strokeStyle = k & (k - 1) ? GRID : '#C9C2B2'; xe.lineWidth = 1; xe.beginPath(); xe.moveTo(EX(k), ET); xe.lineTo(EX(k), EH - EB); xe.stroke(); if (k <= 8 || k === 12 || k === 16) text(xe, String(k), EX(k), EH - EB + 13, { align: 'center' }); }
+    text(xe, 'partial frequency ÷ fundamental (log) — grey lines are the harmonic series', W - R, EH - 8, { align: 'right', size: 11 });
+    EDITOR.p.forEach((p, i) => { xe.fillStyle = i === sel ? HOT : i ? ACC : INK; xe.fillRect(EX(p) - 4, EY(EDITOR.a[i]), 8, EY(0) - EY(EDITOR.a[i])); text(xe, p.toFixed(3), EX(p), EY(EDITOR.a[i]) - 9, { align: 'center', size: 10.5, color: INK }); });
+  }
+  function compute() { D = dissCurve(EDITOR, f0, C1); dips = findDips(D); P = 1200; let bv = Infinity; for (const c of dips) if (c >= 1000 && c <= 1400 && D[c] < bv) { bv = D[c]; P = c; } }
+  function drawCurve() {
+    let mx = 0; for (const v of D) mx = Math.max(mx, v);
+    const Y = v => H - B - v / mx * (H - T - B);
+    paper(x);
+    for (let s = 0; s <= 14; s++) { x.strokeStyle = GRID; x.lineWidth = 1; x.beginPath(); x.moveTo(X(s * 100), T); x.lineTo(X(s * 100), H - B); x.stroke(); text(x, String(s), X(s * 100), H - B + 13, { align: 'center' }); }
+    text(x, 'interval, semitones of standard tuning →', W - R, H - 9, { align: 'right', size: 11 });
+    text(x, 'dissonance curve of this timbre · blue dots = the derived scale · red = pseudo-octave', L, 12, { size: 11 });
+    x.strokeStyle = INK; x.lineWidth = 2; x.beginPath(); for (let c = 0; c <= C1; c++) c ? x.lineTo(X(c), Y(D[c])) : x.moveTo(X(c), Y(D[c])); x.stroke();
+    for (const c of dips) { x.fillStyle = c === P ? HOT : ACC; x.beginPath(); x.arc(X(c), Y(D[c]), 4.5, 0, 7); x.fill(); const low = Y(D[c]) > H - B - 24; text(x, String(c), X(c) + (low ? 22 : 0), Y(D[c]) + (low ? -2 : 15), { align: 'center', size: 10.5, color: c === P ? HOT : ACC }); }
+  }
+  function scale() { return [0, ...dips.filter(c => c <= P)]; }
+  function table() {
+    const rows = scale().map((c, i) => { const nr = nearestRatio(c), st = Math.round(c / 100); return `<tr><td>${i}</td><td>${c}</td><td>${nr ? `${nr.p}/${nr.q} (${nr.e >= 0 ? '+' : ''}${nr.e.toFixed(1)} c)` : '—'}</td><td>${INTS[st] || st + ' st'} ${c - st * 100 >= 0 ? '+' : ''}${c - st * 100} c</td><td>${D[c].toFixed(2)}</td></tr>`; });
+    $('t-table').innerHTML = `<thead><tr><th>Step</th><th>Cents</th><th>Nearest simple ratio</th><th>Nearest standard step</th><th>Roughness</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+    const host = $('t-keys'); host.textContent = '';
+    const lab = document.createElement('span'); lab.className = 'off'; lab.textContent = 'Play step against root:'; host.append(lab);
+    scale().forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = `${i} · ${c}`; b.onclick = () => playNotes([f0, f0 * 2 ** (c / 1200)], EDITOR, audio().currentTime + 0.02, 1.1); host.append(b); });
+    const asc = document.createElement('button'); asc.type = 'button'; asc.textContent = 'Play the scale'; asc.onclick = () => { const t = audio().currentTime + 0.05; scale().forEach((c, i) => playNotes([f0 * 2 ** (c / 1200)], EDITOR, t + i * 0.32, 0.3)); }; host.append(asc);
+    $('t-info').textContent = `${EDITOR.p.length} partials · pseudo-octave ${P} cents (ratio ${(2 ** (P / 1200)).toFixed(3)}) · ${scale().length} scale steps`;
+  }
+  // the cadence test
+  const CAD = [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7, 12]];
+  const chordF = (ch, per) => ch.map(k => f0 * 2 ** (k * per / 12 / 1200));
+  function test() {
+    const ref = notesRough([f0, f0 * 2 ** (1 / 12)], EDITOR);
+    const s = CAD.map(ch => notesRough(chordF(ch, 1200), EDITOR) / ref), m = CAD.map(ch => notesRough(chordF(ch, P), EDITOR) / ref);
+    const sum = a => a.reduce((t, v) => t + v, 0);
+    $('t-test').innerHTML = `Roughness per chord (1 = a semitone in this timbre)<br>standard: ${s.map(v => v.toFixed(2)).join(' · ')} → <b>${sum(s).toFixed(2)}</b><br>matched:  ${m.map(v => v.toFixed(2)).join(' · ')} → <b>${sum(m).toFixed(2)}</b>${P === 1200 ? '<br>(this timbre’s pseudo-octave is the octave, so the two tunings are the same)' : sum(m) >= sum(s) ? '<br>Matched tuning does not help here: these overtones are not a stretched harmonic series, so twelve equal steps of the pseudo-octave miss its dips. Use its own scale (the table) instead.' : ''}`;
+  }
+  let timer = null;
+  const cadence = per => () => { const t = audio().currentTime + 0.05; CAD.forEach((ch, i) => playNotes(chordF(ch, per).map(f => f / 2), EDITOR, t + i * 0.9, 0.85)); timer = setTimeout(() => { if (current) current(); }, 3900); };
+  const stopCad = () => { clearTimeout(timer); for (const g of live) { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setTargetAtTime(0, AC.currentTime, 0.02); } };
+  toggle($('t-std'), () => cadence(1200)(), stopCad);
+  toggle($('t-mat'), () => cadence(P)(), stopCad);
+  function all() { compute(); drawEditor(); drawCurve(); table(); test(); }
+  seg($('t-pre'), Object.entries(PRESETS).map(([k, v]) => [k, v.name]), 'harmonic', k => { EDITOR = copyT(PRESETS[k]); all(); });
+  let raf = 0;
+  drag($('tedcv'), (px, py, ph) => {
+    if (ph === 'down') { sel = -1; let bd = 18; EDITOR.p.forEach((p, i) => { const d = Math.abs(EX(p) - px); if (d < bd) { bd = d; sel = i; } }); }
+    if (sel < 0) return;
+    if (sel > 0) EDITOR.p[sel] = +clamp(2 ** ((px - L) / (W - L - R) * Math.log2(RMAX)), 1.05, RMAX).toFixed(3);
+    EDITOR.a[sel] = +clamp((EY(0) - py) / (EY(0) - EY(1)), 0.02, 1).toFixed(2);
+    EDITOR.name = 'Custom'; drawEditor();
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { compute(); drawCurve(); });
+  }, () => { sel = -1; all(); });
+  $('t-add').onclick = () => { if (EDITOR.p.length >= 12) return; const last = EDITOR.p[EDITOR.p.length - 1]; EDITOR.p.push(+Math.min(RMAX, last * 1.3 + 0.5).toFixed(3)); EDITOR.a.push(0.3); EDITOR.name = 'Custom'; all(); };
+  $('t-del').onclick = () => { if (EDITOR.p.length <= 1) return; EDITOR.p.pop(); EDITOR.a.pop(); EDITOR.name = 'Custom'; all(); };
+  $('t-note').onclick = () => playNotes([f0], EDITOR, audio().currentTime + 0.02, 1.2);
+  all();
+}
+
+/* ------------------------------------------------------------ 5. tension and release */
+function tension() {
+  const xk = ctx('kbcv'), x = ctx('prcv'), Tm = harmonic(6, 0.88), REF = notesRough([mtof(60), mtof(61)], Tm);
+  const rough = ms => notesRough(ms.map(mtof), Tm) / REF;
+  let oct = 0, chord = new Set([60, 64, 67]);
+  const LO = 48, W = 1000, KH = 170, whites = [];
+  for (let m = LO; m < LO + 24; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) whites.push(m);
+  const ww = (W - 2) / whites.length;
+  const keyRect = m => { const black = [1, 3, 6, 8, 10].includes(m % 12); if (!black) { const i = whites.indexOf(m); return { x: 1 + i * ww, y: 1, w: ww, h: KH - 2, black }; } const i = whites.indexOf(m - 1); return { x: 1 + (i + 1) * ww - ww * 0.3, y: 1, w: ww * 0.6, h: (KH - 2) * 0.6, black }; };
+  function drawKb() {
+    paper(xk);
+    const keys = [...Array(24).keys()].map(k => LO + k), order = [...keys.filter(m => !keyRect(m).black), ...keys.filter(m => keyRect(m).black)];
+    for (const m of order) { const r = keyRect(m), on = chord.has(m); xk.fillStyle = on ? ACC : r.black ? INK : '#FFFFFF'; xk.fillRect(r.x, r.y, r.w, r.h); xk.strokeStyle = '#9A9486'; xk.lineWidth = 1; xk.strokeRect(r.x + .5, r.y + .5, r.w - 1, r.h - 1); if (!r.black && m % 12 === 0) text(xk, noteName(m + oct * 12), r.x + r.w / 2, KH - 14, { align: 'center', size: 11, color: on ? '#fff' : MUTED }); }
+    const ms = [...chord].sort((a, b) => a - b).map(m => m + oct * 12);
+    if (ms.length < 2) { $('kb-desc').innerHTML = 'Pick two or more keys.'; return; }
+    let worst = null, wv = -1; for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) { const v = notesRough([mtof(ms[i]), mtof(ms[j])], Tm) / REF; if (v > wv) { wv = v; worst = [ms[i], ms[j]]; } }
+    const same = [-24, -12, 0, 12].map(s => rough(ms.map(m => m + s - oct * 12)).toFixed(2));
+    $('kb-desc').innerHTML = `Chord <b>${ms.map(noteName).join(' ')}</b><br>Roughness <b>${rough(ms).toFixed(2)}</b><br>Roughest pair: ${noteName(worst[0])}–${noteName(worst[1])} (${wv.toFixed(2)})<br>Same chord two octaves down → up: ${same.join(' · ')}`;
+  }
+  $('kbcv').addEventListener('pointerdown', e => {
+    const [px, py] = canvasPoint($('kbcv'), e); let hit = null;
+    for (let m = LO; m < LO + 24; m++) { const r = keyRect(m); if (r.black && px >= r.x && px <= r.x + r.w && py <= r.y + r.h) hit = m; }
+    if (hit === null) for (let m = LO; m < LO + 24; m++) { const r = keyRect(m); if (!r.black && px >= r.x && px <= r.x + r.w) hit = m; }
+    if (hit === null) return;
+    chord.has(hit) ? chord.delete(hit) : chord.add(hit); drawKb();
+    playNotes([mtof(hit + oct * 12)], Tm, audio().currentTime + 0.01, 0.5, 0.2);
+  });
+  seg($('kb-oct'), [[-2, '−2'], [-1, '−1'], [0, '0'], [1, '+1']], oct, v => { oct = v; drawKb(); });
+  $('kb-play').onclick = () => { if (chord.size) playNotes([...chord].map(m => mtof(m + oct * 12)), Tm, audio().currentTime + 0.02, 1.5); };
+  $('kb-clear').onclick = () => { chord.clear(); drawKb(); };
+
+  const PROGS = {
+    cadence: { name: 'Cadence', ch: [['C', [48, 60, 64, 67]], ['Am', [45, 60, 64, 69]], ['F', [41, 60, 65, 69]], ['G7', [43, 59, 65, 67]], ['C', [48, 60, 64, 67]]] },
+    sus: { name: 'Suspensions', ch: [['C', [48, 60, 64, 67]], ['Csus4', [48, 60, 65, 67]], ['C', [48, 60, 64, 67]], ['G7sus4', [43, 60, 65, 67]], ['G7', [43, 59, 65, 67]], ['C', [48, 60, 64, 72]]] },
+    cluster: { name: 'Cluster build', ch: [['C', [60, 64, 67]], ['+D', [60, 62, 64, 67]], ['+F', [60, 62, 64, 65, 67]], ['C–E chromatic', [60, 61, 62, 63, 64]], ['open C', [36, 48, 55, 64, 72]]] },
+    register: { name: 'Same triad, lower', ch: [['C6', [84, 88, 91]], ['C5', [72, 76, 79]], ['C4', [60, 64, 67]], ['C3', [48, 52, 55]], ['C2', [36, 40, 43]]] },
+  };
+  let prog = 'cadence', playing = -1, raf = 0, t0 = 0;
+  function drawProg() {
+    const P = PROGS[prog].ch, vals = P.map(([, ms]) => rough(ms)), W2 = 1000, H = 260, L = 50, R = 16, T = 24, B = 40, mx = Math.max(1.5, ...vals) * 1.1;
+    paper(x);
+    const step = (W2 - L - R) / P.length, Y = v => H - B - v / mx * (H - T - B);
+    for (let g = 0; g <= mx; g += mx > 6 ? 2 : 0.5) { x.strokeStyle = GRID; x.lineWidth = 1; x.beginPath(); x.moveTo(L, Y(g)); x.lineTo(W2 - R, Y(g)); x.stroke(); text(x, g.toFixed(1), L - 6, Y(g), { align: 'right', size: 10.5 }); }
+    P.forEach(([nm], i) => { const cx = L + step * (i + .5); x.fillStyle = i === playing ? HOT : 'rgba(43,60,209,.18)'; x.fillRect(cx - step * .32, Y(vals[i]), step * .64, Y(0) - Y(vals[i])); text(x, nm, cx, H - B + 14, { align: 'center', color: INK, weight: 500 }); text(x, vals[i].toFixed(2), cx, Y(vals[i]) - 10, { align: 'center', color: INK }); });
+    x.strokeStyle = ACC; x.lineWidth = 2.5; x.beginPath(); P.forEach((_, i) => { const cx = L + step * (i + .5); i ? x.lineTo(cx, Y(vals[i])) : x.moveTo(cx, Y(vals[i])); }); x.stroke();
+    text(x, 'roughness per chord (C4–C♯4 = 1)', L, 10, { size: 11 });
+  }
+  seg($('pr-pick'), Object.entries(PROGS).map(([k, v]) => [k, v.name]), prog, v => { prog = v; drawProg(); });
+  const STEP = 1.1;
+  const halt = toggle($('pr-play'), () => {
+    const P = PROGS[prog].ch; t0 = audio().currentTime + 0.05;
+    P.forEach(([, ms], i) => playNotes(ms.map(mtof), Tm, t0 + i * STEP, STEP - 0.08));
+    const tick = () => { const i = Math.floor((AC.currentTime - t0) / STEP); if (i >= P.length) { halt(); return; } if (i !== playing) { playing = i; drawProg(); } raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+  }, () => { cancelAnimationFrame(raf); playing = -1; drawProg(); for (const g of live) { g.gain.cancelScheduledValues(AC.currentTime); g.gain.setTargetAtTime(0, AC.currentTime, 0.02); } });
+  drawKb(); drawProg();
+}
+
+/* ------------------------------------------------------------ 6. missing fundamental */
+function missing() {
+  const xs = ctx('mfcv'), xw = ctx('mwcv'), W = 1000, F = 220;
+  const OPTS = {
+    full: ['Full tone 1–8', [1, 2, 3, 4, 5, 6, 7, 8].map(k => [k * F, 0.85 ** (k - 1)])],
+    nofund: ['No fundamental', [2, 3, 4, 5, 6, 7, 8].map(k => [k * F, 0.85 ** (k - 1)])],
+    three: ['Only 4, 5, 6', [4, 5, 6].map(k => [k * F, 1])],
+    shift: ['4, 5, 6 shifted +40 Hz', [4, 5, 6].map(k => [k * F + 40, 1])],
+    pure: ['Pure 220 Hz', [[F, 1]]],
+  };
+  let pick = 'nofund', dr = null;
+  const SR = 44100;
+  function wave(comps, n) { const s = new Float32Array(n); for (const [f, a] of comps) for (let i = 0; i < n; i++) s[i] += a * Math.sin(2 * Math.PI * f * i / SR); return s; }
+  function period(comps) {   // autocorrelation: the shortest lag whose peak is within 10% of the best one
+    const N = 8192, s = wave(comps, N + 1000), lo = Math.floor(SR / 2000), hi = Math.floor(SR / 50);
+    const r = new Float64Array(hi + 2); let e = 0; for (let i = 0; i < N; i++) e += s[i] * s[i];
+    for (let k = lo; k <= hi + 1; k++) { let v = 0; for (let i = 0; i < N; i++) v += s[i] * s[i + k]; r[k] = v / e; }
+    let best = 0; for (let k = lo + 1; k <= hi; k++) best = Math.max(best, r[k]);
+    for (let k = lo + 1; k <= hi; k++) if (r[k] > r[k - 1] && r[k] >= r[k + 1] && r[k] >= 0.9 * best) { const a = r[k - 1], b = r[k], c = r[k + 1], d = (a - c) / (2 * (a - 2 * b + c)); return (k + d) / SR; }
+    return 0;
+  }
+  function draw() {
+    const comps = OPTS[pick][1], H = 180, L = 40, R = 16, B = 34, T = 16, FX = 2000, X = f => L + f / FX * (W - L - R);
+    paper(xs);
+    for (let k = 1; k * F <= FX; k++) { xs.strokeStyle = GRID; xs.lineWidth = 1; xs.beginPath(); xs.moveTo(X(k * F), T); xs.lineTo(X(k * F), H - B); xs.stroke(); text(xs, String(k * F), X(k * F), H - B + 13, { align: 'center', size: 10.5 }); }
+    text(xs, 'frequency, Hz (grey lines: multiples of 220)', W - R, H - 8, { align: 'right', size: 11 });
+    for (const [f, a] of comps) { xs.fillStyle = ACC; xs.fillRect(X(f) - 3, H - B - a * (H - T - B), 6, a * (H - T - B)); }
+    if (!comps.some(([f]) => Math.abs(f - F) < 1)) { xs.strokeStyle = HOT; xs.setLineDash([5, 4]); xs.lineWidth = 2; xs.strokeRect(X(F) - 4, T, 8, H - B - T); xs.setLineDash([]); text(xs, 'nothing here', X(F) + 10, T + 10, { color: HOT }); }
+    const n = Math.round(0.015 * SR), s = wave(comps, n); let mx = 0; for (const v of s) mx = Math.max(mx, Math.abs(v));
+    const h = 150; paper(xw);
+    for (let t = 0; t <= 0.015; t += 1 / F) { xw.strokeStyle = GRID; xw.beginPath(); xw.moveTo(t / 0.015 * W, 0); xw.lineTo(t / 0.015 * W, h); xw.stroke(); }
+    xw.strokeStyle = INK; xw.lineWidth = 1.5; xw.beginPath(); for (let i = 0; i < n; i++) { const px = i / n * W, py = h / 2 - s[i] / mx * (h / 2 - 12); i ? xw.lineTo(px, py) : xw.moveTo(px, py); } xw.stroke();
+    xw.fillStyle = PAPER; xw.fillRect(4, 3, 330, 18); text(xw, '15 ms of waveform · grey lines every 1/220 s', 10, 12, { size: 11 });
+    const p = period(comps), lowest = Math.min(...comps.map(c => c[0]));
+    $('mf-desc').innerHTML = `Lowest component present: <b>${lowest.toFixed(0)} Hz</b> · waveform period ${p ? (p * 1000).toFixed(3) + ' ms' : '—'} → pitch heard ≈ <b>${p ? (1 / p).toFixed(1) + ' Hz' : '—'}</b>`;
+    if (dr) dr.set(comps.map(c => c[0]), comps.map(c => c[1]));
+  }
+  seg($('mf-pick'), Object.entries(OPTS).map(([k, v]) => [k, v[0]]), pick, v => { pick = v; draw(); });
+  toggle($('mf-play'), () => { dr = drone(0.24); dr.on(); draw(); }, () => { dr && dr.off(); dr = null; });
+  draw();
+}
+
+/* ------------------------------------------------------------ 7. Shepard tones */
+function shepard() {
+  const x = ctx('shcv'), W = 1000, H = 240, L = 30, R = 16, T = 20, B = 36, FLO = 20, OCT = 10, CEN = Math.log2(FLO) + OCT / 2, SIG = 1.5;
+  let phase = 0, dir = 1, mode = null, oscs = null, g = null, timer = 0, raf = 0, steps = 0;
+  const gain = f => Math.exp(-0.5 * ((Math.log2(f) - CEN) / SIG) ** 2);
+  const freqs = () => Array.from({ length: OCT }, (_, k) => FLO * 2 ** (((k + phase) % OCT + OCT) % OCT));
+  const X = f => L + (Math.log2(f) - Math.log2(FLO)) / OCT * (W - L - R), Y = v => H - B - v * (H - T - B);
+  function draw() {
+    paper(x);
+    for (let k = 0; k <= OCT; k++) { const f = FLO * 2 ** k; x.strokeStyle = GRID; x.beginPath(); x.moveTo(X(f), T); x.lineTo(X(f), H - B); x.stroke(); text(x, f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 0 : 1) + 'k' : String(f), X(f), H - B + 13, { align: 'center', size: 10.5 }); }
+    x.strokeStyle = MUTED; x.lineWidth = 1.5; x.setLineDash([5, 4]); x.beginPath(); for (let px = L; px <= W - R; px += 3) { const f = FLO * 2 ** ((px - L) / (W - L - R) * OCT); px === L ? x.moveTo(px, Y(gain(f))) : x.lineTo(px, Y(gain(f))); } x.stroke(); x.setLineDash([]);
+    for (const f of freqs()) { x.strokeStyle = ACC; x.lineWidth = 4; x.beginPath(); x.moveTo(X(f), Y(0)); x.lineTo(X(f), Y(gain(f))); x.stroke(); }
+    text(x, 'frequency, Hz (log) · dashed: fixed loudness envelope · bars: the components now', W - R, H - 8, { align: 'right', size: 11 });
+    const semis = ((Math.round(phase * 12) % 12) + 12) % 12;
+    $('sh-desc').innerHTML = `Chroma: <b>${NAMES[(semis + 4) % 12]}</b> (step ${semis} of 12) · ${mode ? (mode === 'step' ? `${steps} steps taken, still in the same register` : 'gliding') : 'stopped'} · after 12 steps every component is exactly where another one started`;
+  }
+  function apply(snap) {
+    if (!oscs) return; const t = AC.currentTime, fs = freqs();
+    oscs.forEach((v, k) => { const f = fs[k]; if (snap || f < v.f / 1.5) v.o.frequency.setValueAtTime(f, t); else v.o.frequency.setTargetAtTime(f, t, mode === 'step' ? 0.01 : 0.03); v.g.gain.setTargetAtTime(gain(f) * 0.32, t, 0.02); v.f = f; });
+  }
+  function start(m) {
+    const a = audio(); mode = m; steps = 0; g = a.createGain(); g.gain.value = 0; g.connect(master); g.gain.setTargetAtTime(0.5, a.currentTime, 0.1);
+    oscs = freqs().map(f => { const o = a.createOscillator(), og = a.createGain(); o.frequency.value = f; og.gain.value = 0; o.connect(og).connect(g); o.start(); return { o, g: og, f }; });
+    apply(true);
+    if (m === 'step') timer = setInterval(() => { phase = (phase + dir / 12 + OCT) % OCT; steps++; apply(); draw(); }, 420);
+    else { let last = performance.now(); const tick = now => { phase = (phase + dir * (now - last) / 1000 / 12 + OCT) % OCT; last = now; apply(); draw(); raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); }
+  }
+  function stop() { clearInterval(timer); cancelAnimationFrame(raf); if (g) { const gg = g, os = oscs; gg.gain.setTargetAtTime(0, AC.currentTime, 0.05); setTimeout(() => { os.forEach(v => v.o.stop()); gg.disconnect(); }, 400); } g = null; oscs = null; mode = null; draw(); }
+  toggle($('sh-step'), () => start('step'), stop);
+  toggle($('sh-glide'), () => start('glide'), stop);
+  seg($('sh-dir'), [[1, 'Up'], [-1, 'Down']], dir, v => { dir = v; });
+  draw();
+}
+
+/* ------------------------------------------------------------ 8. lab */
+function lab() {
+  const x = ctx('seqcv'), W = 1000, H = 460, L = 64, R = 10, T = 10, LANE = 80, STEPS = 16, f0 = 220;
+  const JUST = [0, 111.73, 203.91, 315.64, 386.31, 498.04, 590.22, 701.96, 813.69, 884.36, 1017.6, 1088.27];
+  const TIMS = { ...Object.fromEntries(Object.entries(PRESETS).map(([k, v]) => [k, v.name])), editor: 'From the editor' };
+  let tim = 'harmonic', tun = 'tet', bpm = 96, cells = new Set(), playing = -1, timer = 0, next = 0, stepI = 0;
+  const T_ = () => tim === 'editor' ? EDITOR : PRESETS[tim];
+  function tuning() {
+    const Tm = T_();
+    if (tun === 'tet') return { name: '12-tone equal', steps: [...Array(12).keys()].map(k => k * 100), period: 1200 };
+    if (tun === 'just') return { name: '5-limit just', steps: JUST, period: 1200 };
+    const D = dissCurve(Tm, f0, 1400), dips = findDips(D); let P = 1200, bv = Infinity; for (const c of dips) if (c >= 1000 && c <= 1400 && D[c] < bv) { bv = D[c]; P = c; }
+    if (tun === 'pseudo') return { name: `12 equal steps of ${P} c`, steps: [...Array(12).keys()].map(k => k * P / 12), period: P };
+    return { name: `dips of ${Tm.name}`, steps: [0, ...dips.filter(c => c < P)], period: P };
+  }
+  let TU = tuning();
+  const rows = () => { const out = []; for (let o = 0; out.length < 16; o++) for (const s of TU.steps) { if (out.length >= 16) break; out.push(s + o * TU.period); } return out; };
+  const ROWS = () => rows().length;
+  const gw = () => (W - L - R) / STEPS, gh = () => (H - T - LANE - 20) / ROWS();
+  const freqOf = r => f0 * 2 ** (rows()[r] / 1200);
+  function stepRough(s) { const fs = []; for (let r = 0; r < ROWS(); r++) if (cells.has(s + ',' + r)) fs.push(freqOf(r)); return fs.length > 1 ? notesRough(fs, T_()) / notesRough([f0 * 2, f0 * 2 * 2 ** (1 / 12)], T_()) : 0; }
+  function draw() {
+    paper(x); const rs = rows(), cw = gw(), ch = gh();
+    rs.forEach((c, r) => { const y = T + (ROWS() - 1 - r) * ch; x.fillStyle = c % TU.period === 0 ? 'rgba(43,60,209,.07)' : 'transparent'; x.fillRect(L, y, W - L - R, ch); text(x, `${Math.round(c)}`, L - 8, y + ch / 2, { align: 'right', size: 10.5 }); });
+    for (let s = 0; s <= STEPS; s++) { x.strokeStyle = s % 4 ? GRID : '#BDB6A6'; x.lineWidth = 1; x.beginPath(); x.moveTo(L + s * cw, T); x.lineTo(L + s * cw, T + ROWS() * ch); x.stroke(); }
+    for (let r = 0; r <= ROWS(); r++) { x.strokeStyle = GRID; x.beginPath(); x.moveTo(L, T + r * ch); x.lineTo(W - R, T + r * ch); x.stroke(); }
+    for (const k of cells) { const [s, r] = k.split(',').map(Number); if (r >= ROWS()) continue; x.fillStyle = s === playing ? HOT : ACC; x.fillRect(L + s * cw + 2, T + (ROWS() - 1 - r) * ch + 2, cw - 4, ch - 4); }
+    if (playing >= 0) { x.strokeStyle = HOT; x.lineWidth = 2; x.strokeRect(L + playing * cw + 1, T + 1, cw - 2, ROWS() * ch - 2); }
+    text(x, 'cents', L - 8, T + ROWS() * ch + 10, { align: 'right', size: 10.5 });
+    const ly = H - LANE, vals = [...Array(STEPS).keys()].map(stepRough), mx = Math.max(2, ...vals);
+    text(x, 'rough', L - 8, ly + LANE / 2, { align: 'right', size: 10.5 });
+    vals.forEach((v, s) => { const h = v / mx * (LANE - 22); x.fillStyle = s === playing ? HOT : 'rgba(43,60,209,.35)'; x.fillRect(L + s * cw + 4, ly + LANE - 6 - h, cw - 8, h); if (v) text(x, v.toFixed(1), L + s * cw + cw / 2, ly + LANE - 12 - h, { align: 'center', size: 10, color: INK }); });
+    $('sq-tinfo').textContent = `${TU.name} · ${TU.steps.length} steps per period of ${Math.round(TU.period)} cents · root ${f0} Hz`;
+  }
+  drag($('seqcv'), (px, py, ph) => {
+    if (ph !== 'down') return;
+    const s = Math.floor((px - L) / gw()), r = ROWS() - 1 - Math.floor((py - T) / gh());
+    if (s < 0 || s >= STEPS || r < 0 || r >= ROWS()) return;
+    const k = s + ',' + r; cells.has(k) ? cells.delete(k) : (cells.add(k), playNotes([freqOf(r)], T_(), audio().currentTime + 0.01, 0.35, 0.2));
+    draw();
+  });
+  function demo() {
+    cells.clear();
+    const idx = c => { const rs = rows(); let b = 0; rs.forEach((v, i) => { if (Math.abs(v - c) < Math.abs(rs[b] - c)) b = i; }); return b; };
+    const P = TU.period, at = k => idx(k * P / 12);   // degrees in twelfths of the period, snapped to the nearest row
+    [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7, 12]].forEach((ch, i) => { for (let s = i * 4; s < i * 4 + 4; s++) { if (s % 4 === 0) ch.forEach(k => cells.add(s + ',' + at(k))); else if (s % 4 === 2) cells.add(s + ',' + at(ch[s % 3 === 0 ? 1 : 2])); } });
+    draw();
+  }
+  function tick() {
+    const a = AC, dur = 60 / bpm / 2;
+    while (next < a.currentTime + 0.12) {
+      const s = stepI % STEPS, fs = []; for (let r = 0; r < ROWS(); r++) if (cells.has(s + ',' + r)) fs.push(freqOf(r));
+      if (fs.length) playNotes(fs, T_(), next, dur * 0.95, 0.3);
+      const when = (next - a.currentTime) * 1000; setTimeout(() => { if (timer) { playing = s; draw(); } }, Math.max(0, when));
+      next += dur; stepI++;
+    }
+  }
+  toggle($('sq-play'), () => { const a = audio(); next = a.currentTime + 0.06; stepI = 0; timer = setInterval(tick, 30); tick(); }, () => { clearInterval(timer); timer = 0; playing = -1; draw(); });
+  seg($('sq-tim'), Object.entries(TIMS), tim, v => { tim = v; TU = tuning(); draw(); });
+  seg($('sq-tun'), [['tet', '12-TET'], ['just', 'Just'], ['dips', 'Timbre dips'], ['pseudo', 'Pseudo-octave 12']], tun, v => { tun = v; TU = tuning(); draw(); });
+  $('sq-bpm').oninput = () => { bpm = +$('sq-bpm').value; $('sq-bpmo').textContent = bpm + ' bpm'; };
+  $('sq-bpmo').textContent = bpm + ' bpm';
+  $('sq-demo').onclick = demo; $('sq-clear').onclick = () => { cells.clear(); draw(); };
+  $('sq-scl').onclick = () => {
+    const st = [...TU.steps.slice(1), TU.period];
+    const scl = `! consonance-${tun}.scl\n!\n${TU.name}, from the "Why notes get along" lab\n ${st.length}\n!\n${st.map(c => ' ' + c.toFixed(5)).join('\n')}\n`;
+    download(`consonance-${tun}.scl`, scl, 'text/plain');
+  };
+  $('sq-json').onclick = () => download('consonance-lab.json', JSON.stringify({ timbre: { name: T_().name, partials: T_().p, amplitudes: T_().a }, tuning: { name: TU.name, cents: TU.steps, period: TU.period, rootHz: f0 }, bpm, pattern: [...cells].map(k => k.split(',').map(Number)).map(([step, row]) => ({ step, row, cents: rows()[row] })).filter(c => c.cents !== undefined) }, null, 2), 'application/json');
+  demo();
+}
+
+/* ------------------------------------------------------------ boot */
+try { await Promise.all([document.fonts.load('700 40px "Bricolage Grotesque"'), document.fonts.load('500 13px "JetBrains Mono"')]); } catch (e) { /* fall back to system fonts */ }
+for (const f of [ear, plCurve, partials, timbreLab, tension, missing, shepard, lab]) {
+  try { f(); } catch (e) { console.error(f.name, e); }
+}
+</script>
+</body>
+</html>
