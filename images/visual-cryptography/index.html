@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secrets in the Overlap</title>
+<meta name="description" content="Visual cryptography as a set of art elements: shares that are noise alone and a picture together, thresholds, meaningful covers, progressive reveals, rotation and flip secrets, forged shares, and a lab that exports printable transparencies.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Sections are static HTML; every canvas is drawn by the script at the bottom (2D canvas only). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#DCD6C8;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#2A2822;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#2A2822;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards b{color:var(--fg);font-weight:600}
+.cards a{font:500 12px/1 var(--font-mono)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+table.plain th,table.plain td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td{color:var(--muted)}
+table.plain td:first-child{font-weight:600;white-space:nowrap;color:var(--fg)}
+
+/* Gallery tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 12px}
+.tiles.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile{display:flex;flex-direction:column;gap:0;margin:0;min-width:0}
+.tile canvas{display:block;width:100%;aspect-ratio:3/2;background:var(--stage);border:1px solid var(--line)}
+.tile .tn{font:600 13.5px/1.25 var(--font-display);margin:8px 0 0}
+.tile .ts{font:400 11px/1.3 var(--font-mono);color:var(--accent);margin:3px 0 0}
+.tile .td{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.42}
+.rowlabel{grid-column:1/-1;font:500 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 -8px;padding-top:10px;border-top:1px dashed var(--line)}
+.rowlabel:first-child{margin-top:0;padding-top:0;border-top:0}
+
+/* Interactive panels */
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel canvas{display:block;width:100%;height:auto;background:var(--stage);border:1px solid var(--line);touch-action:none}
+.panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 16px}
+.panels .tn{font:600 14.5px/1.25 var(--font-display);margin:0}
+.panels .td{font-size:12.5px;color:var(--muted);line-height:1.42}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.bar input[type=range]{flex:1 1 160px;accent-color:var(--accent);margin:0}
+.bar label{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:24px;align-items:start}
+.split .side{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* Lab */
+.lab{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,1fr);gap:28px;align-items:start}
+.stagecol{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.stage{position:relative;background:var(--stage);border:1px solid var(--line);overflow:hidden}
+.stage canvas{display:block;width:100%;height:auto;cursor:grab;touch-action:none}
+.meter{display:flex;align-items:center;gap:10px;font:500 11px/1 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.meter .mbar{flex:1;height:6px;background:var(--line);position:relative}
+.meter .mbar i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.meter output{color:var(--fg);letter-spacing:0;text-transform:none;min-width:9ch;text-align:right}
+.labbar{display:flex;flex-wrap:wrap;gap:8px}
+.controls{display:flex;flex-direction:column;gap:12px;min-width:0}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 4px;min-width:0}
+.group>h3{margin-bottom:2px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0 0 10px}
+.row{display:flex;flex-direction:column;gap:5px;margin:0 0 12px;min-width:0}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.row input[type=text]{font:500 14px var(--font-mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;width:100%}
+.row .ends{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;line-height:1.3;color:var(--muted)}
+
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+.curve{display:block;width:100%;height:230px;background:var(--surface);border:1px solid var(--line)}
+.foot{font-size:13px;color:var(--muted);max-width:80ch}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .panels{grid-template-columns:minmax(0,1fr)}
+  .split{grid-template-columns:minmax(0,1fr)}
+  .lab{grid-template-columns:minmax(0,1fr)}
+  .stagecol{top:0;z-index:5;background:var(--bg);padding:8px 0}
+  .desc{font-size:11.5px}
+}
+@media (max-width:560px){
+  .tiles.three{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rowlabel{margin-bottom:-4px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Images · canvas · a toolkit</p>
+  <h1>Secrets in the overlap</h1>
+  <p class="lede">Visual cryptography splits a picture into sheets that each look like pure noise. Stack the right sheets and the picture appears, decoded by the eye with no computer at all. For an artist that is a set of strange, useful elements: images that exist only in an overlap, reveals that need several people, pictures that change when a sheet is turned or flipped, and noise that is quietly full of meaning. Everything below is drawn live from real schemes, and every number under a tile is measured from the pixels.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#borrow">Elements to borrow</a></li>
+    <li><a href="#trick">The trick</a></li>
+    <li><a href="#cost">The cost of more people</a></li>
+    <li><a href="#thr">Threshold</a></li>
+    <li><a href="#mean">Meaningful shares</a></li>
+    <li><a href="#prog">Progressive</a></li>
+    <li><a href="#dith">Dither as medium</a></li>
+    <li><a href="#turn">Rotate, flip, fold</a></li>
+    <li><a href="#xor">OR vs XOR</a></li>
+    <li><a href="#cheat">The forged share</a></li>
+    <li><a href="#letters">Letters</a></li>
+    <li><a href="#lab">Lab</a></li>
+    <li><a href="#story">Story beat</a></li>
+    <li><a href="#glossary">Glossary and sources</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="borrow" aria-labelledby="borrow-h">
+  <header><p class="eyebrow">Overview</p><h2 id="borrow-h">Elements to borrow</h2></header>
+  <div class="prose">
+    <p>Read each scheme as a design move, not only as security. The research names each scheme by its guarantee. What an artist can take from each is listed here.</p>
+  </div>
+  <div class="cards">
+    <div><h3>Meaning lives in the overlap</h3><p>Each piece alone is noise; the image is a relationship between pieces. Two characters, two halves of a map, a letter and its envelope. <a href="#trick">The trick</a></p></div>
+    <div><h3>A reveal that needs a crowd</h3><p>Any k of n sheets show the picture, and k−1 show nothing. A fellowship rule you can print. <a href="#thr">Threshold</a></p></div>
+    <div><h3>A secret behind a surface</h3><p>Each sheet shows an innocent picture, and the stack shows a third one. Surface versus subtext. <a href="#mean">Meaningful shares</a></p></div>
+    <div><h3>Pacing by layers</h3><p>The image sharpens with every added sheet, so you can plan a reveal beat by beat. <a href="#prog">Progressive</a></p></div>
+    <div><h3>Motion as the key</h3><p>Turn, flip or fold a sheet and a different picture appears. The gesture is the decoding. <a href="#turn">Rotate, flip, fold</a></p></div>
+    <div><h3>Grain as material</h3><p>The noise texture changes with the dither and the scheme. It is a visual language before it is a security property. <a href="#dith">Dither as medium</a></p></div>
+    <div><h3>The lie that looks the same</h3><p>A forged sheet looks exactly like a real one but shows a false picture. A twist device. <a href="#cheat">The forged share</a></p></div>
+    <div><h3>Letters as pixels</h3><p>Shares built from type: a page of text that hides an image. <a href="#letters">Letters</a></p></div>
+  </div>
+</section>
+
+<section class="demo" id="trick" aria-labelledby="trick-h">
+  <header><p class="eyebrow">1 · The trick</p><h2 id="trick-h">Two sheets of noise, one picture</h2></header>
+  <div class="prose">
+    <p>Naor and Shamir's 1994 scheme splits every pixel of a black-and-white secret into a 2×2 block on each of two sheets. Every block has exactly two dark subpixels, whichever pixel it came from, so <b>one sheet alone carries no information at all</b>, not just very little. Stacking the sheets is a logical OR: wherever either sheet is dark, light is blocked. Drag the transparency onto the paper.</p>
+  </div>
+  <div class="panel">
+    <canvas id="trickcv" width="900" height="420" aria-label="Two noise sheets; drag the right sheet onto the left to reveal a kite"></canvas>
+    <div class="bar"><label for="trick-slide">Slide the transparency</label><input type="range" id="trick-slide" min="0" max="1000" value="0"></div>
+  </div>
+  <div class="split">
+    <div class="tile"><canvas id="codecv" width="600" height="400" aria-label="Codebook: how one pixel becomes two 2x2 blocks"></canvas><p class="tn">The codebook</p><p class="ts">one of 6 patterns, picked at random per pixel</p></div>
+    <div class="side prose">
+      <p><b>White pixel:</b> both sheets get the <i>same</i> random pattern, so the stack has 2 of 4 subpixels dark and reads as grey.</p>
+      <p><b>Black pixel:</b> the second sheet gets the <i>complement</i>, so the stack is 4 of 4 dark and reads as black.</p>
+      <p>Two costs come with it. <b>Pixel expansion</b>: each pixel became 4 subpixels. <b>Contrast loss</b>: white comes back only half white, a relative contrast α of ½. Almost every later scheme is a different trade between these two costs and what the sheets look like.</p>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="cost" aria-labelledby="cost-h">
+  <header><p class="eyebrow">2 · Basis matrices</p><h2 id="cost-h">The cost of more people</h2></header>
+  <div class="prose">
+    <p>The general recipe for n sheets, all needed, is a pair of <b>basis matrices</b>, one row per sheet. The white matrix lists every even-sized subset of the sheets as a column, and the black matrix every odd-sized one. Each pixel shuffles the columns, and row i becomes sheet i's block. Any n−1 rows look identical in both matrices, so nothing leaks. Stacking all n leaves exactly one white column for a white pixel and none for a black one. The cost is that each pixel needs 2ⁿ⁻¹ subpixels and contrast falls to 1/2ⁿ⁻¹. Add people and the secret fades.</p>
+  </div>
+  <div class="bar"><label>Sheets n</label><div class="seg" id="cost-n" role="group" aria-label="Number of sheets"></div></div>
+  <div class="tiles three" id="t-cost"></div>
+  <p class="desc" id="cost-read"></p>
+</section>
+
+<section class="demo" id="thr" aria-labelledby="thr-h">
+  <header><p class="eyebrow">3 · Threshold (k, n)</p><h2 id="thr-h">Any k of five cards</h2></header>
+  <div class="prose">
+    <p>Threshold schemes relax "all n" to "any k of n". Fewer than k sheets are provably blank, and k or more show the image. Toggle the cards below. The basis matrices here were found by a small search over matrices built from all columns of a given weight. For (2,5) that search reaches the known optimum, α = 0.3; for larger k it is simply the best this construction found. The image gets fainter as k rises. <b>Average the blocks</b> to see what a camera or scanner would recover from the same stack.</p>
+  </div>
+  <div class="split">
+    <div class="panel"><canvas id="thrcv" width="600" height="400" aria-label="Stack of the selected cards"></canvas></div>
+    <div class="side">
+      <div class="bar"><label>k</label><div class="seg" id="thr-k" role="group" aria-label="Threshold k"></div></div>
+      <div class="bar" id="thr-cards" role="group" aria-label="Cards in the stack"></div>
+      <div class="bar"><button class="btn" id="thr-avg" type="button" aria-pressed="false">Average the blocks</button></div>
+      <p class="desc" id="thr-read"></p>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="mean" aria-labelledby="mean-h">
+  <header><p class="eyebrow">4 · Meaningful shares</p><h2 id="mean-h">A bird, a cage, and a key between them</h2></header>
+  <div class="prose">
+    <p>Noise sheets announce that they hide something. <b>Extended visual cryptography</b> (Ateniese and colleagues) gives each sheet its own cover picture: a cover-black pixel gets 3 of 4 dark subpixels and a cover-white one gets 2, while the stack still decodes the secret. The cost is contrast on both sides. Below is a grid search over four schemes. Each row shows share 1, share 2 and the stack, with both contrasts measured. In the random-grid rows, one dial λ sets how much of each sheet is cover. Watch the covers bleed into the stack as λ rises: the survey calls this <b>inter-share interference</b>, and it is also a lovely texture.</p>
+  </div>
+  <div class="tiles three" id="t-mean"></div>
+  <p class="note"><b>Grid search as a habit.</b> Fix the secret, then vary one thing per row and one per column. Here the rows are schemes and the columns are what each viewer sees. The same layout works for any art parameter: palettes against compositions, brushes against subjects.</p>
+</section>
+
+<section class="demo" id="prog" aria-labelledby="prog-h">
+  <header><p class="eyebrow">5 · Progressive</p><h2 id="prog-h">A picture that arrives in layers</h2></header>
+  <div class="prose">
+    <p>Threshold schemes are all-or-nothing. <b>Progressive</b> schemes let clarity grow with every sheet added. This demo uses a simple probabilistic construction, written for this page and not taken from the papers. For a black pixel, one random sheet of six gets a dark dot. For a white pixel, all six get a dark dot with probability 1/6, and otherwise none do. Every sheet is therefore 1/6 dark wherever you look, so one sheet shows nothing. Each added sheet covers more of the black pixels while the white ones stay as they were, so contrast climbs to (t−1)/6.</p>
+  </div>
+  <div class="tiles" id="t-prog"></div>
+  <canvas class="curve" id="progcv" aria-label="Contrast against the number of sheets stacked"></canvas>
+</section>
+
+<section class="demo" id="dith" aria-labelledby="dith-h">
+  <header><p class="eyebrow">6 · Dither as medium</p><h2 id="dith-h">Grey secrets go through a halftone first</h2></header>
+  <div class="prose">
+    <p>Classic schemes only share black and white, so a grey picture is dithered first, and the dither becomes the grain of the reveal. The top row shows four dithers of the same shaded sphere (the same family as the <a href="../halftone-dithering/">halftone notebook</a>). The bottom row shows each one shared with a random grid and stacked. Halftone visual cryptography (Zhou, Arce and Di Crescenzo) takes this further by weaving the secret into the halftone cells of grey covers.</p>
+  </div>
+  <div class="tiles" id="t-dith"></div>
+</section>
+
+<section class="demo" id="turn" aria-labelledby="turn-h">
+  <header><p class="eyebrow">7 · Multi-secret</p><h2 id="turn-h">Rotate, flip, fold</h2></header>
+  <div class="prose">
+    <p>One pair of sheets can hold several secrets if each secret gets its own slice of every cell, and the second sheet is built to line up with the first only after a given move. Wu and Chen's circular shares give a different secret at each rotation angle. Flip visual cryptography gives a second secret when one sheet is turned over. Tagged visual cryptography stamps a tag that appears when a single sheet is folded onto itself. In each panel, a secret appears only at the exact move. With a quarter of the contrast left, the pictures are faint; <b>Squint</b> blurs the panel the way half-closed eyes do.</p>
+  </div>
+  <div class="panels">
+    <div class="panel"><canvas id="turncv" width="600" height="420" aria-label="Two circular shares, the top one rotating"></canvas>
+      <p class="tn">Turntable</p>
+      <div class="bar"><label>Secrets</label><div class="seg" id="turn-x" role="group" aria-label="Number of secrets"></div></div>
+      <div class="bar"><input type="range" id="turn-a" min="0" max="359" value="0" aria-label="Rotation angle"><button class="btn" id="turn-spin" type="button" aria-pressed="false">Spin</button><button class="btn" type="button" data-squint="turncv" aria-pressed="false">Squint</button></div>
+      <p class="td" id="turn-read"></p></div>
+    <div class="panel"><canvas id="flipcv" width="600" height="420" aria-label="Two stacked sheets; the top one flips over"></canvas>
+      <p class="tn">Flip</p>
+      <div class="bar"><button class="btn" id="flip-go" type="button" aria-pressed="false">Flip the top sheet</button><button class="btn" type="button" data-squint="flipcv" aria-pressed="false">Squint</button></div>
+      <p class="td" id="flip-read">Stacked face up, the sheets show a kite. Flipped over, the same top sheet shows a bird.</p></div>
+    <div class="panel"><canvas id="foldcv" width="600" height="420" aria-label="One sheet folding in half"></canvas>
+      <p class="tn">Fold (tagged share)</p>
+      <div class="bar"><button class="btn" id="fold-go" type="button" aria-pressed="false">Fold the sheet</button><button class="btn" type="button" data-squint="foldcv" aria-pressed="false">Squint</button></div>
+      <p class="td" id="fold-read">One sheet, folded onto itself, shows its tag: a star. It still works as a normal share for some other secret.</p></div>
+  </div>
+  <p class="note"><b>How the slices work.</b> Every cell is split into strips that a move does not mix up: radial rings for a rotation, top and bottom halves for a left-right flip or fold. Strip j of the second sheet is computed as an XOR against the strip of the first sheet that it will land on after move j. In any other position the strips meet random partners and stay noise. Each extra secret costs contrast, because it takes its own slice of the cell.</p>
+</section>
+
+<section class="demo" id="xor" aria-labelledby="xor-h">
+  <header><p class="eyebrow">8 · OR vs XOR</p><h2 id="xor-h">Stacked by light, or computed exactly</h2></header>
+  <div class="prose">
+    <p>Physical stacking is OR: ink only adds, so a white pixel can never come back fully white, and half of it stays dark. A computer can use XOR instead, and XOR undoes itself: sheet 1 XOR sheet 2 gives back the secret bit for bit. The same trick works on whole grey bytes. The choice is aesthetic as well as technical: smoky, analog reveals or perfect digital ones.</p>
+  </div>
+  <div class="tiles" id="t-xor"></div>
+</section>
+
+<section class="demo" id="cheat" aria-labelledby="cheat-h">
+  <header><p class="eyebrow">9 · Verifiable</p><h2 id="cheat-h">The forged share</h2></header>
+  <div class="prose">
+    <p>Visual cryptography trusts every holder. A holder who has seen the real result can work out the other sheet and print a new one that stacks to <i>anything</i>, and it looks just as random as an honest sheet. <b>Verifiable</b> schemes add a check. In this simple version, the dealer keeps a verification sheet, the complement of the honest share. The honest share plus the verification sheet stacks to solid black. A forged share leaves white specks wherever it was changed, the same kind of tamper map the survey describes. This version catches only half of the changed pixels: those that went from dark to light.</p>
+  </div>
+  <div class="tiles" id="t-cheat"></div>
+</section>
+
+<section class="demo" id="letters" aria-labelledby="letters-h">
+  <header><p class="eyebrow">10 · Typography</p><h2 id="letters-h">Letters as subpixels</h2></header>
+  <div class="prose">
+    <p>Lin and colleagues' letter-based scheme replaces pixels with letters. This is a looser, art-first version: each cell is a letter, set reversed out of a dark block when the cell is dark and in plain ink otherwise. Each sheet reads as a page of text. Stacked, the dark blocks gather where the secret is.</p>
+  </div>
+  <div class="tiles three" id="t-letters"></div>
+</section>
+
+<section class="demo" id="lab" aria-labelledby="lab-h">
+  <header><p class="eyebrow">11 · Lab</p><h2 id="lab-h">Make your own sheets</h2></header>
+  <div class="prose">
+    <p>Pick a secret and a scheme, choose which sheets are in the stack, and drag on the stage to misalign the top sheet. Even a one-subpixel offset destroys the picture, which is why printed shares need registration marks. <b>Save the sheets</b> exports every share at print resolution with crop marks, ready for transparency film.</p>
+  </div>
+  <div class="lab">
+    <div class="stagecol">
+      <div class="stage"><canvas id="labcv" width="600" height="400" aria-label="The current stack"></canvas></div>
+      <div class="meter"><span>Contrast α</span><span class="mbar"><i id="lab-bar"></i></span><output id="lab-a">0</output></div>
+      <p class="desc" id="lab-read"></p>
+      <div class="labbar"><button class="btn" id="lab-seed" type="button">New randomness</button><button class="btn" id="lab-center" type="button">Re-align</button><button class="btn" id="lab-save" type="button">Save the sheets (PNG)</button></div>
+    </div>
+    <div class="controls">
+      <div class="group"><h3>Secret</h3>
+        <div class="row"><div class="seg" id="lab-secret" role="group" aria-label="Secret"></div></div>
+        <div class="row" id="lab-textrow" hidden><div class="lab2"><span>Text</span></div><input type="text" id="lab-text" value="HELLO" maxlength="12" aria-label="Secret text"></div>
+        <div class="row" id="lab-dithrow" hidden><div class="lab2"><span>Dither</span></div><div class="seg" id="lab-dither" role="group" aria-label="Dither"></div></div>
+        <div class="row"><div class="lab2"><span>Resolution</span><output id="lab-res-o"></output></div><input type="range" id="lab-res" min="30" max="150" step="6" value="90" aria-label="Resolution"></div>
+      </div>
+      <div class="group"><h3>Scheme</h3>
+        <p class="gnote" id="lab-snote"></p>
+        <div class="row"><div class="seg" id="lab-scheme" role="group" aria-label="Scheme"></div></div>
+        <div class="row" id="lab-krow" hidden><div class="lab2"><span>k of 5</span></div><div class="seg" id="lab-k" role="group" aria-label="k"></div></div>
+        <div class="row" id="lab-nrow" hidden><div class="lab2"><span>Sheets n</span></div><div class="seg" id="lab-n" role="group" aria-label="n"></div></div>
+        <div class="row" id="lab-lamrow" hidden><div class="lab2"><span>Cover share λ</span><output id="lab-lam-o"></output></div><input type="range" id="lab-lam" min="0" max="90" value="40" aria-label="Cover share"><div class="ends"><span>clear secret</span><span>clear covers</span></div></div>
+      </div>
+      <div class="group"><h3>Stack</h3>
+        <p class="gnote">Sheets in the stack. The last one ticked is the top sheet, which the drag moves.</p>
+        <div class="row"><div class="bar" id="lab-on" role="group" aria-label="Sheets in the stack"></div></div>
+        <div class="row"><div class="lab2"><span>Offset</span><output id="lab-off-o">0, 0</output></div></div>
+        <div class="row"><div class="lab2"><span>Ink</span></div><div class="seg" id="lab-ink" role="group" aria-label="Ink"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="story" aria-labelledby="story-h">
+  <header><p class="eyebrow">12 · Story</p><h2 id="story-h">Four friends, four sheets, one kite</h2></header>
+  <div class="prose">
+    <p>A progressive scheme maps directly onto a story beat. Pip and three friends each hold a sheet that looks like static. Each one who joins makes the picture a little clearer, so the reveal climbs the way an intensity curve does. Plan it with the story planner on the <a href="../visual-structure/#story">visual structure page</a>: the last sheet lands on the climax.</p>
+  </div>
+  <div class="tiles" id="t-story"></div>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and sources</h2></header>
+  <div class="tablewrap"><table class="plain">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Share</td><td>One sheet. Alone it reveals nothing about the secret.</td></tr>
+      <tr><td>Access structure</td><td>Which groups of shares may recover the secret (qualified) and which must learn nothing (forbidden).</td></tr>
+      <tr><td>Basis matrices</td><td>Two n × m 0/1 matrices, one for white pixels and one for black. Every pixel shuffles the columns of one of them, and row i becomes share i.</td></tr>
+      <tr><td>Pixel expansion m</td><td>Subpixels per secret pixel on each share. (n, n) Naor–Shamir needs 2ⁿ⁻¹.</td></tr>
+      <tr><td>Relative contrast α</td><td>How much lighter a recovered white pixel is than a recovered black one, from 0 to 1. Classic (2,2) gives ½.</td></tr>
+      <tr><td>Random grid</td><td>Kafri and Keren's 1987 scheme with no pixel expansion: share 2 is share 1, inverted wherever the secret is black.</td></tr>
+      <tr><td>Probabilistic / size-invariant</td><td>Pick one random column of the basis matrix per pixel instead of all of them, so the shares keep the secret's size and contrast holds on average.</td></tr>
+      <tr><td>Extended (EVC)</td><td>Shares carry meaningful cover images while the stack still decodes the secret.</td></tr>
+      <tr><td>Halftone VC</td><td>Grey covers are halftoned and the secret is woven into the halftone cells.</td></tr>
+      <tr><td>Progressive</td><td>Clarity grows with the number of shares stacked, instead of a hard threshold.</td></tr>
+      <tr><td>Verifiable</td><td>Shares can be checked for tampering before being trusted.</td></tr>
+      <tr><td>Multi-secret</td><td>One set of shares holds several secrets, read by rotating, flipping or folding.</td></tr>
+      <tr><td>XOR-based</td><td>Recovered by computation instead of stacking. Exact, including grey and color.</td></tr>
+      <tr><td>Recursive / learning-based</td><td>Secrets nested inside the shares of larger secrets, and shares generated by trained networks. Covered by the surveys, not shown here.</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="reading">
+    <li><b>Shivani, Khurana and Gupta (2026).</b> Visual cryptography: a comprehensive survey of schemes, evaluation metrics, and emerging research directions. <i>International Journal of Computational Intelligence Systems.</i> <a href="https://doi.org/10.1007/s44196-026-01552-0">doi:10.1007/s44196-026-01552-0</a>. The six-axis taxonomy behind this page. Licensed CC BY-NC-ND 4.0: this page cites it, and all drawings and code here are original.</li>
+    <li><b>Ibrahim, Teh and Abdullah (2021).</b> An overview of visual cryptography techniques. <i>Multimedia Tools and Applications.</i> <a href="https://doi.org/10.1007/s11042-021-11229-9">doi:10.1007/s11042-021-11229-9</a>. Flip, tagged and letter-based variants.</li>
+    <li><b>Naor and Shamir (1995).</b> Visual cryptography. EUROCRYPT ’94, LNCS 950.</li>
+    <li><b>Kafri and Keren (1987).</b> Encryption of pictures and shapes by random grids. <i>Optics Letters.</i></li>
+    <li><b>Ateniese, Blundo, De Santis and Stinson.</b> Visual cryptography for general access structures (1996); Extended capabilities for visual cryptography (2001).</li>
+    <li><b>Zhou, Arce and Di Crescenzo (2006).</b> Halftone visual cryptography. <i>IEEE Transactions on Image Processing.</i></li>
+    <li><b>Chen and Tsao (2011).</b> User-friendly random-grid-based visual secret sharing. <i>IEEE TCSVT.</i></li>
+    <li><b>Wu and Chen (1998)</b>, rotation-based two-secret shares. <b>Lin, Chen and Lin (2010)</b>, flip visual cryptography. <b>Wang and Hsu (2011)</b>, tagged visual cryptography. <b>Lin, Yang, Laih and Lin (2013)</b>, natural-language letter-based VC.</li>
+  </ol>
+</section>
+
+<p class="foot">Drawn live in the browser with 2D canvas and no build step. Each share is a 0/1 bitmap drawn without smoothing, stacking is a bitwise OR, and the α under each tile is measured: the white fraction where the secret is white minus the white fraction where it is black. Constructions: Naor–Shamir codebooks and basis matrices, column-weight (k, 5) basis matrices from a small integer search, Ateniese-style 2×2 extended shares, random grids with a cover dial, a probabilistic progressive scheme of my own, and XOR-sliced multi-secret sheets.</p>
+
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const W = 600, H = 400;
+const $ = id => document.getElementById(id);
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DESK = '#DCD6C8', PAPER = '#F4F0E7', TEXT = '#4A4F5C';
+const INK = [22, 24, 30, 255], CYAN = [0, 158, 206, 255], MAG = [226, 38, 120, 255], YEL = [244, 196, 0, 255], GRN = [40, 160, 90, 255], ORG = [240, 110, 30, 255];
+const COLORS = [CYAN, MAG, YEL, GRN, ORG, [120, 80, 200, 255]];
+
+function rngOf(seed) {
+  return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const fmt = a => (Math.round(a * 1000) / 1000).toFixed(3);
+const pop = v => { let c = 0; while (v) { c += v & 1; v >>= 1; } return c; };
+function shuffle(a, rng) { for (let i = a.length - 1; i > 0; i--) { const j = rng() * (i + 1) | 0; const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+/* ------------------------------------------------------------ bitmaps (1 = ink) */
+function bm(w, h) { return { w, h, d: new Uint8Array(w * h) }; }
+function randBm(w, h, rng, p = 0.5) { const b = bm(w, h); for (let i = 0; i < b.d.length; i++) b.d[i] = rng() < p ? 1 : 0; return b; }
+function orAll(list) { const b = bm(list[0].w, list[0].h); for (const s of list) for (let i = 0; i < b.d.length; i++) b.d[i] |= s.d[i]; return b; }
+function xorAll(list) { const b = bm(list[0].w, list[0].h); for (const s of list) for (let i = 0; i < b.d.length; i++) b.d[i] ^= s.d[i]; return b; }
+function shifted(b, dx, dy) {
+  const o = bm(b.w, b.h);
+  for (let y = 0; y < b.h; y++) { const sy = y - dy; if (sy < 0 || sy >= b.h) continue; for (let x = 0; x < b.w; x++) { const sx = x - dx; if (sx >= 0 && sx < b.w) o.d[y * b.w + x] = b.d[sy * b.w + sx]; } }
+  return o;
+}
+function fromArr(a, w, h) { return { w, h, d: a }; }
+
+/* contrast: white fraction where the secret is white minus where it is black */
+function measure(st, S, sc) {
+  const { gw, bw, bh } = sc, sw = st.w; let w0 = 0, n0 = 0, w1 = 0, n1 = 0;
+  for (let y = 0; y < st.h; y++) for (let x = 0; x < sw; x++) {
+    const s = S[(y / bh | 0) * gw + (x / bw | 0)], white = st.d[y * sw + x] ? 0 : 1;
+    if (s) { n1++; w1 += white; } else { n0++; w0 += white; }
+  }
+  return (n0 ? w0 / n0 : 0) - (n1 ? w1 / n1 : 0);
+}
+/* how visible a cover is in one share: ink fraction on cover-black minus cover-white */
+function coverContrast(sh, C, sc) {
+  const { gw, bw, bh } = sc; let a = 0, na = 0, b = 0, nb = 0;
+  for (let y = 0; y < sh.h; y++) for (let x = 0; x < sh.w; x++) {
+    const c = C[(y / bh | 0) * gw + (x / bw | 0)], ink = sh.d[y * sh.w + x];
+    if (c) { na++; a += ink; } else { nb++; b += ink; }
+  }
+  return (na ? a / na : 0) - (nb ? b / nb : 0);
+}
+/* average each secret pixel's block, then stretch: what a scanner could recover */
+function blockAverage(st, sc) {
+  const { gw, gh, bw, bh } = sc, g = new Float32Array(gw * gh);
+  for (let py = 0; py < gh; py++) for (let px = 0; px < gw; px++) {
+    let k = 0; for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) k += st.d[(py * bh + y) * st.w + px * bw + x];
+    g[py * gw + px] = k / (bw * bh);
+  }
+  let lo = 1, hi = 0; for (const v of g) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const r = hi - lo || 1; for (let i = 0; i < g.length; i++) g[i] = (g[i] - lo) / r;
+  return g;
+}
+
+/* ------------------------------------------------------------ drawing */
+const imgCache = new WeakMap();
+function img(b, ink = INK) {
+  let m = imgCache.get(b); if (!m) { m = {}; imgCache.set(b, m); }
+  const key = ink.join(); if (m[key]) return m[key];
+  const c = mk(b.w, b.h), x = c.getContext('2d'), id = x.createImageData(b.w, b.h);
+  for (let i = 0; i < b.d.length; i++) if (b.d[i]) id.data.set(ink, i * 4);
+  x.putImageData(id, 0, 0); return (m[key] = c);
+}
+function greyImg(g, w, h) {
+  const c = mk(w, h), x = c.getContext('2d'), id = x.createImageData(w, h), P = [244, 240, 231], I = [22, 24, 30];
+  for (let i = 0; i < w * h; i++) { const t = g[i]; for (let k = 0; k < 3; k++) id.data[i * 4 + k] = P[k] + (I[k] - P[k]) * t; id.data[i * 4 + 3] = 255; }
+  x.putImageData(id, 0, 0); return c;
+}
+function desk(x, cw = x.canvas.width, ch = x.canvas.height) { x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.fillStyle = DESK; x.fillRect(0, 0, cw, ch); }
+function fitRect(aspect, pad = 22, cw = W, ch = H) {
+  let w = cw - 2 * pad, h = w / aspect; if (h > ch - 2 * pad) { h = ch - 2 * pad; w = h * aspect; }
+  return { x: Math.round((cw - w) / 2), y: Math.round((ch - h) / 2), w: Math.round(w), h: Math.round(h) };
+}
+function sheet(x, r) { x.fillStyle = 'rgba(60,50,30,.12)'; x.fillRect(r.x + 3, r.y + 4, r.w, r.h); x.fillStyle = PAPER; x.fillRect(r.x, r.y, r.w, r.h); }
+function film(x, r) { x.fillStyle = 'rgba(255,255,255,.28)'; x.fillRect(r.x, r.y, r.w, r.h); x.strokeStyle = 'rgba(22,24,30,.35)'; x.lineWidth = 1; x.strokeRect(r.x + .5, r.y + .5, r.w - 1, r.h - 1); }
+function put(x, b, r, ink = INK) { x.imageSmoothingEnabled = false; x.drawImage(img(b, ink), r.x, r.y, r.w, r.h); }
+function showBits(x, b, gw, gh, ink) { desk(x); const r = fitRect(gw / gh); sheet(x, r); put(x, b, r, ink); return r; }
+function showGrey(x, g, w, h) { desk(x); const r = fitRect(w / h); sheet(x, r); x.imageSmoothingEnabled = false; x.drawImage(greyImg(g, w, h), r.x, r.y, r.w, r.h); return r; }
+function label(x, t, px, py, align = 'left', size = 13) { x.fillStyle = TEXT; x.font = `500 ${size}px "JetBrains Mono", ui-monospace, monospace`; x.textAlign = align; x.textBaseline = 'middle'; x.fillText(t, px, py); }
+
+function tile(host, name, sub = '', desc = '') {
+  const f = document.createElement('figure'); f.className = 'tile';
+  const c = mk(W, H); f.append(c);
+  const n = document.createElement('p'); n.className = 'tn'; n.textContent = name; f.append(n);
+  const s = document.createElement('p'); s.className = 'ts'; s.textContent = sub; f.append(s);
+  if (desc) { const d = document.createElement('p'); d.className = 'td'; d.textContent = desc; f.append(d); }
+  host.append(f);
+  return { ctx: c.getContext('2d'), canvas: c, sub: t => { s.textContent = t; }, name: t => { n.textContent = t; } };
+}
+function rowLabel(host, t) { const p = document.createElement('p'); p.className = 'rowlabel'; p.textContent = t; host.append(p); }
+function seg(host, items, cur, onPick) {
+  host.textContent = '';
+  const btns = items.map(([v, t]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.setAttribute('aria-pressed', String(v === cur));
+    b.onclick = () => { btns.forEach(o => o.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); onPick(v); };
+    host.append(b); return b;
+  });
+}
+function onVisible(el, cb) { new IntersectionObserver(es => es.forEach(e => cb(e.isIntersecting))).observe(el); }
+function canvasPoint(cv, e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+
+/* ------------------------------------------------------------ secrets: drawn in a 120 x 80 design space */
+const rc = mk(8, 8), rx = rc.getContext('2d', { willReadFrequently: true });
+function raster(w, h, draw, fit = 1) {
+  rc.width = w; rc.height = h; rx.setTransform(1, 0, 0, 1, 0, 0); rx.fillStyle = '#fff'; rx.fillRect(0, 0, w, h);
+  const s = Math.min(w / 120, h / 80) * fit; rx.translate(w / 2, h / 2); rx.scale(s, s); rx.translate(-60, -40);
+  rx.fillStyle = '#000'; rx.strokeStyle = '#000'; rx.lineCap = 'round'; rx.lineJoin = 'round';
+  draw(rx);
+  const d = rx.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) g[i] = 1 - d[i * 4] / 255;
+  return g;
+}
+const bin = (g, t = 0.5) => { const o = new Uint8Array(g.length); for (let i = 0; i < g.length; i++) o[i] = g[i] > t ? 1 : 0; return o; };
+const SHAPES = {
+  kite(x) {
+    x.beginPath(); x.moveTo(60, 3); x.lineTo(83, 27); x.lineTo(60, 62); x.lineTo(37, 27); x.closePath(); x.fill();
+    x.strokeStyle = '#fff'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(60, 6); x.lineTo(60, 59); x.moveTo(40, 27); x.lineTo(80, 27); x.stroke();
+    x.strokeStyle = '#000'; x.lineWidth = 2.2; x.beginPath(); x.moveTo(60, 62); x.bezierCurveTo(52, 70, 72, 72, 64, 79); x.stroke();
+    for (const [bx, by] of [[57, 68], [66, 75]]) { x.beginPath(); x.moveTo(bx - 6, by - 4); x.lineTo(bx + 6, by + 4); x.lineTo(bx + 6, by - 4); x.lineTo(bx - 6, by + 4); x.closePath(); x.fill(); }
+  },
+  key(x) {
+    x.beginPath(); x.arc(32, 40, 17, 0, Math.PI * 2); x.arc(32, 40, 7.5, 0, Math.PI * 2, true); x.fill('evenodd');
+    x.fillRect(46, 35, 58, 10); x.fillRect(84, 44, 7, 12); x.fillRect(96, 44, 8, 16);
+  },
+  eye(x) {
+    x.beginPath(); x.moveTo(10, 40); x.quadraticCurveTo(60, 2, 110, 40); x.quadraticCurveTo(60, 78, 10, 40); x.fill();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(60, 40, 16, 0, 7); x.fill();
+    x.fillStyle = '#000'; x.beginPath(); x.arc(60, 40, 8.5, 0, 7); x.fill();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(64.5, 35.5, 3.2, 0, 7); x.fill();
+  },
+  bird(x) {
+    x.beginPath(); x.ellipse(56, 46, 27, 15, -0.12, 0, 7); x.fill();
+    x.beginPath(); x.arc(83, 33, 11, 0, 7); x.fill();
+    x.beginPath(); x.moveTo(92, 30); x.lineTo(106, 34); x.lineTo(92, 38); x.fill();
+    x.beginPath(); x.moveTo(34, 44); x.lineTo(10, 30); x.lineTo(16, 54); x.closePath(); x.fill();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(86, 31, 2.4, 0, 7); x.fill();
+    x.strokeStyle = '#fff'; x.lineWidth = 2.2; x.beginPath(); x.moveTo(40, 42); x.quadraticCurveTo(56, 34, 70, 44); x.stroke();
+    x.strokeStyle = '#000'; x.lineWidth = 2.6; x.beginPath(); x.moveTo(52, 60); x.lineTo(50, 74); x.moveTo(62, 60); x.lineTo(64, 74); x.stroke();
+  },
+  cage(x) {
+    x.lineWidth = 3;
+    x.beginPath(); x.arc(60, 34, 30, Math.PI, 0); x.stroke();
+    x.beginPath(); for (let bx = 32; bx <= 88; bx += 8) { const dy = Math.sqrt(Math.max(0, 900 - (bx - 60) ** 2)); x.moveTo(bx, 34 - dy); x.lineTo(bx, 70); } x.stroke();
+    x.fillRect(26, 68, 68, 8); x.beginPath(); x.arc(60, 3, 3.5, 0, 7); x.stroke();
+    x.beginPath(); x.moveTo(32, 50); x.lineTo(88, 50); x.stroke();
+  },
+  star(x) {
+    x.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 14 : 34, a = -Math.PI / 2 + i * Math.PI / 5; x.lineTo(60 + r * Math.cos(a), 42 + r * Math.sin(a)); } x.closePath(); x.fill();
+  },
+  moon(x) { /* grey */
+    const sky = x.createLinearGradient(0, 0, 0, 80); sky.addColorStop(0, '#9a9a9a'); sky.addColorStop(1, '#f0f0f0'); x.fillStyle = sky; x.fillRect(-60, -40, 240, 160);
+    const g = x.createRadialGradient(50, 30, 2, 60, 38, 30); g.addColorStop(0, '#202020'); g.addColorStop(1, '#5a5a5a'); x.fillStyle = g; x.beginPath(); x.arc(60, 38, 28, 0, 7); x.fill();
+    x.fillStyle = '#9a9a9a'; x.beginPath(); x.arc(72, 30, 24, 0, 7); x.fill();
+  },
+  tree(x) { /* grey */
+    x.fillStyle = '#ececec'; x.fillRect(-60, -40, 240, 160);
+    x.fillStyle = '#3a3a3a'; x.fillRect(55, 46, 10, 30);
+    const g = x.createRadialGradient(52, 22, 4, 60, 32, 34); g.addColorStop(0, '#5a5a5a'); g.addColorStop(1, '#151515'); x.fillStyle = g;
+    for (const [cx, cy, r] of [[60, 24, 20], [44, 36, 15], [76, 36, 15], [60, 42, 14]]) { x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); }
+    x.fillStyle = '#9a9a9a'; x.fillRect(-60, 74, 240, 40);
+  },
+  sphere(x) { /* grey */
+    const sky = x.createLinearGradient(0, 0, 0, 80); sky.addColorStop(0, '#b8b8b8'); sky.addColorStop(.7, '#f4f4f4'); sky.addColorStop(.7, '#8c8c8c'); sky.addColorStop(1, '#d0d0d0'); x.fillStyle = sky; x.fillRect(-60, -40, 240, 160);
+    x.fillStyle = 'rgba(0,0,0,.55)'; x.beginPath(); x.ellipse(66, 64, 30, 6, 0, 0, 7); x.fill();
+    const g = x.createRadialGradient(48, 24, 2, 58, 36, 30); g.addColorStop(0, '#ffffff'); g.addColorStop(.55, '#8a8a8a'); g.addColorStop(1, '#0c0c0c'); x.fillStyle = g; x.beginPath(); x.arc(58, 36, 26, 0, 7); x.fill();
+  },
+};
+function textShape(str) {
+  return x => {
+    let size = 60; x.font = `700 ${size}px "Bricolage Grotesque", sans-serif`;
+    const w = x.measureText(str).width; size = Math.min(60, size * 112 / Math.max(1, w));
+    x.font = `700 ${size}px "Bricolage Grotesque", sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(str, 60, 42);
+  };
+}
+const greyOf = (name, w, h) => raster(w, h, SHAPES[name] || textShape(name));
+const secret = (name, w, h) => bin(greyOf(name, w, h));
+
+/* ------------------------------------------------------------ dithers (darkness g in 0..1 -> ink bits) */
+function bayer(n) {
+  let M = [[0]];
+  while (M.length < n) { const s = M.length, o = []; for (let y = 0; y < 2 * s; y++) { o.push([]); for (let x = 0; x < 2 * s; x++) o[y].push(4 * M[y % s][x % s] + [[0, 2], [3, 1]][y / s | 0][x / s | 0]); } M = o; }
+  return M.flat();
+}
+function voidAndCluster(N, sigma) { /* the same routine as the halftone notebook */
+  const n = N * N, R = Math.ceil(sigma * 3), rng = rngOf(12345), kx = [], ky = [], kw = [];
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { kx.push(dx); ky.push(dy); kw.push(Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))); }
+  const K = kx.length, E = new Float64Array(n), B = new Uint8Array(n);
+  const splat = (i, s) => { const ix = i % N, iy = (i - ix) / N; for (let k = 0; k < K; k++) { const x = (ix + kx[k] + N) % N, y = (iy + ky[k] + N) % N; E[y * N + x] += s * kw[k]; } };
+  const tightest = () => { let bi = -1, bv = -Infinity; for (let i = 0; i < n; i++) if (B[i] === 1 && E[i] > bv) { bv = E[i]; bi = i; } return bi; };
+  const largestVoid = () => { let bi = -1, bv = Infinity; for (let i = 0; i < n; i++) if (B[i] === 0 && E[i] < bv) { bv = E[i]; bi = i; } return bi; };
+  const ones0 = Math.max(1, Math.round(n * 0.1)); let placed = 0;
+  while (placed < ones0) { const p = rng() * n | 0; if (!B[p]) { B[p] = 1; splat(p, 1); placed++; } }
+  for (let it = 0; it < n * 4; it++) { const c = tightest(); B[c] = 0; splat(c, -1); const v = largestVoid(); B[v] = 1; splat(v, 1); if (v === c) break; }
+  const rank = new Uint32Array(n), B0 = B.slice(), E0 = E.slice(); let ones = ones0;
+  while (ones > 0) { const t = tightest(); B[t] = 0; splat(t, -1); ones--; rank[t] = ones; }
+  B.set(B0); E.set(E0); let r = ones0;
+  while (r < n) { const w = largestVoid(); B[w] = 1; splat(w, 1); rank[w] = r; r++; }
+  return rank;
+}
+const B8 = bayer(8); let VAC = null;
+const DITHERS = {
+  thr: ['Threshold', (g) => bin(g)],
+  bayer: ['Bayer 8×8', (g, w, h) => { const o = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) o[y * w + x] = g[y * w + x] > (B8[(y % 8) * 8 + x % 8] + .5) / 64 ? 1 : 0; return o; }],
+  fs: ['Floyd–Steinberg', (g, w, h) => {
+    const e = Float32Array.from(g), o = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, v = e[i] > .5 ? 1 : 0, err = e[i] - v; o[i] = v;
+      if (x + 1 < w) e[i + 1] += err * 7 / 16;
+      if (y + 1 < h) { if (x > 0) e[i + w - 1] += err * 3 / 16; e[i + w] += err * 5 / 16; if (x + 1 < w) e[i + w + 1] += err / 16; }
+    }
+    return o;
+  }],
+  blue: ['Blue noise', (g, w, h) => { VAC = VAC || voidAndCluster(32, 1.5); const o = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) o[y * w + x] = g[y * w + x] > (VAC[(y % 32) * 32 + x % 32] + .5) / 1024 ? 1 : 0; return o; }],
+};
+
+/* ------------------------------------------------------------ schemes: each returns { shares, gw, gh, bw, bh, m } */
+const LAY = { 1: [1, 1], 2: [2, 1], 4: [2, 2], 8: [4, 2], 10: [5, 2], 15: [5, 3], 16: [4, 4], 32: [8, 4] };
+/* column-weight basis matrices for (k, 5): d[w] > 0 puts d[w] copies of every weight-w column in the white matrix, d[w] < 0 in the black one */
+const D5 = { 2: [4, 0, 0, -1, 0, 6], 3: [3, -1, 0, 0, 1, -3], 4: [2, -1, 0, 1, -2, 3], 5: [1, -1, 1, -1, 1, -1] };
+const A5 = { 2: 0.3, 3: 0.125, 4: 1 / 15, 5: 1 / 16 };
+
+function sRG(S, gw, gh, rng) { const a = randBm(gw, gh, rng), b = bm(gw, gh); for (let i = 0; i < S.length; i++) b.d[i] = a.d[i] ^ S[i]; return { shares: [a, b], gw, gh, bw: 1, bh: 1, m: 1 }; }
+const P6 = [3, 5, 6, 9, 10, 12];
+function sNS22(S, gw, gh, rng) {
+  const sw = gw * 2, a = bm(sw, gh * 2), b = bm(sw, gh * 2);
+  for (let py = 0; py < gh; py++) for (let px = 0; px < gw; px++) {
+    const p = P6[rng() * 6 | 0], q = S[py * gw + px] ? (~p & 15) : p;
+    for (let j = 0; j < 4; j++) { const i = (py * 2 + (j >> 1)) * sw + px * 2 + (j & 1); a.d[i] = (p >> j) & 1; b.d[i] = (q >> j) & 1; }
+  }
+  return { shares: [a, b], gw, gh, bw: 2, bh: 2, m: 4 };
+}
+function colsOf(n, d) { const C0 = [], C1 = []; for (let v = 0; v < 1 << n; v++) { const k = d[pop(v)]; for (let r = 0; r < Math.abs(k); r++) (k > 0 ? C0 : C1).push(v); } return { C0, C1 }; }
+const nsCols = n => colsOf(n, Array.from({ length: n + 1 }, (_, w) => w % 2 ? -1 : 1));
+function sBasis(S, gw, gh, n, { C0, C1 }, rng) {
+  const m = C0.length, [bw, bh] = LAY[m], sw = gw * bw, sh = gh * bh, out = Array.from({ length: n }, () => bm(sw, sh)), idx = [...Array(m).keys()];
+  for (let py = 0; py < gh; py++) for (let px = 0; px < gw; px++) {
+    const cols = S[py * gw + px] ? C1 : C0; shuffle(idx, rng);
+    for (let j = 0; j < m; j++) { const c = cols[idx[j]], i = (py * bh + (j / bw | 0)) * sw + px * bw + j % bw; for (let s = 0; s < n; s++) out[s].d[i] = (c >> s) & 1; }
+  }
+  return { shares: out, gw, gh, bw, bh, m };
+}
+/* Ateniese-style 2x2 extended shares: rows of weight 2 (cover white) or 3 (cover black); stack weight 3 (secret white) or 4 (black) */
+const EVT = [[[0b0011, 0b0101], [0b0011, 0b0111], [0b0111, 0b0011], [0b0111, 0b0111]], [[0b0011, 0b1100], [0b0011, 0b1110], [0b0111, 0b1100], [0b0111, 0b1011]]];
+function sEVC(S, C1, C2, gw, gh, rng) {
+  const sw = gw * 2, a = bm(sw, gh * 2), b = bm(sw, gh * 2), perm = [0, 1, 2, 3];
+  for (let py = 0; py < gh; py++) for (let px = 0; px < gw; px++) {
+    const p = py * gw + px, [r1, r2] = EVT[S[p]][C1[p] * 2 + C2[p]]; shuffle(perm, rng);
+    for (let j = 0; j < 4; j++) { const q = perm[j], i = (py * 2 + (q >> 1)) * sw + px * 2 + (q & 1); a.d[i] = (r1 >> j) & 1; b.d[i] = (r2 >> j) & 1; }
+  }
+  return { shares: [a, b], gw, gh, bw: 2, bh: 2, m: 4 };
+}
+/* random grid with covers: with probability lambda a pixel shows each sheet's cover, otherwise it carries the secret */
+function sRGCover(S, C1, C2, lam, gw, gh, rng) {
+  const a = bm(gw, gh), b = bm(gw, gh);
+  for (let i = 0; i < S.length; i++) { if (rng() < lam) { a.d[i] = C1[i]; b.d[i] = C2[i]; } else { const r = rng() < .5 ? 1 : 0; a.d[i] = r; b.d[i] = r ^ S[i]; } }
+  return { shares: [a, b], gw, gh, bw: 1, bh: 1, m: 1 };
+}
+/* progressive: black pixel -> one random sheet dark; white pixel -> all sheets dark with probability 1/n */
+function sProg(S, gw, gh, n, rng) {
+  const out = Array.from({ length: n }, () => bm(gw, gh));
+  for (let i = 0; i < S.length; i++) { if (S[i]) out[rng() * n | 0].d[i] = 1; else if (rng() < 1 / n) for (const s of out) s.d[i] = 1; }
+  return { shares: out, gw, gh, bw: 1, bh: 1, m: 1 };
+}
+
+/* ------------------------------------------------------------ 1. the trick */
+function trick() {
+  const cv = $('trickcv'), x = cv.getContext('2d'), CW = cv.width, CH = cv.height;
+  const gw = 60, gh = 40, S = secret('kite', gw, gh), sc = sNS22(S, gw, gh, rngOf(7));
+  const sw = 360, sh = 240, ax = 50, ay = 112, bx0 = CW - 50 - sw; let t = 0;
+  const slide = $('trick-slide');
+  function draw() {
+    desk(x); const bx = Math.round(bx0 + (ax - bx0) * t), A = { x: ax, y: ay, w: sw, h: sh }, B = { x: bx, y: ay, w: sw, h: sh };
+    sheet(x, A); put(x, sc.shares[0], A); film(x, B); put(x, sc.shares[1], B);
+    if (bx - ax > 230) { label(x, 'share 1 · paper', ax, ay - 18); label(x, 'share 2 · transparency', bx, ay - 18); }
+    else label(x, 'share 1 + share 2', ax, ay - 18);
+    label(x, t === 1 ? 'stacked: the kite' : t > .02 ? 'keep sliding…' : 'each sheet alone: noise', CW / 2, 40, 'center', 15);
+  }
+  function set(v) { t = v > .985 ? 1 : Math.max(0, v); slide.value = Math.round(t * 1000); draw(); }
+  slide.addEventListener('input', () => set(slide.value / 1000));
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { const [px] = canvasPoint(cv, e); drag = { px, t }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => { if (!drag) return; const [px] = canvasPoint(cv, e); set(drag.t + (px - drag.px) / (ax - bx0)); });
+  cv.addEventListener('pointerup', () => { drag = null; });
+  draw();
+
+  /* codebook */
+  const c2 = $('codecv'), y = c2.getContext('2d'); let p = 3;
+  function block(px, py, bits, cs = 32) { for (let j = 0; j < 4; j++) { y.fillStyle = (bits >> j) & 1 ? 'rgb(22,24,30)' : PAPER; y.fillRect(px + (j & 1) * cs, py + (j >> 1) * cs, cs - 2, cs - 2); } }
+  function code() {
+    desk(y); const cols = [230, 350, 470];
+    label(y, 'share 1', cols[0] + 31, 44, 'center'); label(y, 'share 2', cols[1] + 31, 44, 'center'); label(y, 'stacked', cols[2] + 31, 44, 'center');
+    label(y, 'white pixel', 30, 132); label(y, 'black pixel', 30, 282);
+    y.fillStyle = PAPER; y.fillRect(150, 112, 40, 40); y.fillStyle = 'rgb(22,24,30)'; y.fillRect(150, 262, 40, 40); y.strokeStyle = 'rgba(22,24,30,.4)'; y.strokeRect(150.5, 112.5, 39, 39);
+    const q = ~p & 15; block(cols[0], 100, p); block(cols[1], 100, p); block(cols[2], 100, p);
+    block(cols[0], 250, p); block(cols[1], 250, q); block(cols[2], 250, 15);
+    label(y, '2 of 4 dark → grey', cols[2] + 31, 186, 'center', 11.5); label(y, '4 of 4 dark → black', cols[2] + 31, 336, 'center', 11.5);
+    label(y, 'same pattern', cols[1] + 31, 186, 'center', 11.5); label(y, 'complement', cols[1] + 31, 336, 'center', 11.5);
+  }
+  code();
+  let timer = 0;
+  onVisible(c2, v => { clearInterval(timer); if (v && !REDUCE) timer = setInterval(() => { p = P6[Math.random() * 6 | 0]; code(); }, 1400); });
+}
+
+/* ------------------------------------------------------------ 2. cost of more people */
+function cost() {
+  const host = $('t-cost');
+  const tb = tile(host, 'Basis matrices'), t1 = tile(host, 'Share 1 alone'), ts = tile(host, 'All n stacked');
+  const gw = 36, gh = 24, S = secret('eye', gw, gh);
+  function matrices(x, n, { C0, C1 }) {
+    desk(x); const m = C0.length, cs = Math.max(6, Math.min(30, Math.floor(540 / m), Math.floor(150 / n)));
+    const ox = Math.round((W - cs * m) / 2);
+    [[C0, 'white pixel  S⁰ (even subsets)', 40], [C1, 'black pixel  S¹ (odd subsets)', 40 + n * cs + 70]].forEach(([C, t, oy]) => {
+      label(x, t, ox, oy - 14, 'left', 12);
+      for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) { x.fillStyle = (C[j] >> i) & 1 ? 'rgb(22,24,30)' : PAPER; x.fillRect(ox + j * cs, oy + i * cs, cs - 1, cs - 1); }
+    });
+  }
+  function run(n) {
+    const cols = nsCols(n), sc = sBasis(S, gw, gh, n, cols, rngOf(11 + n)), st = orAll(sc.shares), a = measure(st, S, sc);
+    matrices(tb.ctx, n, cols); showBits(t1.ctx, sc.shares[0], gw, gh); showBits(ts.ctx, st, gw, gh);
+    tb.sub(`${n} rows × ${sc.m} columns`); t1.sub(`${sc.m} subpixels per pixel`); ts.sub(`measured α ${fmt(a)} · theory 1/${sc.m}`);
+    $('cost-read').textContent = `n = ${n}: every secret pixel becomes ${sc.m} subpixels on each of ${n} sheets, and stacking all ${n} gives contrast ${fmt(a)}. ` + (n >= 5 ? 'The eye is close to losing it; this is why practical (n, n) schemes stop at five or six people.' : 'Try 5 and 6.');
+  }
+  seg($('cost-n'), [2, 3, 4, 5, 6].map(n => [n, String(n)]), 3, run); run(3);
+}
+
+/* ------------------------------------------------------------ 3. threshold */
+function threshold() {
+  const cv = $('thrcv'), x = cv.getContext('2d'); let k = 3, on = [1, 1, 1, 0, 0], avg = false, sc, S;
+  function build() {
+    const cols = colsOf(5, D5[k]), [bw] = LAY[cols.C0.length], gw = Math.round(300 / bw), gh = Math.round(gw * 2 / 3);
+    S = secret('key', gw, gh); sc = sBasis(S, gw, gh, 5, cols, rngOf(31 + k)); draw();
+  }
+  function draw() {
+    const sel = sc.shares.filter((_, i) => on[i]), c = sel.length;
+    if (!c) { desk(x); sheet(x, fitRect(1.5)); $('thr-read').textContent = 'No cards in the stack.'; return; }
+    const st = orAll(sel), a = measure(st, S, sc);
+    if (avg) showGrey(x, blockAverage(st, sc), sc.gw, sc.gh); else showBits(x, st, sc.gw, sc.gh);
+    $('thr-read').textContent = `(${k}, 5) scheme · m = ${sc.m} subpixels · ${c} of 5 cards stacked · ` +
+      (c < k ? `forbidden: fewer than k, provably blank (measured α ${fmt(a)})` : `qualified: measured α ${fmt(a)}` + (c === k ? ` (theory ${fmt(A5[k])})` : ' (more cards, more contrast)')) + (avg ? ' · shown block-averaged and stretched' : '');
+  }
+  seg($('thr-k'), [2, 3, 4, 5].map(v => [v, String(v)]), k, v => { k = v; on = on.map((_, i) => i < k ? 1 : 0); cards(); build(); });
+  function cards() {
+    const host = $('thr-cards'); host.textContent = '';
+    on.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = `Card ${i + 1}`; b.setAttribute('aria-pressed', String(!!o)); b.onclick = () => { on[i] ^= 1; b.setAttribute('aria-pressed', String(!!on[i])); draw(); }; host.append(b); });
+  }
+  const ab = $('thr-avg'); ab.onclick = () => { avg = !avg; ab.setAttribute('aria-pressed', String(avg)); draw(); };
+  cards(); build();
+}
+
+/* ------------------------------------------------------------ 4. meaningful shares */
+function meaningful() {
+  const host = $('t-mean');
+  function row(title, sc, S, covers, note) {
+    rowLabel(host, title);
+    covers.forEach((C, i) => { const t = tile(host, `Share ${i + 1}`, `cover contrast ${fmt(coverContrast(sc.shares[i], C, sc))}`); showBits(t.ctx, sc.shares[i], sc.gw, sc.gh); });
+    const st = orAll(sc.shares), t = tile(host, 'Stacked', `secret α ${fmt(measure(st, S, sc))}`, note); showBits(t.ctx, st, sc.gw, sc.gh);
+  }
+  let gw = 60, gh = 40;
+  const S = secret('key', gw, gh), C1 = secret('bird', gw, gh), C2 = secret('cage', gw, gh);
+  row('Extended VC · 2×2 blocks', sEVC(S, C1, C2, gw, gh, rngOf(21)), S, [C1, C2], 'Covers and secret both at ¼. The classic trade.');
+  gw = 120; gh = 80;
+  const S2 = secret('key', gw, gh), D1 = secret('bird', gw, gh), D2 = secret('cage', gw, gh);
+  row('Random grid with covers · λ = 0.25', sRGCover(S2, D1, D2, .25, gw, gh, rngOf(22)), S2, [D1, D2], 'No expansion. Faint covers, readable key.');
+  row('Random grid with covers · λ = 0.6', sRGCover(S2, D1, D2, .6, gw, gh, rngOf(23)), S2, [D1, D2], 'Clear covers; the key fades and both covers ghost into the stack.');
+  gw = 60; gh = 40;
+  const G1 = DITHERS.fs[1](greyOf('moon', gw, gh), gw, gh), G2 = DITHERS.fs[1](greyOf('tree', gw, gh), gw, gh);
+  row('Extended VC with dithered grey covers', sEVC(S, G1, G2, gw, gh, rngOf(24)), S, [G1, G2], 'Grey covers survive as dither texture: the idea behind halftone VC.');
+}
+
+/* ------------------------------------------------------------ 5. progressive */
+function progressive() {
+  const host = $('t-prog'), n = 6, gw = 120, gh = 80, S = secret('kite', gw, gh), sc = sProg(S, gw, gh, n, rngOf(41)), meas = [];
+  for (let t = 1; t <= n; t++) {
+    const st = orAll(sc.shares.slice(0, t)), a = measure(st, S, sc); meas.push(a);
+    const tl = tile(host, t === 1 ? '1 sheet' : `${t} sheets`, `measured α ${fmt(a)} · theory ${fmt((t - 1) / n)}`); showBits(tl.ctx, st, gw, gh);
+  }
+  const cv = $('progcv');
+  function curve() {
+    const dpr = Math.min(2, devicePixelRatio || 1), cw = cv.clientWidth, ch = cv.clientHeight; if (!cw) return;
+    cv.width = cw * dpr; cv.height = ch * dpr; const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cs = getComputedStyle(document.documentElement), fg = cs.getPropertyValue('--fg'), mu = cs.getPropertyValue('--muted'), ac = cs.getPropertyValue('--accent'), li = cs.getPropertyValue('--line');
+    x.clearRect(0, 0, cw, ch); const L = 54, R = 20, T = 22, B = 40, px = t => L + (t - 1) / (n - 1) * (cw - L - R), py = a => T + (1 - a) * (ch - T - B);
+    x.strokeStyle = li; x.lineWidth = 1; x.font = '500 11px "JetBrains Mono", monospace'; x.fillStyle = mu;
+    for (const a of [0, .25, .5, .75, 1]) { x.beginPath(); x.moveTo(L, py(a)); x.lineTo(cw - R, py(a)); x.stroke(); x.textAlign = 'right'; x.textBaseline = 'middle'; x.fillText(a.toFixed(2), L - 8, py(a)); }
+    for (let t = 1; t <= n; t++) { x.textAlign = 'center'; x.textBaseline = 'top'; x.fillText(String(t), px(t), ch - B + 8); }
+    x.textAlign = 'left'; x.fillText('sheets stacked', L, ch - 14);
+    x.strokeStyle = mu; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(px(1), py(0)); x.lineTo(px(n - .02), py(0)); x.lineTo(px(n), py(1 / 32)); x.stroke(); x.setLineDash([]);
+    x.fillStyle = mu; x.textBaseline = 'bottom'; x.textAlign = 'right'; x.fillText('threshold, all 6 needed: 0 until the last, then 1/32', px(n) - 4, py(0) - 6);
+    x.strokeStyle = ac; x.lineWidth = 2; x.beginPath(); for (let t = 1; t <= n; t++) { const X = px(t), Y = py((t - 1) / n); t === 1 ? x.moveTo(X, Y) : x.lineTo(X, Y); } x.stroke();
+    x.fillStyle = fg; meas.forEach((a, i) => { x.beginPath(); x.arc(px(i + 1), py(a), 4, 0, 7); x.fill(); });
+    x.fillStyle = ac; x.textAlign = 'left'; x.textBaseline = 'bottom'; x.fillText('progressive (t−1)/6 · dots measured', px(1) + 6, py(.83));
+  }
+  curve(); new ResizeObserver(curve).observe(cv); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', curve);
+}
+
+/* ------------------------------------------------------------ 6. dither */
+function dither() {
+  const host = $('t-dith'), gw = 150, gh = 100, g = greyOf('sphere', gw, gh), keys = ['thr', 'bayer', 'fs', 'blue'];
+  const bits = keys.map(k => DITHERS[k][1](g, gw, gh));
+  keys.forEach((k, i) => { const t = tile(host, DITHERS[k][0], 'the secret after dithering'); showBits(t.ctx, fromArr(bits[i], gw, gh), gw, gh); });
+  keys.forEach((k, i) => { const sc = sRG(bits[i], gw, gh, rngOf(51 + i)), t = tile(host, `${DITHERS[k][0]} · stacked`, `measured α ${fmt(measure(orAll(sc.shares), bits[i], sc))}`); showBits(t.ctx, orAll(sc.shares), gw, gh); });
+}
+
+/* ------------------------------------------------------------ 7. rotate, flip, fold */
+function turntable() {
+  const cv = $('turncv'), x = cv.getContext('2d'), CW = cv.width, CH = cv.height;
+  const NAMES = ['kite', 'key', 'eye', 'bird'], RINGS = 40, SECT = 288, RHO0 = .05, D = 520;
+  let X = 2, angle = 0, spin = false, imgs = null;
+  const disc = (s, X, sub) => {
+    const c = mk(D, D), y = c.getContext('2d'), cx = D / 2, R = D / 2 - 2, dr = (1 - RHO0) / RINGS, da = Math.PI * 2 / SECT;
+    y.fillStyle = 'rgb(22,24,30)'; y.beginPath();
+    for (let k = 0; k < X; k++) for (let r = 0; r < RINGS; r++) {
+      const ri = (RHO0 + r * dr + k * dr / X) * R, ro = (RHO0 + r * dr + (k + 1) * dr / X) * R;
+      for (let j = 0; j < SECT; j++) if (s[k][r * SECT + j]) { const a0 = j * da, a1 = a0 + da; y.moveTo(cx + ro * Math.cos(a0), cx + ro * Math.sin(a0)); y.arc(cx, cx, ro, a0, a1); y.arc(cx, cx, ri, a1, a0, true); y.closePath(); }
+    }
+    y.fill(); return c;
+  };
+  function build() {
+    const rng = rngOf(61 + X), step = SECT / X, N = 120, dr = (1 - RHO0) / RINGS;
+    const secs = NAMES.slice(0, X).map(nm => secret(nm, N, N));
+    const sample = (k, r, j) => { const rho = (RHO0 + (r + .5) * dr) * .62, th = (j + .5) * Math.PI * 2 / SECT; const u = Math.min(N - 1, Math.max(0, (.5 + rho * Math.cos(th)) * N | 0)), v = Math.min(N - 1, Math.max(0, (.5 + rho * Math.sin(th)) * N | 0)); return secs[k][v * N + u]; };
+    const s1 = [], s2 = [];
+    for (let k = 0; k < X; k++) { s1.push(randBm(SECT, RINGS, rng).d); s2.push(new Uint8Array(RINGS * SECT)); }
+    for (let k = 0; k < X; k++) for (let r = 0; r < RINGS; r++) for (let j = 0; j < SECT; j++) { const jj = (j + k * step) % SECT; s2[k][r * SECT + j] = s1[k][r * SECT + jj] ^ sample(k, r, jj); }
+    imgs = [disc(s1, X), disc(s2, X)]; draw();
+  }
+  function draw() {
+    desk(x); const cx = CW / 2, cy = CH / 2 + 10, R = 172, step = 360 / X;
+    x.fillStyle = PAPER; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.fill();
+    x.drawImage(imgs[0], cx - R, cy - R, 2 * R, 2 * R);
+    x.save(); x.translate(cx, cy); x.rotate(angle * Math.PI / 180); x.drawImage(imgs[1], -R, -R, 2 * R, 2 * R); x.restore();
+    [[0, 70], [1, CW - 70]].forEach(([i, tx]) => { x.fillStyle = PAPER; x.beginPath(); x.arc(tx, 74, 54, 0, 7); x.fill(); x.drawImage(imgs[i], tx - 54, 20, 108, 108); label(x, `sheet ${i + 1}`, tx, 142, 'center', 11); });
+    const k = Math.round(angle / step) % X, on = Math.abs(angle - Math.round(angle / step) * step) < .5;
+    $('turn-read').textContent = on ? `${Math.round(angle)}°: secret ${k + 1}, the ${NAMES[k]}. Try ${Math.round(((k + 1) % X) * step)}°.` : `${Math.round(angle)}°: the cells meet random partners, so you see noise. Secrets sit at every ${step}°.`;
+  }
+  const sl = $('turn-a');
+  sl.addEventListener('input', () => { angle = +sl.value; draw(); });
+  seg($('turn-x'), [[2, '2'], [3, '3'], [4, '4']], X, v => { X = v; angle = 0; sl.value = 0; build(); });
+  let raf = 0, last = 0, vis = false;
+  const tick = t => { if (!spin || !vis) { raf = 0; return; } const dt = last ? (t - last) / 1000 : 0; last = t; angle = (angle + dt * 24) % 360; sl.value = Math.round(angle); draw(); raf = requestAnimationFrame(tick); };
+  const start = () => { if (spin && vis && !raf) { last = 0; raf = requestAnimationFrame(tick); } };
+  const sb = $('turn-spin'); sb.onclick = () => { spin = !spin; sb.setAttribute('aria-pressed', String(spin)); if (!spin) { const step = 360 / X; angle = Math.round(angle / step) * step % 360; sl.value = angle; draw(); } start(); };
+  onVisible(cv, v => { vis = v; start(); });
+  build();
+}
+
+/* flip and fold share the strip trick: cells are 1 x 2 subpixels, top strip and bottom strip */
+function flip() {
+  const cv = $('flipcv'), x = cv.getContext('2d'), gw = 120, gh = 80, rng = rngOf(71);
+  const A = secret('kite', gw, gh), B = secret('bird', gw, gh), s1 = randBm(gw, gh * 2, rng), s2 = bm(gw, gh * 2);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const top = (2 * j) * gw, bot = (2 * j + 1) * gw, m = gw - 1 - i;
+    s2.d[top + i] = s1.d[top + i] ^ A[j * gw + i];
+    s2.d[bot + i] = s1.d[bot + m] ^ B[j * gw + m];
+  }
+  let sx = 1, target = 1, raf = 0;
+  const r = fitRect(1.5, 40, cv.width, cv.height);
+  function draw() {
+    desk(x); sheet(x, r); put(x, s1, r);
+    x.save(); x.translate(r.x + r.w / 2, 0); x.scale(sx, 1); x.translate(-(r.x + r.w / 2), 0); film(x, r); put(x, s2, r); x.restore();
+    label(x, sx > .99 ? 'face up: the kite' : sx < -.99 ? 'flipped: the bird' : 'turning…', cv.width / 2, 20, 'center');
+  }
+  const go = $('flip-go');
+  go.onclick = () => {
+    target = -target; go.setAttribute('aria-pressed', String(target < 0));
+    if (REDUCE) { sx = target; draw(); return; }
+    const t0 = performance.now(), from = sx; cancelAnimationFrame(raf);
+    const step = t => { const k = Math.min(1, (t - t0) / 700); sx = from + (target - from) * (0.5 - Math.cos(Math.PI * k) / 2); draw(); if (k < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+  };
+  draw();
+}
+function fold() {
+  const cv = $('foldcv'), x = cv.getContext('2d'), gw = 120, gh = 80, half = gw / 2, rng = rngOf(81);
+  const T = secret('star', half, gh), s = randBm(gw, gh * 2, rng);
+  for (let j = 0; j < gh; j++) for (let i = half; i < gw; i++) { const m = gw - 1 - i, bot = (2 * j + 1) * gw; s.d[bot + i] = s.d[bot + m] ^ T[j * half + m]; }
+  let sx = 1, target = 1, raf = 0;
+  const r = fitRect(1.5, 40, cv.width, cv.height), cx = r.x + r.w / 2, im = img(s);
+  function draw() {
+    desk(x); x.imageSmoothingEnabled = false;
+    const L = { x: r.x, y: r.y, w: r.w / 2, h: r.h }; film(x, L); x.drawImage(im, 0, 0, half, gh * 2, L.x, L.y, L.w, L.h);
+    x.save(); x.translate(cx, 0); x.scale(sx, 1); x.translate(-cx, 0); film(x, { x: cx, y: r.y, w: r.w / 2, h: r.h }); x.drawImage(im, half, 0, half, gh * 2, cx, r.y, r.w / 2, r.h); x.restore();
+    label(x, sx > .99 ? 'open: noise' : sx < -.99 ? 'folded: the tag' : 'folding…', cv.width / 2, 20, 'center');
+  }
+  const go = $('fold-go');
+  go.onclick = () => {
+    target = -target; go.setAttribute('aria-pressed', String(target < 0)); go.textContent = target < 0 ? 'Unfold' : 'Fold the sheet';
+    if (REDUCE) { sx = target; draw(); return; }
+    const t0 = performance.now(), from = sx; cancelAnimationFrame(raf);
+    const step = t => { const k = Math.min(1, (t - t0) / 800); sx = from + (target - from) * (0.5 - Math.cos(Math.PI * k) / 2); draw(); if (k < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+  };
+  draw();
+}
+
+/* ------------------------------------------------------------ 8. OR vs XOR */
+function orxor() {
+  const host = $('t-xor'), gw = 120, gh = 80, S = secret('eye', gw, gh), sc = sRG(S, gw, gh, rngOf(91));
+  let t = tile(host, 'Share 1', 'random bits'); showBits(t.ctx, sc.shares[0], gw, gh);
+  const st = orAll(sc.shares); t = tile(host, 'Stacked (OR)', `measured α ${fmt(measure(st, S, sc))}`, 'Light passes only where both sheets are clear.'); showBits(t.ctx, st, gw, gh);
+  const xs = xorAll(sc.shares); t = tile(host, 'Computed (XOR)', `measured α ${fmt(measure(xs, S, sc))}`, 'Exact: the secret, bit for bit.'); showBits(t.ctx, xs, gw, gh);
+  const g = greyOf('sphere', gw, gh), rng = rngOf(92), out = new Float32Array(gw * gh); let same = 0;
+  for (let i = 0; i < g.length; i++) { const v = Math.round(g[i] * 255), r = rng() * 256 | 0, s2 = r ^ v, back = r ^ s2; out[i] = back / 255; same += back === v; }
+  t = tile(host, 'Grey, computed (XOR)', `${same === g.length ? 'all' : same} of ${g.length} bytes exact`, 'Each share is a field of random bytes; XOR restores every grey.'); showGrey(t.ctx, out, gw, gh);
+}
+
+/* ------------------------------------------------------------ 9. forged share */
+function cheat() {
+  const host = $('t-cheat'), gw = 120, gh = 80, S = secret('NORTH', gw, gh), F = secret('SOUTH', gw, gh), sc = sRG(S, gw, gh, rngOf(101));
+  const [r1, r2] = sc.shares, forged = bm(gw, gh), verify = bm(gw, gh);
+  for (let i = 0; i < S.length; i++) { forged.d[i] = F[i] ? 1 - r2.d[i] : r2.d[i]; verify.d[i] = 1 - r1.d[i]; }
+  let t = tile(host, 'Honest stack', 'share 1 + share 2', 'The real message.'); showBits(t.ctx, orAll([r1, r2]), gw, gh);
+  t = tile(host, 'Forged stack', 'forged 1 + share 2', 'The forged sheet is just as random, but it says something else.'); showBits(t.ctx, orAll([forged, r2]), gw, gh);
+  t = tile(host, 'Verify the honest sheet', 'share 1 + verification', 'Solid black: it passes.'); showBits(t.ctx, orAll([r1, verify]), gw, gh);
+  const vf = orAll([forged, verify]); let specks = 0; for (const v of vf.d) specks += 1 - v;
+  t = tile(host, 'Verify the forged sheet', `${specks} tampered pixels found`, 'White specks mark the changes.'); showBits(t.ctx, vf, gw, gh);
+}
+
+/* ------------------------------------------------------------ 10. letters */
+function letters() {
+  const host = $('t-letters'), gw = 24, gh = 16, S = secret('kite', gw, gh), sc = sRG(S, gw, gh, rngOf(111));
+  const TXT = ['THE KITE ONLY FLIES WHEN THE WIND AND THE STRING AGREE ', 'HOLD ON LET GO HOLD ON LET GO PULL GENTLY AND LOOK UP '];
+  const cs = Math.floor(Math.min((W - 40) / gw, (H - 40) / gh)), ox = Math.round((W - cs * gw) / 2), oy = Math.round((H - cs * gh) / 2);
+  function layer(b, txt) {
+    const c = mk(W, H), y = c.getContext('2d'); y.fillStyle = '#fff'; y.fillRect(0, 0, W, H);
+    y.font = `700 ${Math.round(cs * .78)}px "Bricolage Grotesque", sans-serif`; y.textAlign = 'center'; y.textBaseline = 'middle';
+    for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+      const ch = txt[(j * gw + i) % txt.length], px = ox + i * cs, py = oy + j * cs;
+      if (b.d[j * gw + i]) { y.fillStyle = 'rgb(22,24,30)'; y.fillRect(px, py, cs, cs); y.fillStyle = '#fff'; } else y.fillStyle = 'rgb(22,24,30)';
+      y.fillText(ch, px + cs / 2, py + cs / 2 + 1);
+    }
+    return c;
+  }
+  const L1 = layer(sc.shares[0], TXT[0]), L2 = layer(sc.shares[1], TXT[1]);
+  function paint(t, layers) { const x = t.ctx; desk(x); sheet(x, { x: ox - 10, y: oy - 10, w: cs * gw + 20, h: cs * gh + 20 }); x.globalCompositeOperation = 'multiply'; layers.forEach(l => x.drawImage(l, 0, 0)); x.globalCompositeOperation = 'source-over'; }
+  paint(tile(host, 'Share 1', 'a page of text'), [L1]);
+  paint(tile(host, 'Share 2', 'another page'), [L2]);
+  paint(tile(host, 'Stacked', `measured α ${fmt(measure(orAll(sc.shares), S, sc))}`), [L1, L2]);
+}
+
+/* ------------------------------------------------------------ 11. lab */
+function lab() {
+  const cv = $('labcv'), x = cv.getContext('2d');
+  const L = { secret: 'kite', text: 'HELLO', dither: 'fs', res: 90, scheme: 'rg', k: 3, n: 4, lam: .4, ink: 'black', on: [], dx: 0, dy: 0, seed: 1 };
+  const SCHEMES = {
+    rg: ['Random grid', 'Kafri–Keren random grid: no pixel expansion, α = ½.'],
+    ns: ['Classic 2×2', 'Naor–Shamir: every pixel becomes a 2×2 block, α = ½.'],
+    cover: ['Covers', 'Random grid with a bird and a cage as covers. λ trades cover clarity for secret clarity.'],
+    prog: ['Progressive', 'Clarity grows with each sheet; one sheet alone is blank.'],
+    thr: ['Threshold', 'Any k of 5 sheets reveal it; fewer show nothing.'],
+    xor: ['XOR', 'Computed instead of stacked: exact recovery.'],
+  };
+  let cur = null;
+  function build() {
+    const isText = L.secret === 'text', isGrey = L.secret === 'sphere';
+    $('lab-textrow').hidden = !isText; $('lab-dithrow').hidden = !isGrey;
+    $('lab-krow').hidden = L.scheme !== 'thr'; $('lab-nrow').hidden = L.scheme !== 'prog'; $('lab-lamrow').hidden = L.scheme !== 'cover';
+    $('lab-snote').textContent = SCHEMES[L.scheme][1];
+    let bw = 1; const cols = L.scheme === 'thr' ? colsOf(5, D5[L.k]) : null;
+    if (L.scheme === 'ns') bw = 2; if (cols) bw = LAY[cols.C0.length][0] / 2; /* threshold blocks are wide; keep the secret legible */
+    const gw = Math.max(12, Math.round(L.res / bw)), gh = Math.max(8, Math.round(gw * 2 / 3)), name = isText ? (L.text.trim() || ' ') : L.secret;
+    const S = isGrey ? DITHERS[L.dither][1](greyOf('sphere', gw, gh), gw, gh) : secret(name, gw, gh), rng = rngOf(L.seed * 977 + 13);
+    let sc;
+    if (L.scheme === 'rg' || L.scheme === 'xor') sc = sRG(S, gw, gh, rng);
+    else if (L.scheme === 'ns') sc = sNS22(S, gw, gh, rng);
+    else if (L.scheme === 'cover') sc = sRGCover(S, secret('bird', gw, gh), secret('cage', gw, gh), L.lam, gw, gh, rng);
+    else if (L.scheme === 'prog') sc = sProg(S, gw, gh, L.n, rng);
+    else sc = sBasis(S, gw, gh, 5, cols, rng);
+    const n = sc.shares.length;
+    if (L.on.length !== n) { L.on = Array.from({ length: n }, (_, i) => L.scheme === 'thr' ? i < L.k : true); L.order = L.on.map((o, i) => i).filter(i => L.on[i]); chips(); }
+    cur = { sc, S }; draw();
+  }
+  function chips() {
+    const host = $('lab-on'); host.textContent = '';
+    L.on.forEach((o, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = `Sheet ${i + 1}`; b.setAttribute('aria-pressed', String(!!o));
+      b.onclick = () => { L.on[i] = !L.on[i]; L.order = L.order.filter(j => j !== i); if (L.on[i]) L.order.push(i); b.setAttribute('aria-pressed', String(L.on[i])); draw(); };
+      host.append(b);
+    });
+  }
+  function stackOf() {
+    const { sc } = cur, idx = L.order.filter(i => L.on[i]); if (!idx.length) return null;
+    const top = idx[idx.length - 1], list = idx.map(i => i === top && (L.dx || L.dy) ? shifted(sc.shares[i], L.dx, L.dy) : sc.shares[i]);
+    return { idx, list, st: L.scheme === 'xor' ? xorAll(list) : orAll(list) };
+  }
+  function draw() {
+    const { sc, S } = cur, s = stackOf(), r = fitRect(sc.gw / sc.gh);
+    desk(x); sheet(x, r);
+    $('lab-off-o').textContent = `${L.dx}, ${L.dy}`;
+    if (!s) { $('lab-read').textContent = 'No sheets in the stack.'; $('lab-a').textContent = '—'; $('lab-bar').style.width = '0%'; return; }
+    if (L.ink === 'color' && L.scheme !== 'xor') { x.globalCompositeOperation = 'multiply'; s.list.forEach((b, j) => put(x, b, r, COLORS[s.idx[j] % COLORS.length])); x.globalCompositeOperation = 'source-over'; }
+    else put(x, s.st, r);
+    const a = measure(s.st, S, sc), c = s.idx.length, n = sc.shares.length;
+    $('lab-a').textContent = fmt(a); $('lab-bar').style.width = `${Math.max(0, Math.min(1, a)) * 100}%`;
+    let q = '';
+    if (L.scheme === 'thr') q = c >= L.k ? ' · qualified' : ' · forbidden (fewer than k)';
+    else if (L.scheme === 'prog') q = c > 1 ? ` · theory ${fmt((c - 1) / n)}` : ' · one sheet: blank';
+    else q = c < 2 ? ' · one sheet: blank' : '';
+    $('lab-read').textContent = `${SCHEMES[L.scheme][0]} · ${c} of ${n} sheets ${L.scheme === 'xor' ? 'XORed' : 'stacked'} · m = ${sc.m} · ${sc.gw}×${sc.gh} secret pixels · measured α ${fmt(a)}${q}` + (L.dx || L.dy ? ` · top sheet off by ${L.dx}, ${L.dy}` : '');
+  }
+  seg($('lab-secret'), [['kite', 'Kite'], ['key', 'Key'], ['eye', 'Eye'], ['bird', 'Bird'], ['text', 'Text'], ['sphere', 'Grey sphere']], L.secret, v => { L.secret = v; build(); });
+  seg($('lab-dither'), Object.entries(DITHERS).map(([k, [t]]) => [k, t]), L.dither, v => { L.dither = v; build(); });
+  seg($('lab-scheme'), Object.entries(SCHEMES).map(([k, [t]]) => [k, t]), L.scheme, v => { L.scheme = v; L.on = []; L.dx = L.dy = 0; build(); });
+  seg($('lab-k'), [2, 3, 4, 5].map(v => [v, String(v)]), L.k, v => { L.k = v; L.on = []; build(); });
+  seg($('lab-n'), [2, 3, 4, 5, 6].map(v => [v, String(v)]), L.n, v => { L.n = v; L.on = []; build(); });
+  seg($('lab-ink'), [['black', 'Black'], ['color', 'One color per sheet']], L.ink, v => { L.ink = v; draw(); });
+  const txt = $('lab-text'); txt.addEventListener('input', () => { L.text = txt.value.toUpperCase(); build(); });
+  const res = $('lab-res'); const resO = () => { $('lab-res-o').textContent = `${L.res} px wide`; };
+  res.addEventListener('input', () => { L.res = +res.value; resO(); build(); }); resO();
+  const lam = $('lab-lam'); const lamO = () => { $('lab-lam-o').textContent = L.lam.toFixed(2); };
+  lam.addEventListener('input', () => { L.lam = lam.value / 100; lamO(); build(); }); lamO();
+  $('lab-seed').onclick = () => { L.seed++; build(); };
+  $('lab-center').onclick = () => { L.dx = L.dy = 0; draw(); };
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { const [px, py] = canvasPoint(cv, e); drag = { px, py, dx: L.dx, dy: L.dy }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => {
+    if (!drag) return; const [px, py] = canvasPoint(cv, e), sh = cur.sc.shares[0], r = fitRect(cur.sc.gw / cur.sc.gh);
+    const dx = drag.dx + Math.round((px - drag.px) / (r.w / sh.w)), dy = drag.dy + Math.round((py - drag.py) / (r.h / sh.h));
+    if (dx !== L.dx || dy !== L.dy) { L.dx = dx; L.dy = dy; draw(); }
+  });
+  cv.addEventListener('pointerup', () => { drag = null; });
+  $('lab-save').onclick = () => {
+    const { sc } = cur, n = sc.shares.length, P = Math.max(2, Math.floor(1600 / sc.gw)), w = sc.gw * P, h = sc.gh * P, M = 90;
+    const c = mk(w + 2 * M, n * (h + 2 * M)), y = c.getContext('2d'); y.fillStyle = '#fff'; y.fillRect(0, 0, c.width, c.height);
+    sc.shares.forEach((b, i) => {
+      const ox = M, oy = i * (h + 2 * M) + M; y.imageSmoothingEnabled = false; y.drawImage(img(b), ox, oy, w, h);
+      y.strokeStyle = '#000'; y.lineWidth = 2;
+      for (const [cx, cy] of [[ox, oy], [ox + w, oy], [ox, oy + h], [ox + w, oy + h]]) { y.beginPath(); y.moveTo(cx - 40, cy); y.lineTo(cx - 8, cy); y.moveTo(cx + 8, cy); y.lineTo(cx + 40, cy); y.moveTo(cx, cy - 40); y.lineTo(cx, cy - 8); y.moveTo(cx, cy + 8); y.lineTo(cx, cy + 40); y.stroke(); }
+      y.fillStyle = '#000'; y.font = '500 22px "JetBrains Mono", monospace'; y.textBaseline = 'alphabetic';
+      y.fillText(`Sheet ${i + 1} of ${n} · ${SCHEMES[L.scheme][0]} · print at 100% on transparency film`, ox, oy - 34);
+    });
+    c.toBlob(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `vc-sheets-${L.scheme}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  };
+  build();
+}
+
+/* ------------------------------------------------------------ 12. story */
+function story() {
+  const host = $('t-story'), n = 4, gw = 120, gh = 80, S = secret('kite', gw, gh), sc = sProg(S, gw, gh, n, rngOf(121));
+  const beats = [['Pip’s sheet', 'Static. Pip is alone with a sheet of dust.'], ['Jun joins', 'Something is there, if you squint.'], ['Oli joins', 'A shape: a diamond with a tail.'], ['Sam joins: the climax', 'The kite, as clear as it gets.']];
+  beats.forEach(([nm, d], i) => { const st = orAll(sc.shares.slice(0, i + 1)), t = tile(host, nm, `${i + 1} of 4 sheets · α ${fmt(measure(st, S, sc))}`, d); showBits(t.ctx, st, gw, gh); });
+}
+
+/* squint: blur and stretch a canvas, the way half-closed eyes average fine noise */
+document.querySelectorAll('[data-squint]').forEach(b => { b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); $(b.dataset.squint).style.filter = on ? 'blur(1.4px) contrast(2.2)' : ''; }; });
+
+/* ------------------------------------------------------------ boot */
+try { await Promise.all([document.fonts.load('700 40px "Bricolage Grotesque"'), document.fonts.load('500 13px "JetBrains Mono"')]); } catch (e) { /* fall back to system fonts */ }
+for (const f of [trick, cost, threshold, meaningful, progressive, dither, turntable, flip, fold, orxor, cheat, letters, lab, story]) {
+  try { f(); } catch (e) { console.error(f.name, e); }
+}
+</script>
+</body>
+</html>
