@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Pictures in One</title>
+<meta name="description" content="Hybrid images and the eye's spatial-frequency channels: a calibrated Campbell–Robson chart, an image split into frequency bands, a hybrid maker that predicts the distance where the picture flips, and Harmon and Julesz's blocky portrait.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Sections are static HTML; every canvas is drawn by the script at the bottom (2D canvas only). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#F6F3EC;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards a{font:500 12px/1 var(--font-mono)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+table.plain th,table.plain td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td{color:var(--muted)}
+table.plain td:first-child{font-weight:600;white-space:nowrap;color:var(--fg)}
+
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px}
+.tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tile{display:flex;flex-direction:column;margin:0;min-width:0}
+.tile canvas{display:block;width:100%;aspect-ratio:1;background:var(--stage);border:1px solid var(--line)}
+.tile .tn{font:600 13.5px/1.25 var(--font-display);margin:8px 0 0}
+.tile .ts{font:400 11px/1.3 var(--font-mono);color:var(--accent);margin:3px 0 0}
+.tile .td{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.42}
+
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel canvas,canvas.plot{display:block;width:100%;height:auto;background:var(--stage);border:1px solid var(--line);touch-action:none}
+#crcv{height:380px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.bar input[type=range]{flex:1 1 160px;accent-color:var(--accent);margin:0}
+.bar label,.lbl{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.desc b{color:var(--accent);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{display:flex;align-items:center;gap:6px;font:500 12px/1.2 var(--font-mono);background:var(--surface);border:1px solid var(--line);padding:6px 8px;cursor:pointer}
+.chips input{accent-color:var(--accent);margin:0}
+
+.card-cal{height:54px;border:2px dashed var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;font:500 11px/1.2 var(--font-mono);color:var(--accent);flex:none}
+.maker{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:24px;align-items:start}
+.maker .out{display:flex;flex-direction:column;gap:10px;min-width:0}
+#hy{display:block;width:100%;max-width:560px;aspect-ratio:1;background:var(--stage);border:1px solid var(--line)}
+.controls{display:flex;flex-direction:column;gap:12px;min-width:0}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 12px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.row{display:flex;flex-direction:column;gap:5px;min-width:0}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.row input[type=file]{font:400 12px var(--font-body);color:var(--muted);max-width:100%}
+.step{display:flex;align-items:center;justify-content:center;background:var(--stage);border:1px solid var(--line);height:300px;overflow:hidden}
+.step canvas{display:block;image-rendering:auto}
+
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+
+@media (max-width:900px){
+  .maker{grid-template-columns:minmax(0,1fr)}
+  .tiles.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .desc{font-size:11.5px}
+}
+@media (max-width:560px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Images · canvas · vision science</p>
+  <h1>Two pictures in one</h1>
+  <p class="lede">A hybrid image shows one picture up close and a different one from across the room. It works because the visual system does not see an image whole: it splits it into channels by how fine the detail is, and which channels you can use depends on how far away you stand. This page measures your own sensitivity, takes pictures apart into those channels, builds hybrids and predicts the distance at which each one flips. All pictures are drawn on the page or come from this notebook's sprite sheets, and you can load your own.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#borrow">Elements to borrow</a></li>
+    <li><a href="#csf">Your contrast sensitivity</a></li>
+    <li><a href="#bands">An image in bands</a></li>
+    <li><a href="#make">Make a hybrid</a></li>
+    <li><a href="#blocks">The blocky portrait</a></li>
+    <li><a href="#glossary">Glossary and sources</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="borrow" aria-labelledby="borrow-h">
+  <header><p class="eyebrow">Overview</p><h2 id="borrow-h">Elements to borrow</h2></header>
+  <div class="cards">
+    <div><h3>Distance as a reveal</h3><p>A poster, a mural or a game map that changes meaning as the viewer walks up to it. <a href="#make">Make a hybrid</a></p></div>
+    <div><h3>Thumbnail versus full size</h3><p>The small version and the large version of one image can say different things on purpose. <a href="#make">The pyramid</a></p></div>
+    <div><h3>Squint for the big shapes</h3><p>Squinting deletes the fine bands and leaves values and masses: the painter's check, now with a mechanism. <a href="#bands">Bands</a></p></div>
+    <div><h3>Edges that hide a picture</h3><p>Sharp block edges can bury a coarse image; blur or distance digs it out. <a href="#blocks">Blocky portrait</a></p></div>
+    <div><h3>Mood in the coarse layer</h3><p>A face can be calm in its detail and angry in its blur. Viewers read the blur first. <a href="#make">Smile / frown</a></p></div>
+  </div>
+</section>
+
+<section class="demo" id="csf" aria-labelledby="csf-h">
+  <header><p class="eyebrow">1 · Campbell and Robson, 1968</p><h2 id="csf-h">Your contrast sensitivity</h2></header>
+  <div class="prose">
+    <p>The chart below is one image. Stripes get finer from left to right, and their contrast falls from bottom to top. The contrast is exactly the same along every row, yet the stripes seem to reach higher in the middle than at either side: <b>where they fade is your own contrast sensitivity function</b>, drawn by your eye. It is band-pass. You are most sensitive at a few cycles per degree of visual angle and much less to very coarse or very fine patterns.</p>
+    <p>Neurons in primary visual cortex are tuned to narrow ranges of stripe width, so the visual system works like a bank of spatial-frequency filters, much as the cochlea is a bank of sound-frequency filters (<a href="../../music/consonance/">the consonance page</a>). The curve is the envelope of those channels. To put real units on the axis, match the dashed box to a bank card and set your viewing distance. Then click where the stripes vanish at a few points to trace your curve.</p>
+  </div>
+  <div class="panel">
+    <canvas id="crcv" aria-label="Campbell–Robson contrast sensitivity chart"></canvas>
+    <div class="bar"><div class="card-cal" id="cal-card">bank card · 85.6 mm</div><label for="cal-w">Card width</label><input type="range" id="cal-w" min="200" max="500" value="324"></div>
+    <div class="bar"><label for="cal-d">Viewing distance</label><input type="range" id="cal-d" min="25" max="300" value="60"><output id="cal-do" class="lbl"></output><button class="btn" id="cr-model" aria-pressed="true">Show model curve</button><button class="btn" id="cr-clear">Clear my points</button></div>
+    <p class="desc" id="cr-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="bands" aria-labelledby="bands-h">
+  <header><p class="eyebrow">2 · The Laplacian pyramid</p><h2 id="bands-h">An image in bands</h2></header>
+  <div class="prose">
+    <p>Blur an image a little, then a bit more, then more again, and take the difference between each blur and the next. Every difference holds one octave of detail, from edges and texture down to large patches of light and dark, and adding all the differences back gives the original exactly. Burt and Adelson called this a Laplacian pyramid. It is a reasonable sketch of how the early visual system holds an image.</p>
+    <p>The coarse bands carry layout, value structure and mood. The fine bands carry edges, texture and identity details. Schyns and Oliva showed that people take in the coarse layer first, within about 50 ms, and fill in the fine layer after. <b>Squinting is a low-pass filter</b>: it keeps the bottom rows of this table and drops the top ones, which is why painters squint to judge masses and values. Untick bands to rebuild the picture from any subset.</p>
+  </div>
+  <div class="bar"><label>Picture</label><div class="seg" id="b-pic" role="group" aria-label="Picture to decompose"></div></div>
+  <div class="tiles" id="b-tiles"></div>
+  <div class="tiles four">
+    <div class="tile"><canvas id="b-sum" width="512" height="512" aria-label="Rebuilt from the ticked bands"></canvas><p class="tn">Rebuilt from the ticked bands</p><p class="ts" id="b-sumts"></p></div>
+    <div class="tile" style="grid-column:span 3"><div class="chips" id="b-chips" aria-label="Bands to include"></div><p class="td" style="margin-top:10px">Try only the two coarsest bands (the squint), then only the two finest (a line drawing). Each band is shown above with mid-grey for zero and its contrast stretched so it is visible.</p></div>
+  </div>
+</section>
+
+<section class="demo" id="make" aria-labelledby="make-h">
+  <header><p class="eyebrow">3 · Oliva, Torralba and Schyns, 2006</p><h2 id="make-h">Make a hybrid</h2></header>
+  <div class="prose">
+    <p>A hybrid is the low-pass of one picture added to the high-pass of another. Close up, the high-pass detail sits near the peak of your sensitivity and wins; the blurred picture reads as shading. Step back and the whole image shrinks on your retina, so every stripe in it gets finer in cycles per degree: the detail slides off the fine end of your curve, and the blurred picture slides into the sensitive range. The pyramid strip shows the same hybrid at halving sizes, which is the same as standing twice as far away each time.</p>
+    <p>The spectrum plot shows the two pictures' energy per frequency band and your eye's window for the chosen distance. The prediction weights each band by the model sensitivity and reports which picture should dominate, and where they swap. It is a model of an average observer, so treat the switch distance as an estimate and check it with the pyramid.</p>
+  </div>
+  <div class="maker">
+    <div class="out">
+      <canvas id="hy" width="512" height="512" aria-label="The hybrid image"></canvas>
+      <canvas id="pyr" class="plot" width="1000" height="270" aria-label="The hybrid at halving sizes"></canvas>
+      <canvas id="spec" class="plot" width="1000" height="300" aria-label="Energy of each component per frequency, with the eye's window"></canvas>
+      <p class="desc" id="hy-desc"></p>
+    </div>
+    <div class="controls">
+      <div class="group"><h3>Pairs</h3><div class="seg" id="hy-pre" role="group" aria-label="Preset pair"></div><p class="gnote">The first picture is the near one (detail); the second is the far one (blur).</p></div>
+      <div class="group"><h3>Cutoffs</h3>
+        <div class="row"><div class="lab2"><span>Far: keep below</span><output id="hy-lo"></output></div><input type="range" id="hy-sl" min="4" max="80" value="12"></div>
+        <div class="row"><div class="lab2"><span>Near: keep above</span><output id="hy-hi"></output></div><input type="range" id="hy-sh" min="8" max="160" value="30"></div>
+        <div class="row"><div class="lab2"><span>Near strength</span><output id="hy-go"></output></div><input type="range" id="hy-g" min="50" max="300" value="150"></div>
+        <label class="lbl"><input type="checkbox" id="hy-col"> Far picture in colour</label>
+      </div>
+      <div class="group"><h3>Your own pictures</h3>
+        <div class="row"><div class="lab2"><span>Near</span></div><input type="file" id="up-a" accept="image/*"></div>
+        <div class="row"><div class="lab2"><span>Far</span></div><input type="file" id="up-b" accept="image/*"></div>
+        <div class="row"><div class="lab2"><span>Far: scale</span><output id="al-so"></output></div><input type="range" id="al-s" min="50" max="200" value="100"></div>
+        <div class="row"><div class="lab2"><span>Far: shift x · y</span><output id="al-xo"></output></div><input type="range" id="al-x" min="-128" max="128" value="0"><input type="range" id="al-y" min="-128" max="128" value="0"></div>
+        <p class="gnote">Files stay in this browser. Line up eyes and outlines; hybrids work best when the two pictures share a silhouette.</p>
+      </div>
+      <div class="group"><h3>Viewing distance</h3>
+        <div class="row"><div class="lab2"><span>Distance</span><output id="hy-do"></output></div><input type="range" id="hy-d" min="0" max="1000" value="200"></div>
+        <div class="step"><canvas id="stepcv" aria-label="The hybrid at the size it covers on your retina from this distance"></canvas></div>
+        <p class="gnote">The preview shrinks to the visual angle the big image would cover from that distance, relative to your calibrated screen distance.</p>
+        <button class="btn" id="hy-save">Save the hybrid (PNG)</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="blocks" aria-labelledby="blocks-h">
+  <header><p class="eyebrow">4 · Harmon and Julesz, 1973</p><h2 id="blocks-h">The blocky portrait</h2></header>
+  <div class="prose">
+    <p>Average a picture over coarse blocks and it becomes hard to recognise, even though all the coarse information is still there. Harmon and Julesz showed why: the sharp block edges add high-frequency noise, and noise <b>in the band just above</b> the picture's own frequencies masks it, because both land in neighbouring channels. Remove that adjacent band and the picture comes back; remove a band far above it and nothing changes. Distance and squinting do the first for free, which is the trick behind Dalí's Lincoln and every pixel-art portrait that only reads from across the room.</p>
+  </div>
+  <div class="bar"><label>Picture</label><div class="seg" id="bk-pic" role="group" aria-label="Picture"></div><label>Blocks</label><div class="seg" id="bk-n" role="group" aria-label="Block count"></div></div>
+  <div class="tiles four" id="bk-tiles"></div>
+  <p class="desc" id="bk-desc"></p>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and sources</h2></header>
+  <div class="tablewrap"><table class="plain">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Spatial frequency</td><td>How fine a pattern is: stripe pairs per unit. Per image (cycles per image) is a property of the picture; per degree of visual angle (cpd) depends on how big it looks.</td></tr>
+      <tr><td>Contrast</td><td>Michelson contrast, (Lmax − Lmin) / (Lmax + Lmin), in light, not in pixel values.</td></tr>
+      <tr><td>CSF</td><td>Contrast sensitivity function: 1 / the faintest visible contrast, per spatial frequency. Band-pass, peaking at a few cpd.</td></tr>
+      <tr><td>Channel</td><td>A population of visual neurons tuned to about one octave of spatial frequency and a range of orientations.</td></tr>
+      <tr><td>Low-pass / high-pass</td><td>Keep only the coarse / only the fine part of an image. Here both use a Gaussian blur; the cutoff is where the blur halves a stripe's contrast.</td></tr>
+      <tr><td>Laplacian pyramid</td><td>An image stored as differences of successive blurs, one octave each, plus a coarse remainder. Sums back to the original exactly.</td></tr>
+      <tr><td>Hybrid image</td><td>Low-pass of one picture plus high-pass of another, so which one you see depends on distance.</td></tr>
+      <tr><td>Critical-band masking</td><td>Noise hides a pattern most when it is close to the pattern in frequency, as in hearing.</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="reading">
+    <li><b>Oliva, Torralba and Schyns (2006).</b> Hybrid images. <i>ACM Transactions on Graphics</i> 25(3), SIGGRAPH. The construction used here.</li>
+    <li><b>Schyns and Oliva (1994).</b> From blobs to boundary edges. <i>Psychological Science</i> 5, 195–200. <b>Schyns and Oliva (1999).</b> Dr. Angry and Mr. Smile. <i>Cognition</i> 69, 243–265. Coarse-to-fine perception and the emotion hybrids.</li>
+    <li><b>Campbell and Robson (1968).</b> Application of Fourier analysis to the visibility of gratings. <i>Journal of Physiology</i> 197, 551–566. The chart and the channel idea.</li>
+    <li><b>Mannos and Sakrison (1974).</b> The effects of a visual fidelity criterion on the encoding of images. <i>IEEE Transactions on Information Theory</i> 20, 525–536. The model curve: A(f) = 2.6 (0.0192 + 0.114 f) e^−(0.114 f)^1.1.</li>
+    <li><b>Burt and Adelson (1983).</b> The Laplacian pyramid as a compact image code. <i>IEEE Transactions on Communications</i> 31, 532–540.</li>
+    <li><b>Harmon and Julesz (1973).</b> Masking in visual recognition: effects of two-dimensional filtered noise. <i>Science</i> 180, 1194–1197.</li>
+    <li><b>Livingstone (2000).</b> Is it warm? Is it real? Or just low spatial frequency? <i>Science</i> 290, 1299. The Mona Lisa's smile lives in the coarse bands.</li>
+    <li><b>De Valois and De Valois (1988).</b> <i>Spatial Vision.</i> Oxford University Press.</li>
+  </ol>
+  <p class="note">All drawings and code on this page are original. The fox and tiger come from this notebook's <a href="../pixel-sprites/">pixel sprites</a>. Screens are not lab displays: the chart is gamma-corrected and dithered to show contrasts below one pixel level, but your screen's brightness, viewing distance and the card calibration all move the numbers.</p>
+</section>
+
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const N = 512;
+const PAPER = '#F6F3EC', INK = '#1B1F2A', GRID = '#DDD7CA', MUTED = '#7A7F8C', ACC = '#2B3CD1', HOT = '#D2452F', OK = '#16856F';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function text(x, t, px, py, { align = 'left', size = 12, color = MUTED, base = 'middle', weight = 400 } = {}) {
+  x.fillStyle = color; x.font = `${weight} ${size}px ${MONO}`; x.textAlign = align; x.textBaseline = base; x.fillText(t, px, py);
+}
+function seg(host, items, cur, onPick) {
+  host.textContent = '';
+  return items.map(([v, lab]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.setAttribute('aria-pressed', String(v === cur)); b.onclick = () => { host.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b))); onPick(v); }; host.append(b); return b; });
+}
+function tile(host, name, sub = '', desc = '', size = N) {
+  const f = document.createElement('figure'); f.className = 'tile';
+  const c = mk(size, size); c.setAttribute('aria-label', name);
+  const n = document.createElement('p'); n.className = 'tn'; n.textContent = name;
+  const s = document.createElement('p'); s.className = 'ts'; s.textContent = sub;
+  const d = document.createElement('p'); d.className = 'td'; d.textContent = desc;
+  f.append(c, n, s); if (desc) f.append(d); host.append(f);
+  return { c, ctx: c.getContext('2d'), sub: s };
+}
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } } };
+
+/* ------------------------------------------------------------ images: { w, h, ch: [R, G, B] } Float32 in 0..1 */
+function fromCanvas(c) {
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, n = c.width * c.height, ch = [0, 1, 2].map(() => new Float32Array(n));
+  for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) ch[k][i] = d[i * 4 + k] / 255;
+  return { w: c.width, h: c.height, ch };
+}
+const grey = im => { const n = im.w * im.h, g = new Float32Array(n); for (let i = 0; i < n; i++) g[i] = 0.299 * im.ch[0][i] + 0.587 * im.ch[1][i] + 0.114 * im.ch[2][i]; return g; };
+function putGrey(x, g, w, h, map = v => v) { const id = x.createImageData(w, h); for (let i = 0; i < w * h; i++) { const v = clamp(map(g[i]), 0, 1) * 255; id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = v; id.data[i * 4 + 3] = 255; } x.putImageData(id, 0, 0); }
+function putRGB(x, ch, w, h) { const id = x.createImageData(w, h); for (let i = 0; i < w * h; i++) { for (let k = 0; k < 3; k++) id.data[i * 4 + k] = clamp(ch[k][i], 0, 1) * 255; id.data[i * 4 + 3] = 255; } x.putImageData(id, 0, 0); }
+
+/* Gaussian blur by three box passes (exact enough, and cost does not grow with sigma) */
+function boxes(s) { const wI = Math.sqrt(4 * s * s + 1); let wl = Math.floor(wI); if (wl % 2 === 0) wl--; const m = Math.round((12 * s * s - 3 * wl * wl - 12 * wl - 9) / (-4 * wl - 4)); return [0, 1, 2].map(i => i < m ? wl : wl + 2); }
+function boxH(s, d, w, h, r) { const k = 1 / (2 * r + 1); for (let y = 0; y < h; y++) { const o = y * w; let a = 0; for (let i = -r; i <= r; i++) a += s[o + clamp(i, 0, w - 1)]; for (let x = 0; x < w; x++) { d[o + x] = a * k; a += s[o + Math.min(w - 1, x + r + 1)] - s[o + Math.max(0, x - r)]; } } }
+function boxV(s, d, w, h, r) { const k = 1 / (2 * r + 1); for (let x = 0; x < w; x++) { let a = 0; for (let i = -r; i <= r; i++) a += s[clamp(i, 0, h - 1) * w + x]; for (let y = 0; y < h; y++) { d[y * w + x] = a * k; a += s[Math.min(h - 1, y + r + 1) * w + x] - s[Math.max(0, y - r) * w + x]; } } }
+function blur(g, w, h, s) { if (s < 0.4) return g.slice(); let a = g.slice(); const b = new Float32Array(g.length); for (const bx of boxes(s)) { const r = (bx - 1) >> 1; if (!r) continue; boxH(a, b, w, h, r); boxV(b, a, w, h, r); } return a; }
+/* a Gaussian halves a stripe's amplitude at f = sqrt(2 ln 2) / (2 pi sigma) cycles per pixel */
+const HALF = Math.sqrt(2 * Math.LN2) / (2 * Math.PI);
+const sigmaFor = cpi => HALF * N / cpi, cpiFor = s => HALF * N / s;
+
+/* FFT and a radial spectrum in quarter-octave bins */
+function fft(re, im, n) {
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let len = 2; len <= n; len <<= 1) { const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a); for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let k = 0; k < len / 2; k++) { const p = i + k, q = p + len / 2, xr = re[q] * cr - im[q] * ci, xi = re[q] * ci + im[q] * cr; re[q] = re[p] - xr; im[q] = im[p] - xi; re[p] += xr; im[p] += xi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } } }
+}
+const BINS = 4;   // bins per octave
+function spectrum(g, n) {
+  let mean = 0; for (const v of g) mean += v; mean /= g.length;
+  const re = new Float64Array(n * n), im = new Float64Array(n * n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const wv = (0.5 - 0.5 * Math.cos(2 * Math.PI * x / n)) * (0.5 - 0.5 * Math.cos(2 * Math.PI * y / n)); re[y * n + x] = (g[y * n + x] - mean) * wv; }
+  const r = new Float64Array(n), i2 = new Float64Array(n);
+  for (let y = 0; y < n; y++) { const R = re.subarray(y * n, y * n + n), I = im.subarray(y * n, y * n + n); fft(R, I, n); }
+  for (let x = 0; x < n; x++) { for (let y = 0; y < n; y++) { r[y] = re[y * n + x]; i2[y] = im[y * n + x]; } fft(r, i2, n); for (let y = 0; y < n; y++) { re[y * n + x] = r[y]; im[y * n + x] = i2[y]; } }
+  const nb = Math.ceil(Math.log2(n / 2) * BINS) + 1, pw = new Float64Array(nb), cnt = new Uint32Array(nb);
+  for (let v = 0; v < n; v++) for (let u = 0; u < n; u++) {
+    const fu = u <= n / 2 ? u : u - n, fv = v <= n / 2 ? v : v - n, f = Math.hypot(fu, fv);
+    if (f < 1 || f > n / 2) continue;
+    const b = Math.floor(Math.log2(f) * BINS); pw[b] += (re[v * n + u] ** 2 + im[v * n + u] ** 2); cnt[b]++;
+  }
+  // contrast energy per bin (Parseval, with the Hann window's 9/64 power loss undone)
+  return Array.from(pw, (p, b) => ({ f: 2 ** ((b + 0.5) / BINS), e: p / (n * n) ** 2 / (9 / 64), k: cnt[b] })).filter(b => b.k);   // the lowest bins can hold no integer frequencies
+}
+
+/* the model CSF (Mannos and Sakrison 1974), peak normalised to 1 */
+const csfRaw = f => 2.6 * (0.0192 + 0.114 * f) * Math.exp(-((0.114 * f) ** 1.1));
+let CPEAK = 0, FPEAK = 0; for (let f = 0.5; f < 40; f += 0.01) { const v = csfRaw(f); if (v > CPEAK) { CPEAK = v; FPEAK = f; } }
+const csf = f => csfRaw(f) / CPEAK;
+const SMAX = 200;   // peak sensitivity used for the threshold line: 1/200 = 0.5% contrast
+
+/* calibration shared by every section: CSS px per cm and viewing distance */
+const CAL = { pxcm: store.get('hyb.pxcm', 96 / 2.54), dist: store.get('hyb.dist', 60) };
+const degPerPx = () => 2 * Math.atan(1 / CAL.pxcm / 2 / CAL.dist) * 180 / Math.PI;   // one CSS px, in degrees
+const listeners = [];
+
+/* ------------------------------------------------------------ built-in pictures, drawn at 512 x 512 */
+const SHEETS = {};
+function loadImg(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+function sprite(name) {
+  return x => {
+    x.fillStyle = '#c9c4b8'; x.fillRect(0, 0, N, N);
+    const im = SHEETS[name]; if (!im) { text(x, name, N / 2, N / 2, { align: 'center', size: 60, color: INK }); return; }
+    const c = im.width / 8, t = mk(c, c), tx = t.getContext('2d'); tx.drawImage(im, 0, 2 * c, c, c, 0, 0, c, c);
+    const d = tx.getImageData(0, 0, c, c).data; let x0 = c, y0 = c, x1 = 0, y1 = 0;
+    for (let y = 0; y < c; y++) for (let xx = 0; xx < c; xx++) if (d[(y * c + xx) * 4 + 3] > 0) { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, s = Math.min(440 / bw, 400 / bh);
+    x.imageSmoothingEnabled = false; x.drawImage(t, x0, y0, bw, bh, (N - bw * s) / 2, (N - bh * s) / 2 + 20, bw * s, bh * s);
+  };
+}
+function face(mood) {
+  return x => {
+    x.fillStyle = '#d9d5cc'; x.fillRect(0, 0, N, N);
+    x.fillStyle = '#9b948a'; x.beginPath(); x.ellipse(256, 270, 168, 196, 0, 0, 7); x.fill();
+    x.lineCap = 'round'; x.lineWidth = 16; x.strokeStyle = '#1b1f2a'; x.fillStyle = '#1b1f2a';
+    for (const s of [-1, 1]) {
+      x.beginPath(); x.ellipse(256 + s * 66, 230, 22, mood === 'smile' ? 14 : 22, 0, 0, 7); x.fill();
+      x.beginPath();
+      if (mood === 'smile') x.arc(256 + s * 66, 196, 40, Math.PI * 1.2, Math.PI * 1.8);
+      else { x.moveTo(256 + s * 112, 168); x.lineTo(256 + s * 32, 200); }
+      x.stroke();
+    }
+    x.lineWidth = 12; x.beginPath(); x.moveTo(256, 250); x.lineTo(246, 310); x.lineTo(266, 310); x.stroke();
+    x.lineWidth = 18; x.beginPath();
+    if (mood === 'smile') x.arc(256, 300, 90, Math.PI * 0.2, Math.PI * 0.8); else x.arc(256, 430, 90, Math.PI * 1.25, Math.PI * 1.75);
+    x.stroke();
+  };
+}
+function word(t) {
+  return x => {
+    x.fillStyle = '#e4e0d6'; x.fillRect(0, 0, N, N); x.fillStyle = '#1b1f2a';
+    let s = 260; x.font = `700 ${s}px "Bricolage Grotesque", sans-serif`; const w = x.measureText(t).width; if (w > 460) s *= 460 / w;
+    x.font = `700 ${s}px "Bricolage Grotesque", sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, 256, 270);
+  };
+}
+function clock(h) {
+  return x => {
+    x.fillStyle = '#d9d5cc'; x.fillRect(0, 0, N, N);
+    x.fillStyle = '#f4f1ea'; x.strokeStyle = '#1b1f2a'; x.lineWidth = 14; x.beginPath(); x.arc(256, 256, 200, 0, 7); x.fill(); x.stroke();
+    for (let k = 0; k < 12; k++) { const a = k / 12 * 2 * Math.PI; x.lineWidth = k % 3 ? 6 : 14; x.beginPath(); x.moveTo(256 + Math.sin(a) * 170, 256 - Math.cos(a) * 170); x.lineTo(256 + Math.sin(a) * 190, 256 - Math.cos(a) * 190); x.stroke(); }
+    x.lineCap = 'round'; const a = h / 12 * 2 * Math.PI;
+    x.lineWidth = 22; x.beginPath(); x.moveTo(256, 256); x.lineTo(256 + Math.sin(a) * 110, 256 - Math.cos(a) * 110); x.stroke();
+    x.lineWidth = 12; x.beginPath(); x.moveTo(256, 256); x.lineTo(256, 256 - 160); x.stroke();
+    x.fillStyle = '#1b1f2a'; x.beginPath(); x.arc(256, 256, 16, 0, 7); x.fill();
+  };
+}
+const PICS = { smile: ['Smile', face('smile')], frown: ['Frown', face('frown')], fox: ['Fox', sprite('fox')], tiger: ['Tiger', sprite('tiger')], near: ['NEAR', word('NEAR')], far: ['FAR', word('FAR')], c3: ['3 o’clock', clock(3)], c9: ['9 o’clock', clock(9)] };
+const picCache = {};
+function pic(k) { if (!picCache[k]) { const c = mk(N, N); PICS[k][1](c.getContext('2d')); picCache[k] = fromCanvas(c); } return picCache[k]; }
+
+/* ------------------------------------------------------------ 1. Campbell–Robson chart */
+function campbellRobson() {
+  const cv = $('crcv'), x = cv.getContext('2d');
+  let model = true, pts = store.get('hyb.pts', []);
+  const FMIN = 0.0025, FMAX = 0.33, CMIN = 0.002, AX = 30;   // cycles per device px; contrast at the top
+  const srgb = L => L <= 0.0031308 ? 12.92 * L : 1.055 * L ** (1 / 2.4) - 0.055;
+  let W = 0, H = 0, dpr = 1, pattern = null;
+  const cpdAt = px => FMIN * (FMAX / FMIN) ** (px / W) * dpr / degPerPx();     // device px -> cycles per degree
+  const pxAt = cpd => Math.log(cpd * degPerPx() / dpr / FMIN) / Math.log(FMAX / FMIN) * W;
+  const conAt = py => CMIN ** (1 - py / (H - AX * dpr));                       // top: CMIN, bottom: 1
+  const pyAt = c => (1 - Math.log(c) / Math.log(CMIN)) * (H - AX * dpr);
+  function render() {
+    dpr = window.devicePixelRatio || 1; W = Math.round(cv.clientWidth * dpr); H = Math.round(cv.clientHeight * dpr);
+    if (!W || !H) return; cv.width = W; cv.height = H;
+    const ph = H - AX * dpr, id = x.createImageData(W, ph), k = Math.log(FMAX / FMIN) / W, phase = new Float64Array(W);
+    for (let i = 0; i < W; i++) phase[i] = FMIN / k * (Math.exp(k * i) - 1);   // integral of the rising frequency
+    let seed = 7; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (let y = 0; y < ph; y++) { const c = conAt(y); for (let i = 0; i < W; i++) { const L = 0.5 * (1 + c * Math.sin(2 * Math.PI * phase[i])); const v = Math.floor(srgb(L) * 255 + rnd()); const o = (y * W + i) * 4; id.data[o] = id.data[o + 1] = id.data[o + 2] = v; id.data[o + 3] = 255; } }
+    pattern = id; draw();
+  }
+  function draw() {
+    if (!pattern) return;
+    x.putImageData(pattern, 0, 0);
+    x.fillStyle = PAPER; x.fillRect(0, H - AX * dpr, W, AX * dpr);
+    x.save(); x.scale(dpr, dpr); const w = W / dpr, ph = (H - AX * dpr) / dpr;
+    for (const f of [0.25, 0.5, 1, 2, 4, 8, 16, 32, 64]) { const px = pxAt(f) / dpr; if (px < 8 || px > w - 150) continue; x.strokeStyle = INK; x.beginPath(); x.moveTo(px, ph); x.lineTo(px, ph + 5); x.stroke(); text(x, String(f), px, ph + 15, { align: 'center', size: 11, color: INK }); }
+    text(x, 'cycles per degree →', w - 6, ph + 15, { align: 'right', size: 11 });
+    for (const c of [1, 0.1, 0.01]) { const py = pyAt(c) / dpr; x.fillStyle = 'rgba(246,243,236,.85)'; x.fillRect(2, py - 9, 74, 16); text(x, `${c * 100}% contrast`, 6, py - 1, { size: 10.5, color: INK }); }
+    if (model) {
+      x.strokeStyle = HOT; x.lineWidth = 2; x.setLineDash([6, 4]); x.beginPath(); let on = false;
+      for (let px = 0; px <= w; px += 2) { const f = cpdAt(px * dpr), c = 1 / (SMAX * csf(f)); if (c > 1) { on = false; continue; } const py = pyAt(c) / dpr; on ? x.lineTo(px, py) : x.moveTo(px, py); on = true; }
+      x.stroke(); x.setLineDash([]);
+    }
+    const ps = pts.map(p => [pxAt(p.f) / dpr, pyAt(p.c) / dpr]).sort((a, b) => a[0] - b[0]);
+    x.strokeStyle = ACC; x.lineWidth = 2.5; x.beginPath(); ps.forEach(([px, py], i) => i ? x.lineTo(px, py) : x.moveTo(px, py)); x.stroke();
+    for (const [px, py] of ps) { x.fillStyle = ACC; x.beginPath(); x.arc(px, py, 5, 0, 7); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 1.5; x.stroke(); }
+    x.restore();
+    const best = pts.length ? pts.reduce((a, b) => a.c < b.c ? a : b) : null;
+    $('cr-desc').innerHTML = `Chart spans <b>${cpdAt(0).toFixed(2)}–${cpdAt(W).toFixed(0)} cpd</b> at ${CAL.dist} cm (one CSS px = ${(degPerPx() * 60).toFixed(2)} arcmin) · model peak at ${FPEAK.toFixed(1)} cpd` +
+      (best ? `<br>Your points: ${pts.length} · lowest visible contrast <b>${(best.c * 100).toFixed(2)}%</b> at <b>${best.f.toFixed(1)} cpd</b> (sensitivity ${(1 / best.c).toFixed(0)})` : '<br>Click where the stripes fade into grey at several places across the chart.');
+  }
+  cv.addEventListener('pointerdown', e => { const r = cv.getBoundingClientRect(), px = (e.clientX - r.left) * dpr, py = (e.clientY - r.top) * dpr; if (py > H - AX * dpr) return; pts.push({ f: cpdAt(px), c: conAt(py) }); store.set('hyb.pts', pts); draw(); });
+  $('cr-model').onclick = () => { model = !model; $('cr-model').setAttribute('aria-pressed', String(model)); draw(); };
+  $('cr-clear').onclick = () => { pts = []; store.set('hyb.pts', pts); draw(); };
+  const card = $('cal-card'), cw = $('cal-w'), cd = $('cal-d');
+  cw.value = Math.round(CAL.pxcm * 8.56); cd.value = CAL.dist;
+  const cal = () => { CAL.pxcm = +cw.value / 8.56; CAL.dist = +cd.value; card.style.width = cw.value + 'px'; $('cal-do').textContent = CAL.dist + ' cm'; store.set('hyb.pxcm', CAL.pxcm); store.set('hyb.dist', CAL.dist); draw(); listeners.forEach(f => f()); };
+  cw.oninput = cal; cd.oninput = cal; cal();
+  let t = 0; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(render, 120); }).observe(cv);
+  render();
+}
+
+/* ------------------------------------------------------------ 2. bands */
+function bands() {
+  const SIG = [1, 2, 4, 8, 16];
+  const names = ['Finest: edges and grain', 'Fine: outlines', 'Middle: features', 'Coarse: parts', 'Coarser: masses', 'Remainder: the squint'];
+  const tiles = names.map((nm, i) => tile($('b-tiles'), nm, i < 5 ? `${cpiFor(SIG[i]).toFixed(0)}${i ? '–' + cpiFor(SIG[i - 1]).toFixed(0) : '+'} cycles / image` : `below ${cpiFor(16).toFixed(0)} cycles / image`));
+  tiles.forEach(t => t.c.getContext('2d'));
+  let on = [true, true, true, true, true, true], L = null, src = null;
+  const chips = $('b-chips');
+  names.forEach((nm, i) => { const lab = document.createElement('label'), cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true; cb.onchange = () => { on[i] = cb.checked; rebuild(); }; lab.append(cb, document.createTextNode(nm.split(':')[0])); chips.append(lab); });
+  function build(k) {
+    src = grey(pic(k)); const G = [src, ...SIG.map(s => blur(src, N, N, s))];
+    L = SIG.map((_, i) => { const d = new Float32Array(N * N); for (let p = 0; p < N * N; p++) d[p] = G[i][p] - G[i + 1][p]; return d; });
+    L.push(G[5]);
+    L.forEach((b, i) => {
+      if (i === 5) { putGrey(tiles[i].ctx, b, N, N); return; }
+      let ss = 0; for (const v of b) ss += v * v; const sd = Math.sqrt(ss / b.length) || 1, gain = 0.18 / sd;
+      putGrey(tiles[i].ctx, b, N, N, v => 0.5 + v * gain);
+    });
+    rebuild();
+  }
+  function rebuild() {
+    const out = new Float32Array(N * N); L.forEach((b, i) => { if (on[i]) for (let p = 0; p < N * N; p++) out[p] += b[p]; });
+    const anyOff = on.some(v => !v), mapper = on[5] ? v => v : v => 0.5 + v;
+    putGrey($('b-sum').getContext('2d'), out, N, N, mapper);
+    let err = 0; if (!anyOff) for (let p = 0; p < N * N; p++) err = Math.max(err, Math.abs(out[p] - src[p]));
+    $('b-sumts').textContent = anyOff ? `${on.filter(Boolean).length} of 6 bands${on[5] ? '' : ' · mid-grey added for display'}` : `all 6 bands · max error vs original ${err.toExponential(1)}`;
+  }
+  seg($('b-pic'), [['smile', 'Face'], ['fox', 'Fox'], ['c3', 'Clock'], ['near', 'Word']], 'smile', build);
+  build('smile');
+}
+
+/* ------------------------------------------------------------ 3. hybrid maker */
+function maker() {
+  const PAIRS = { face: ['smile', 'frown', 'Smile / frown'], beast: ['fox', 'tiger', 'Fox / tiger'], word: ['near', 'far', 'NEAR / FAR'], clock: ['c3', 'c9', '3 / 9 o’clock'] };
+  let A = pic('smile'), B = pic('frown'), upA = null, upB = null;
+  const S = { lo: 12, hi: 30, g: 1.5, col: false, sc: 1, dx: 0, dy: 0, d: 0 };
+  let H = null, lowB = null, highA = null, specA = null, specB = null;
+  const hx = $('hy').getContext('2d');
+  function placed(img, sc = 1, dx = 0, dy = 0) {   // cover-fit an uploaded bitmap into the 512 square, with optional scale and shift
+    const c = mk(N, N), x = c.getContext('2d'); x.fillStyle = '#808080'; x.fillRect(0, 0, N, N);
+    const s = Math.max(N / img.width, N / img.height) * sc, w = img.width * s, h = img.height * s;
+    x.drawImage(img, (N - w) / 2 + dx, (N - h) / 2 + dy, w, h); return fromCanvas(c);
+  }
+  function shiftPic(im) { if (S.sc === 1 && !S.dx && !S.dy) return im; const c = mk(N, N), x = c.getContext('2d'), t = mk(N, N); putRGB(t.getContext('2d'), im.ch, N, N); x.fillStyle = '#808080'; x.fillRect(0, 0, N, N); const w = N * S.sc; x.drawImage(t, (N - w) / 2 + S.dx, (N - w) / 2 + S.dy, w, w); return fromCanvas(c); }
+  function compute() {
+    const a = upA ? upA : A, b = upB ? placed(upB, S.sc, S.dx, S.dy) : shiftPic(B);
+    const ga = grey(a), ba = blur(ga, N, N, sigmaFor(S.hi));
+    highA = new Float32Array(N * N); for (let p = 0; p < N * N; p++) highA[p] = (ga[p] - ba[p]) * S.g;
+    const sb = sigmaFor(S.lo), chB = S.col ? b.ch.map(c => blur(c, N, N, sb)) : null; lowB = blur(grey(b), N, N, sb);
+    H = (S.col ? chB : [lowB, lowB, lowB]).map(c => { const o = new Float32Array(N * N); for (let p = 0; p < N * N; p++) o[p] = c[p] + highA[p]; return o; });
+    putRGB(hx, H, N, N);
+    specA = spectrum(highA, N); specB = spectrum(lowB, N);
+    drawPyr(); view();
+  }
+  function drawPyr() {
+    const x = $('pyr').getContext('2d'), W = 1000, HH = 270; x.fillStyle = PAPER; x.fillRect(0, 0, W, HH);
+    let src = $('hy'), px = 12; const base = 240;
+    for (let k = 0; k < 6; k++) {
+      const s = Math.round(base / 2 ** k), t = mk(s, s), tx = t.getContext('2d'); tx.imageSmoothingQuality = 'high'; tx.drawImage(src, 0, 0, s, s); src = t;
+      x.drawImage(t, px, HH - 14 - s); px += s + 18;
+    }
+    text(x, 'each copy is half the size: the same as standing twice as far away', W - 10, 14, { align: 'right', size: 11 });
+  }
+  const DMIN = 25, DMAX = 3000;
+  const distOf = v => DMIN * (DMAX / DMIN) ** (v / 1000);
+  function predictAt(D) {
+    // the hybrid as displayed: its CSS width in cm at the reference calibration, seen from D
+    const wcm = $('hy').clientWidth / CAL.pxcm || 13.5, deg = 2 * Math.atan(wcm / 2 / D) * 180 / Math.PI;
+    const vis = sp => sp.reduce((t, b) => t + b.e * csf(b.f / deg) ** 2, 0);
+    return { deg, va: vis(specA), vb: vis(specB) };
+  }
+  function view() {
+    const D = distOf(S.d); $('hy-do').textContent = D >= 100 ? (D / 100).toFixed(2) + ' m' : D.toFixed(0) + ' cm';
+    const { deg, va, vb } = predictAt(D);
+    // where do they swap? scan distances
+    let sw = null, prev = null; for (let v = 0; v <= 1000; v += 2) { const p = predictAt(distOf(v)), s = Math.sign(p.va - p.vb); if (prev !== null && s !== prev) { sw = distOf(v); break; } prev = s; }
+    // spectrum plot
+    const x = $('spec').getContext('2d'), W = 1000, HH = 300, L = 54, R = 16, T = 22, B = 40;
+    x.fillStyle = PAPER; x.fillRect(0, 0, W, HH);
+    const fx = f => L + Math.log2(f) / Math.log2(256) * (W - L - R);
+    const all = [...specA, ...specB].map(b => b.e).filter(e => e > 0), emax = Math.log10(Math.max(...all)), emin = emax - 5;
+    const fy = e => HH - B - clamp((Math.log10(Math.max(e, 1e-30)) - emin) / (emax - emin), 0, 1) * (HH - T - B);
+    // eye window
+    x.fillStyle = 'rgba(210,69,47,.12)'; x.beginPath(); x.moveTo(fx(1), HH - B);
+    for (let px = L; px <= W - R; px += 3) { const f = 2 ** ((px - L) / (W - L - R) * 8); x.lineTo(px, HH - B - csf(f / deg) * (HH - T - B)); }
+    x.lineTo(W - R, HH - B); x.closePath(); x.fill();
+    for (const f of [1, 2, 4, 8, 16, 32, 64, 128, 256]) { x.strokeStyle = GRID; x.beginPath(); x.moveTo(fx(f), T); x.lineTo(fx(f), HH - B); x.stroke(); text(x, String(f), fx(f), HH - B + 14, { align: 'center', size: 11 }); }
+    text(x, `cycles per image →   (at this distance 1 cycle/image = ${(1 / deg).toFixed(2)} cpd)`, W - R, HH - 9, { align: 'right', size: 11 });
+    for (const [sp, col, nm] of [[specB, OK, 'far picture (low-pass)'], [specA, ACC, 'near picture (high-pass)']]) {
+      x.strokeStyle = col; x.lineWidth = 2.5; x.beginPath(); sp.forEach((b, i) => i ? x.lineTo(fx(b.f), fy(b.e)) : x.moveTo(fx(b.f), fy(b.e))); x.stroke();
+    }
+    text(x, '■ far picture (low-pass)', L + 4, 12, { size: 11, color: OK, weight: 500 }); text(x, '■ near picture (high-pass)', L + 210, 12, { size: 11, color: ACC, weight: 500 }); text(x, '■ your eye’s window at this distance (model)', L + 430, 12, { size: 11, color: HOT, weight: 500 });
+    text(x, 'energy (log)', 6, T + 4, { size: 10.5 });
+    const win = va > vb ? 'near (detail)' : 'far (blur)', ratio = va > vb ? va / vb : vb / va;
+    $('hy-desc').innerHTML = `Far keeps below <b>${S.lo} cycles/image</b> · near keeps above <b>${S.hi}</b> · at ${$('hy-do').textContent} the image spans ${deg.toFixed(2)}°<br>Predicted to dominate: <b>${win}</b> (×${ratio.toFixed(1)} the weighted energy) · predicted switch at <b>${sw ? (sw >= 100 ? (sw / 100).toFixed(2) + ' m' : sw.toFixed(0) + ' cm') : 'none in 25 cm – 30 m'}</b>`;
+    // step-back preview: shrink by the ratio of visual angles against the calibrated distance
+    const step = $('stepcv'), host = step.parentElement, ref = predictAt(CAL.dist).deg, s = clamp(deg / ref, 0.01, 1), size = Math.max(4, Math.round(Math.min(host.clientWidth, 290) * s)), dpr = window.devicePixelRatio || 1;
+    step.width = Math.round(size * dpr); step.height = Math.round(size * dpr); step.style.width = size + 'px'; step.style.height = size + 'px';
+    const sx = step.getContext('2d'); sx.imageSmoothingQuality = 'high'; sx.drawImage($('hy'), 0, 0, step.width, step.height);
+  }
+  const out = () => { $('hy-lo').textContent = S.lo + ' c/img'; $('hy-hi').textContent = S.hi + ' c/img'; $('hy-go').textContent = '×' + S.g.toFixed(1); $('al-so').textContent = '×' + S.sc.toFixed(2); $('al-xo').textContent = `${S.dx} · ${S.dy}`; };
+  const bind = (id, k, f = v => v) => { $(id).oninput = () => { S[k] = f(+$(id).value); out(); clearTimeout(bind.t); bind.t = setTimeout(compute, 60); }; };
+  bind('hy-sl', 'lo'); bind('hy-sh', 'hi'); bind('hy-g', 'g', v => v / 100); bind('al-s', 'sc', v => v / 100); bind('al-x', 'dx'); bind('al-y', 'dy');
+  $('hy-col').onchange = () => { S.col = $('hy-col').checked; compute(); };
+  $('hy-d').oninput = () => { S.d = +$('hy-d').value; view(); };
+  S.d = Math.round(Math.log(CAL.dist / DMIN) / Math.log(DMAX / DMIN) * 1000); $('hy-d').value = S.d;
+  seg($('hy-pre'), Object.entries(PAIRS).map(([k, v]) => [k, v[2]]), 'face', k => { A = pic(PAIRS[k][0]); B = pic(PAIRS[k][1]); upA = upB = null; $('up-a').value = ''; $('up-b').value = ''; compute(); });
+  const upload = (inp, set) => { inp.onchange = async () => { const f = inp.files[0]; if (!f) return; try { const bmp = await createImageBitmap(f); set(bmp); compute(); } catch (e) { console.error(e); } }; };
+  upload($('up-a'), bmp => { upA = placed(bmp); });
+  upload($('up-b'), bmp => { upB = bmp; });
+  $('hy-save').onclick = () => $('hy').toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'hybrid.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  listeners.push(view);
+  let rt = 0; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => H && view(), 120); }).observe($('hy'));
+  out(); compute();
+}
+
+/* ------------------------------------------------------------ 4. Harmon and Julesz */
+function blocks() {
+  const host = $('bk-tiles');
+  const T = [['Blocks', 'The coarse picture, buried under sharp edges.'], ['Blocks, low-passed', 'Everything above the block rate removed: what distance does.'], ['Adjacent band removed', 'Only the octave and a half just above the block rate removed.'], ['Far band removed', 'An equally wide band, much higher, removed instead.']].map(([n, d]) => tile(host, n, '', d));
+  let k = 'smile', nb = 24;
+  function build() {
+    const src = grey(pic(k)), bs = N / nb, b = new Float32Array(N * N), sum = new Float64Array(nb * nb), cnt = new Float64Array(nb * nb);
+    const cell = p => Math.floor((p / N | 0) / bs) * nb + Math.floor((p % N) / bs);   // blocks need not be whole pixels
+    for (let p = 0; p < N * N; p++) { const c = cell(p); sum[c] += src[p]; cnt[c]++; }
+    for (let p = 0; p < N * N; p++) { const c = cell(p); b[p] = sum[c] / cnt[c]; }
+    const fb = nb / 2;   // the block grid's own Nyquist rate, cycles per image
+    const lp = blur(b, N, N, sigmaFor(fb));
+    const bandStop = (f0, f1) => { const g0 = blur(b, N, N, sigmaFor(f1)), g1 = blur(b, N, N, sigmaFor(f0)), o = new Float32Array(N * N); for (let p = 0; p < N * N; p++) o[p] = b[p] - (g0[p] - g1[p]); return o; };
+    const adj = bandStop(fb, fb * 2.8), far = bandStop(fb * 4, Math.min(fb * 11.2, 250));
+    const ref = blur(src, N, N, sigmaFor(fb));
+    const corr = (a, r) => { let ma = 0, mr = 0; for (let p = 0; p < N * N; p++) { ma += a[p]; mr += r[p]; } ma /= N * N; mr /= N * N; let sab = 0, sa = 0, sr = 0; for (let p = 0; p < N * N; p++) { const da = a[p] - ma, dr = r[p] - mr; sab += da * dr; sa += da * da; sr += dr * dr; } return sab / Math.sqrt(sa * sr); };
+    const edge = a => { let e = 0; const hp = blur(a, N, N, sigmaFor(fb)); for (let p = 0; p < N * N; p++) e += (a[p] - hp[p]) ** 2; return Math.sqrt(e / (N * N)); };
+    [b, lp, adj, far].forEach((im, i) => { putGrey(T[i].ctx, im, N, N); T[i].sub.textContent = `edge energy ${edge(im).toFixed(3)} · match to blurred original ${corr(im, ref).toFixed(3)}`; });
+    $('bk-desc').innerHTML = `${nb} × ${nb} blocks of ${bs.toFixed(1)} px ·block rate ${fb} cycles/image · adjacent band ${fb}–${(fb * 2.8).toFixed(0)} · far band ${fb * 4}–${Math.min(fb * 11.2, 250).toFixed(0)} cycles/image<br>"Edge energy" is the RMS content above the block rate, the part that masks; the match is the correlation with the original blurred to the block rate.`;
+  }
+  seg($('bk-pic'), [['smile', 'Face'], ['fox', 'Fox'], ['c9', 'Clock']], k, v => { k = v; build(); });
+  seg($('bk-n'), [[16, '16'], [24, '24'], [32, '32']], nb, v => { nb = v; build(); });
+  build();
+}
+
+/* ------------------------------------------------------------ boot */
+try { await Promise.all([document.fonts.load('700 200px "Bricolage Grotesque"'), document.fonts.load('500 13px "JetBrains Mono"')]); } catch (e) { /* fall back to system fonts */ }
+const [fox, tiger] = await Promise.all([loadImg('../pixel-sprites/output/fox/walk_sheet.png'), loadImg('../pixel-sprites/output/tiger/walk_sheet.png')]);
+SHEETS.fox = fox; SHEETS.tiger = tiger;
+for (const f of [campbellRobson, bands, maker, blocks]) {
+  try { f(); } catch (e) { console.error(f.name, e); }
+}
+</script>
+</body>
+</html>
