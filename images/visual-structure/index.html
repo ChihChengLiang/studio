@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shape and Visual Structure</title>
+<meta name="description" content="The visual components under every picture (shape, line, tone, color, space, movement, rhythm) and the principle of contrast and affinity, drawn in canvas and three.js galleries, with a lab and a story intensity planner.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Gallery sections are static HTML; their tiles are drawn by the script at the bottom (2D canvas, plus three.js for the space gallery). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#08090C;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#030407;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;--stage:#030407;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards b{color:var(--fg);font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;counter-reset:step;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:step;background:var(--surface);border:1px solid var(--line);padding:12px 14px;font-size:13.5px;color:var(--muted);min-width:0}
+.steps li::before{content:counter(step,decimal-leading-zero);display:block;font:500 11px/1 var(--font-mono);color:var(--accent);margin-bottom:6px}
+.steps b{display:block;color:var(--fg);font:600 15px/1.25 var(--font-display);margin-bottom:3px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+table.plain th,table.plain td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td:first-child{font-weight:600;white-space:nowrap}
+table.plain td{color:var(--muted)}
+table.plain td:first-child{color:var(--fg)}
+
+/* Gallery tiles: <figure> for look-only tiles, <button> for tiles that open in the lab */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 12px}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tile{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;margin:0;background:none;border:0;color:inherit;font:inherit;text-align:left;min-width:0}
+button.tile{cursor:pointer}
+.tile canvas{display:block;width:100%;aspect-ratio:3/2;background:var(--stage);border:1px solid var(--line)}
+button.tile:hover canvas{border-color:var(--accent)}
+.tile .tn{font:600 13.5px/1.25 var(--font-display);margin:8px 0 0}
+.tile .ts{font:400 11px/1.3 var(--font-mono);color:var(--accent);margin:3px 0 0}
+.tile .td{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.42}
+
+/* Lab */
+.lab{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,1fr);gap:28px;align-items:start}
+.stagecol{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.stage{position:relative;aspect-ratio:3/2;background:var(--stage);border:1px solid var(--line);overflow:hidden}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.meter{display:flex;align-items:center;gap:10px;font:500 11px/1 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.meter .bar{flex:1;height:6px;background:var(--line);position:relative}
+.meter .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.meter output{color:var(--fg);letter-spacing:0;text-transform:none;min-width:9ch;text-align:right}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.labbar{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.controls{display:flex;flex-direction:column;gap:12px;min-width:0}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 4px;min-width:0}
+.group>h3{margin-bottom:2px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0 0 10px}
+.row{display:flex;flex-direction:column;gap:5px;margin:0 0 12px;min-width:0}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.row .ends{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;line-height:1.3;color:var(--muted)}
+.row .ends span:last-child{text-align:right}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 8px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+
+.curve{display:block;width:100%;height:230px;background:var(--surface);border:1px solid var(--line)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.rules li{background:var(--surface);border:1px solid var(--line);padding:10px 13px;font-size:13.5px;color:var(--muted)}
+.rules b{color:var(--fg);font-weight:600}
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+.nogl{display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted);font-size:14px;border:1px dashed var(--line)}
+.foot{font-size:13px;color:var(--muted);max-width:80ch}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lab{grid-template-columns:minmax(0,1fr)}
+  .stagecol{top:0;z-index:5;background:var(--bg);padding:8px 0}
+  .desc{font-size:11.5px;max-height:7.5em;overflow:auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+}}
+</script>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Images · canvas + three.js · a vocabulary</p>
+  <h1>Shape and visual structure</h1>
+  <p class="lede">Every picture is built from a few basic parts: shape, line, tone, color, space, movement and rhythm. Each part can be kept similar across the frame (affinity) or set against itself (contrast). Contrast raises the intensity the viewer feels, and affinity lowers it. This page shows each part, what it tends to mean, and how to plan it across a story. It follows Bruce Block's <i>The Visual Story</i>, with help from Molly Bang's <i>Picture This</i>.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#idea">Contrast and affinity</a></li>
+    <li><a href="#g-shape">Shape</a></li>
+    <li><a href="#g-scale">Shape at scale</a></li>
+    <li><a href="#g-line">Line</a></li>
+    <li><a href="#g-tone">Tone</a></li>
+    <li><a href="#g-space">Space</a></li>
+    <li><a href="#g-move">Movement</a></li>
+    <li><a href="#g-rhythm">Rhythm</a></li>
+    <li><a href="#g-pairs">Both ways</a></li>
+    <li><a href="#g-bang">Feelings from shapes</a></li>
+    <li><a href="#lab">Lab</a></li>
+    <li><a href="#story">Story intensity</a></li>
+    <li><a href="#practice">In practice</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="idea" aria-labelledby="idea-h">
+  <header><p class="eyebrow">The one principle</p><h2 id="idea-h">Contrast and affinity</h2></header>
+  <div class="prose">
+    <p>Bruce Block's observation is that every picture, whatever its subject, is made of the same few <b>visual components</b>, and each component can be organized in one of two ways.</p>
+    <p><b>Affinity</b> means the component stays similar throughout: all round shapes, all horizontal lines, all middle values. It reads as calm and unified, sometimes dull. <b>Contrast</b> means it's set against itself: round against pointed, horizontal against diagonal, black against white. It reads as tense and energetic, sometimes chaotic.</p>
+    <p>The useful part is that this is a dial, not a style. If a scene should feel calm, keep most components in affinity, and the audience will feel the calm without being able to say why. As the story builds, push components toward contrast. Contrast is also relative: after a long calm stretch, even a small contrast feels big.</p>
+    <p>It works at three scales: inside one frame, between one shot and the next, and across a whole sequence.</p>
+  </div>
+  <div class="tiles two" id="t-idea"></div>
+  <div class="tablewrap">
+    <table class="plain">
+      <thead><tr><th>Component</th><th>What it is</th><th>Affinity</th><th>Contrast</th></tr></thead>
+      <tbody>
+        <tr><td>Shape</td><td>The silhouette of things: round, square, triangular</td><td>One shape family everywhere</td><td>Opposing families: round against pointed</td></tr>
+        <tr><td>Line</td><td>Edges, real or implied, and their direction</td><td>One direction dominates</td><td>Horizontal against vertical against diagonal, straight against curved</td></tr>
+        <tr><td>Tone</td><td>Brightness (value), regardless of hue</td><td>A narrow range of values</td><td>The full range; darkest beside lightest</td></tr>
+        <tr><td>Color</td><td>Hue, saturation (chroma), warm or cool</td><td>One hue family, similar saturation</td><td>Complementary hues, warm against cool, saturated against grey</td></tr>
+        <tr><td>Space</td><td>The illusion of depth on a flat frame</td><td>Flat throughout, or deep throughout</td><td>Flat against deep</td></tr>
+        <tr><td>Movement</td><td>Motion of objects, of the camera, and of the viewer's eye</td><td>One direction, one speed, or stillness</td><td>Opposite directions, still against moving, sudden speed changes</td></tr>
+        <tr><td>Rhythm</td><td>Repetition and alternation in space and in time</td><td>Regular beats</td><td>Irregular or broken beats</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note"><b>Why it helps in 2D and 3D.</b> Each component is a knob you control directly. In 2D you draw it. In 3D you set it through modeling, layout, lens and light. Once each knob has a name, you can decide its setting before you start, instead of hoping the mood shows up. Color has its own page: <a href="../color-lessons/">Color lessons from painters</a>. Camera and light are on <a href="../shot-language/">The language of a shot</a>.</p>
+</section>
+
+<section class="demo" id="g-shape" aria-labelledby="g-shape-h">
+  <header><p class="eyebrow">Gallery 1 · Shape</p><h2 id="g-shape-h">Circle, square, triangle: the three shape families</h2></header>
+  <div class="prose">
+    <p>Shape language is the idea that simple geometric shapes carry feelings, mostly because of how they would behave as physical objects. Circles roll and have no edges. Squares sit still and resist being pushed. Triangles point and cut. Character designers build each character from one dominant family, and production designers do the same with whole worlds.</p>
+  </div>
+  <div class="tiles" id="t-shape"></div>
+  <p class="note"><b>A tendency, not a law.</b> Shape language works because viewers have expectations, which also means you can betray them on purpose. Most good designs mix families with one clearly in charge: a round character with a square jaw is friendly but stubborn.</p>
+</section>
+
+<section class="demo" id="g-scale" aria-labelledby="g-scale-h">
+  <header><p class="eyebrow">Gallery 2 · Shape</p><h2 id="g-scale-h">Shape across a world: environments, size and silhouette</h2></header>
+  <div class="prose">
+    <p>The same families scale up to whole environments, and contrast between a character's shape and its world is one of the strongest ways to make the character stand out. Two more shape habits matter as much as the families: varying sizes, and keeping silhouettes readable.</p>
+  </div>
+  <div class="tiles" id="t-scale"></div>
+  <p class="note"><b>Two quick tests.</b> The <b>silhouette test</b>: fill the character or the whole composition with black. If you can still read the action and the mood, the shapes are doing the work. The <b>big, medium, small test</b>: can you point to one dominant shape, a secondary one and a scatter of small ones? Equal sizes spread attention evenly, so nothing leads.</p>
+</section>
+
+<section class="demo" id="g-line" aria-labelledby="g-line-h">
+  <header><p class="eyebrow">Gallery 3 · Line</p><h2 id="g-line-h">Line: direction carries feeling</h2></header>
+  <div class="prose">
+    <p>A line can be drawn (an edge, a horizon, a tree trunk) or implied (a gaze, a gesture, a row of things, the path of something moving). Direction matters most: horizontal rests, vertical stands, diagonal moves. Curved lines feel soft and organic, straight ones built and rigid. With affinity of line, one direction rules. With contrast, directions fight.</p>
+  </div>
+  <div class="tiles" id="t-line"></div>
+</section>
+
+<section class="demo" id="g-tone" aria-labelledby="g-tone-h">
+  <header><p class="eyebrow">Gallery 4 · Tone</p><h2 id="g-tone-h">Tone: brightness alone</h2></header>
+  <div class="prose">
+    <p>Tone is how light or dark something is, whatever its hue. It pulls the eye harder than anything else, and it's what still reads from across a room. These tiles are greyscale to keep color out of the way. <a href="../color-lessons/">Color lessons</a> covers value structure in color. Here the question is contrast and affinity: how much of the range you use, and where you put the extremes.</p>
+  </div>
+  <div class="tiles" id="t-tone"></div>
+  <p class="note"><b>The squint test.</b> Squint at your picture, or blur it, until detail disappears. What's left is the tonal structure. If your subject vanishes into its surroundings, no amount of detail will rescue it. Fix the values first.</p>
+</section>
+
+<section class="demo" id="g-space" aria-labelledby="g-space-h">
+  <header><p class="eyebrow">Gallery 5 · Space · three.js</p><h2 id="g-space-h">Space: building depth one cue at a time</h2></header>
+  <div class="prose">
+    <p>A frame is flat, so depth is always an illusion built from cues. You can add the cues one at a time, and each tile below adds one to the tile before it. Strip them all away and you get <b>flat space</b>: graphic, formal, airless. Add them all and you get <b>deep space</b>: immersive and real, sometimes overwhelming.</p>
+  </div>
+  <div class="tiles" id="t-depth"></div>
+  <h3>The four kinds of space</h3>
+  <div class="prose"><p>Block names four. Deep and flat are the two ends. <b>Limited space</b> keeps every surface square to the camera, like theatre flats, but allows overlap and size change, so you get some depth and no diagonals. <b>Ambiguous space</b> removes the clues that tell you size and distance, so the viewer can't work out how big things are or where they sit.</p></div>
+  <div class="tiles" id="t-space"></div>
+  <p class="note"><b>In 3D, depth comes almost free.</b> A perspective camera gives you size change and converging lines, lights give you shading, and fog gives you aerial perspective. Flatness is the choice that takes effort: a long lens or an orthographic camera, surfaces square to the camera, flat light. <b>Contrast of space</b> also works across a cut. Many films keep a calm stretch flat and go deep when the world opens up, or the reverse.</p>
+</section>
+
+<section class="demo" id="g-move" aria-labelledby="g-move-h">
+  <header><p class="eyebrow">Gallery 6 · Movement · animated</p><h2 id="g-move-h">Movement: objects, camera and the eye</h2></header>
+  <div class="prose">
+    <p>Block separates three kinds of movement: <b>actual</b> movement of objects in the frame, <b>apparent</b> movement caused by the camera, and <b>induced</b> movement of the viewer's eye across a still image. Direction (horizontal, vertical, diagonal, toward or away), speed and quality (smooth or jerky) each carry meaning. With contrast, directions oppose each other, or one thing moves while everything else holds still.</p>
+  </div>
+  <div class="tiles" id="t-move"></div>
+  <p class="note"><b>Still images move too.</b> Induced movement is the main tool for 2D art: the eye goes first to the strongest contrast, then follows lines, gazes, size steps and repeated shapes. Faint trails are drawn on these tiles so the direction still reads if animation is paused.</p>
+</section>
+
+<section class="demo" id="g-rhythm" aria-labelledby="g-rhythm-h">
+  <header><p class="eyebrow">Gallery 7 · Rhythm</p><h2 id="g-rhythm-h">Rhythm: repetition, alternation and tempo</h2></header>
+  <div class="prose">
+    <p>Rhythm comes from repeated elements and the intervals between them. In a still image that means fence posts, windows, trees, figures. In film it also means the timing of movement and the length of shots. Regular rhythm feels calm and predictable. Irregular rhythm feels lively or nervous. When a rhythm breaks, the eye goes to the break.</p>
+  </div>
+  <div class="tiles" id="t-rhythm"></div>
+</section>
+
+<section class="demo" id="g-pairs" aria-labelledby="g-pairs-h">
+  <header><p class="eyebrow">Gallery 8 · All components</p><h2 id="g-pairs-h">Every component, both ways</h2></header>
+  <div class="prose">
+    <p>One small scene: Pip in a yellow raincoat, a few trees, some hills. In each pair, one component is pushed to affinity (left) or contrast (right) while the others stay calm. Color appears here too. Click any tile to open it in the lab.</p>
+  </div>
+  <div class="tiles" id="t-pairs"></div>
+</section>
+
+<section class="demo" id="g-bang" aria-labelledby="g-bang-h">
+  <header><p class="eyebrow">Gallery 9 · Feelings</p><h2 id="g-bang-h">Feelings from paper shapes: Molly Bang's principles</h2></header>
+  <div class="prose">
+    <p>In <i>Picture This</i> (1991), the illustrator Molly Bang retold Little Red Riding Hood in cut paper: triangles, rectangles and a few colors. With no faces to read, the book shows how much feeling comes from shape, size, position and color alone. Her principles, paraphrased:</p>
+  </div>
+  <ul class="rules">
+    <li><b>Horizontal</b> shapes feel stable and calm. <b>Vertical</b> shapes feel active, reaching up. <b>Diagonals</b> feel like motion and tension.</li>
+    <li>The <b>upper half</b> of a picture feels free, happy or powerful. The <b>lower half</b> feels heavier and more grounded, sometimes sad or threatened.</li>
+    <li>The <b>center</b> of the picture pulls attention most strongly. The <b>edges</b> feel like the edges of the world.</li>
+    <li><b>Pointed</b> shapes frighten. <b>Rounded</b> shapes feel safe and comforting.</li>
+    <li><b>Larger</b> things feel stronger.</li>
+    <li>We notice <b>contrast</b>. Whatever differs from its surroundings stands out.</li>
+    <li><b>Light</b> backgrounds feel safe. <b>Dark</b> backgrounds feel frightening, because we can't see what's in them.</li>
+    <li>We link things by <b>color</b> more strongly than by shape.</li>
+  </ul>
+  <div class="tiles" id="t-bang"></div>
+</section>
+
+<section class="demo" id="lab" aria-labelledby="lab-h">
+  <header><p class="eyebrow">Build your own</p><h2 id="lab-h">Contrast and affinity lab</h2>
+  <p class="lede">Seven dials, one per component: left is affinity, right is contrast. The master slider moves them all together, which is roughly how a story builds. The interesting choices come from moving them separately: a scene can be calm in color and violent in line.</p></header>
+  <div class="lab">
+    <div class="stagecol">
+      <div class="stage"><canvas id="labcv" aria-label="Lab scene"></canvas></div>
+      <div class="meter"><span>Intensity</span><span class="bar"><i id="meterbar"></i></span><output id="meterval"></output></div>
+      <p class="desc" id="labdesc" aria-live="polite"></p>
+      <div class="labbar">
+        <button type="button" class="btn" id="copy">Copy description</button>
+        <button type="button" class="btn" id="reset">Reset</button>
+        <button type="button" class="btn" id="back" hidden>Back to the tile</button>
+      </div>
+    </div>
+    <div class="controls" id="labctl"></div>
+  </div>
+</section>
+
+<section class="demo" id="story" aria-labelledby="story-h">
+  <header><p class="eyebrow">Planning</p><h2 id="story-h">Plan intensity across a story</h2></header>
+  <div class="prose">
+    <p>Block's practical advice: before drawing anything, graph how intense the story should feel at each moment, then assign visual contrast to match. A classic shape rises through conflict to a climax and falls to a resolution. Below is a six-beat story told only with the lab's dials: Pip flies a kite, the wind takes it, a chase, the climax at the town wall, home again. Notice which components carry each beat. The thick line is the average; the thin ones are the seven components.</p>
+  </div>
+  <canvas class="curve" id="curvecv" aria-label="Story intensity graph: the average contrast rises from beat 1 to a peak at beat 5 and drops at beat 6"></canvas>
+  <div class="tiles" id="t-story"></div>
+  <div class="cards">
+    <div><h3>Save the peak for the climax</h3><p>If every frame is already at full contrast, the climax has nowhere to go. This is the most common mistake in student work: every image at maximum, so none of them registers.</p></div>
+    <div><h3>Components don't have to move together</h3><p>Let one or two components carry a story thread (color for a relationship, space for freedom) and keep the others quiet so the important one reads.</p></div>
+    <div><h3>Contrast across the cut</h3><p>Cutting from a calm frame to an intense one is itself a contrast. Cutting between similar frames is affinity, and feels smooth. Editing is where this becomes a tool of its own.</p></div>
+    <div><h3>Progression</h3><p>A component that changes steadily over a sequence (frames growing darker, shapes growing sharper, space growing deeper) tells the audience something is building, even before the plot says so.</p></div>
+  </div>
+</section>
+
+<section class="demo" id="practice" aria-labelledby="practice-h">
+  <header><p class="eyebrow">Use it</p><h2 id="practice-h">Turning the vocabulary into 2D and 3D art</h2></header>
+  <div class="tablewrap">
+    <table class="plain">
+      <thead><tr><th>Component</th><th>In 2D</th><th>In 3D</th></tr></thead>
+      <tbody>
+        <tr><td>Shape</td><td>Thumbnail in silhouette. Build each character from one dominant primitive and repeat that family in its props and home.</td><td>Block out with primitives first. Carry the dominant family through architecture and props. Check silhouettes from the actual shot camera.</td></tr>
+        <tr><td>Line</td><td>Draw the line of action before the figure. Block the composition as three to five lines.</td><td>Layout lines: horizon, walls, road edges. Camera roll for diagonals. Lean props. Pose rigs along a curve.</td></tr>
+        <tr><td>Tone</td><td>Plan in three values, at postage-stamp size, before any color. Squint test.</td><td>Render a grey clay pass. Light to set value groups. Exposure and fog compress or widen the range.</td></tr>
+        <tr><td>Color</td><td>A limited palette with one accent. Group by hue family.</td><td>Albedo palette, light temperature, color grade.</td></tr>
+        <tr><td>Space</td><td>Overlap, size steps, diagonals and haze for depth. Frontal planes and even sizes for flatness.</td><td>Lens and camera height, fog, layout in depth. Orthographic or long lens to flatten.</td></tr>
+        <tr><td>Movement</td><td>Gaze and gesture directions, motion lines, reading order.</td><td>Animation paths, camera moves, parallax between layers.</td></tr>
+        <tr><td>Rhythm</td><td>Repeat elements with variation; leave rests.</td><td>Instancing with jitter, prop spacing, animation and shot timing.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ol class="steps">
+    <li><b>Graph first</b>Sketch the story's intensity curve and mark where each component should peak.</li>
+    <li><b>Assign shapes</b>One shape family for the world, one for the hero, one for the threat.</li>
+    <li><b>Three values</b>Tiny thumbnails in three values, no color. Pick the one that reads instantly.</li>
+    <li><b>Vary one dial</b>Make six versions of one image changing a single component, as the galleries here do. It's grid search applied to structure.</li>
+    <li><b>Test</b>Silhouette test (fill black), squint test (blur), and a flip test (mirror it to see it fresh).</li>
+    <li><b>Master study</b>Take a frame you love and diagram it: shape family, dominant line, value groups, depth cues. Then say where the contrast is.</li>
+  </ol>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and further reading</h2></header>
+  <div class="tablewrap">
+    <table class="plain">
+      <thead><tr><th>Term</th><th>Meaning</th><th>Use it to say</th></tr></thead>
+      <tbody>
+        <tr><td>Affinity / contrast</td><td>A component kept similar, or set against itself</td><td>"Affinity of tone, contrast of shape": a soft image with a sharp intruder</td></tr>
+        <tr><td>Visual intensity</td><td>How strongly the viewer reacts, driven by contrast</td><td>Where a beat should sit on the story graph</td></tr>
+        <tr><td>Shape language</td><td>Feelings carried by round, square and triangular forms</td><td>Character and world design intent</td></tr>
+        <tr><td>Silhouette</td><td>The filled outline of a form</td><td>Readability of a pose or a design</td></tr>
+        <tr><td>Line of action</td><td>One imaginary curve running through a pose</td><td>Energy and direction of a figure</td></tr>
+        <tr><td>Implied line</td><td>A line created by gaze, gesture, alignment or motion</td><td>Leading the eye without drawing anything</td></tr>
+        <tr><td>Leading lines</td><td>Lines that converge on or point to the subject</td><td>Where attention should land</td></tr>
+        <tr><td>Tangent</td><td>Two edges that just touch, flattening depth and confusing shapes</td><td>A mistake to fix: overlap clearly or separate clearly</td></tr>
+        <tr><td>Value, tone</td><td>Lightness independent of hue</td><td>Structure, mood and focal point</td></tr>
+        <tr><td>High key / low key</td><td>A picture kept mostly light, or mostly dark</td><td>Airy innocence against night and mystery</td></tr>
+        <tr><td>Notan</td><td>Japanese term for the design of light and dark masses</td><td>Two- or three-value planning</td></tr>
+        <tr><td>Focal point</td><td>Where the eye lands first, usually the strongest contrast</td><td>What the shot is about</td></tr>
+        <tr><td>Depth cues</td><td>Overlap, height in frame, size change, convergence, texture gradient, shading, aerial perspective</td><td>Building or removing depth deliberately</td></tr>
+        <tr><td>Deep, flat, limited, ambiguous space</td><td>Block's four kinds of space</td><td>The spatial character of a scene</td></tr>
+        <tr><td>Frontal plane</td><td>A surface square to the camera</td><td>Flatness, formality, a stage-set feel</td></tr>
+        <tr><td>Aerial perspective</td><td>Haze lightening, cooling and softening distant things</td><td>Depth, scale, air</td></tr>
+        <tr><td>Actual / apparent / induced movement</td><td>Objects moving, the camera moving, the eye moving</td><td>Which kind of motion carries a moment</td></tr>
+        <tr><td>Rhythm, tempo</td><td>Repetition and its intervals, in space or time</td><td>Calm order, nervous energy, a deliberate break</td></tr>
+        <tr><td>Progression</td><td>A component changing steadily across a sequence</td><td>"Shapes get sharper as the trip goes on"</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="reading">
+    <li><b>Bruce Block, <i>The Visual Story</i>.</b> The source of the components and the contrast and affinity principle. Written for film and animation, but it applies directly to illustration and games.</li>
+    <li><b>Molly Bang, <i>Picture This: How Pictures Work</i>.</b> A short book that builds its principles one paper shape at a time.</li>
+    <li><b>Tom Bancroft, <i>Creating Characters with Personality</i>.</b> Shape language and silhouette in character design.</li>
+    <li><b>Marcos Mateu-Mestre, <i>Framed Ink</i>.</b> Composition, value and staging for storytelling drawings.</li>
+    <li><b>Hans Bacher, <i>Dream Worlds</i>.</b> Production design for animation, with shape and value studies for whole films.</li>
+  </ul>
+</section>
+
+<p class="foot">Drawn live in the browser with no build step. Galleries 1 to 4 and 6 to 9 are 2D canvas drawings made from parametric primitives (the shapes morph between circle and polygon by a single number). The space gallery renders a small three.js r170 scene twelve times, turning on one depth cue per tile: orthographic or perspective camera, camera height, ground lines, a texture, lights with shadow maps, linear fog. The lab draws its scene from seven numbers between 0 (affinity) and 1 (contrast), with colors set in OKLCH so tone and hue can move independently.</p>
+
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const W = 600, H = 400;
+const TAU = Math.PI * 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+function rng(seed) { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function oklch(L, C, h, alpha = 1) {
+  const hr = h * Math.PI / 180, a = C * Math.cos(hr), b = C * Math.sin(hr);
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3, m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3, s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  const f = x => { x = clamp(x); return Math.round(255 * (x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055)); };
+  return `rgba(${f(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s)},${f(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s)},${f(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)},${alpha})`;
+}
+const gray = v => oklch(clamp(v), 0, 0);
+const P = { paper: '#F2EBDD', ink: '#1F1C25', red: '#D24B3E', yellow: '#EDB23C', teal: '#2E8A87', blue: '#3E5CA8', green: '#5F9A58', dgreen: '#2E5B45', sky: '#C9DEE8', sand: '#E3C79A', plum: '#5A4787', pink: '#E59AA0', skin: '#F2C9A6' };
+
+const fill = (ctx, c) => { ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); };
+const circ = (ctx, x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
+const ell = (ctx, x, y, rx, ry, rot = 0) => { ctx.beginPath(); ctx.ellipse(x, y, Math.max(rx, 0.1), Math.max(ry, 0.1), rot, 0, TAU); ctx.fill(); };
+const rect = (ctx, x, y, w, h, r = 0) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
+function path(ctx, pts, close = true) { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); if (close) ctx.closePath(); }
+const fpoly = (ctx, pts) => { path(ctx, pts); ctx.fill(); };
+function stroke(ctx, pts, w, col, dash) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash(dash || []); path(ctx, pts, false); ctx.stroke(); ctx.setLineDash([]); }
+// Shape between a circle (a = 0) and a regular n-gon (a = 1); a vertex points along rot.
+function morph(ctx, cx, cy, rx, ry, n, a, rot = -Math.PI / 2) {
+  const seg = TAU / n, cr = (1 + Math.cos(Math.PI / n)) / 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 120; i++) {
+    const d = i / 120 * TAU, u = ((d % seg) + seg) % seg - seg / 2;
+    const r = lerp(cr, Math.cos(Math.PI / n) / Math.cos(u), a);
+    const x = cx + rx * r * Math.cos(rot + d), y = cy + ry * r * Math.sin(rot + d);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+}
+// Polygon whose corners go from fully smoothed (sharp = 0) to sharp (sharp = 1).
+function spoly(ctx, pts, sharp) {
+  const n = pts.length, L = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const p = pts[(i - 1 + n) % n], v = pts[i], q = pts[(i + 1) % n];
+    const a = L(L(p, v, 0.5), v, sharp), b = L(v, L(v, q, 0.5), 1 - sharp);
+    i ? ctx.lineTo(a[0], a[1]) : ctx.moveTo(a[0], a[1]);
+    ctx.quadraticCurveTo(v[0], v[1], b[0], b[1]);
+  }
+  ctx.closePath();
+}
+function vgrad(ctx, y0, y1, c0, c1) { const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0); }
+function hills(ctx, base, amp, f1, f2, seed, col, x0 = 0, x1 = W) {
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x0, H);
+  for (let x = x0; x <= x1; x += 4) ctx.lineTo(x, base - amp * (0.5 + 0.32 * Math.sin(x / W * f1 + seed) + 0.18 * Math.sin(x / W * f2 + seed * 2.1)));
+  ctx.lineTo(x1, H); ctx.closePath(); ctx.fill();
+}
+function tree(ctx, x, by, h, a, leaf, trunk, lean = 0) {
+  ctx.save(); ctx.translate(x, by); ctx.rotate(lean);
+  ctx.fillStyle = trunk; rect(ctx, -h * 0.045, -h * 0.4, h * 0.09, h * 0.4);
+  ctx.fillStyle = leaf; morph(ctx, 0, -h * 0.62, h * 0.27, h * 0.38, 3, a); ctx.fill();
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------ characters */
+// Pip: a round kid in a raincoat. Feet at (x, fy), roughly h tall.
+function kid(ctx, x, fy, h, coat, o = {}) {
+  const ink = o.ink || P.ink, skin = o.skin || P.skin, ph = o.phase || 0, dir = o.dir || 0;
+  ctx.save(); ctx.translate(x, fy); ctx.rotate(o.lean || 0);
+  const sw = Math.sin(ph) * h * 0.06;
+  ctx.fillStyle = ink;
+  rect(ctx, -h * 0.13 + sw, -h * 0.22, h * 0.1, h * 0.22, h * 0.04);
+  rect(ctx, h * 0.03 - sw, -h * 0.22, h * 0.1, h * 0.22, h * 0.04);
+  ctx.fillStyle = coat;
+  ell(ctx, -h * 0.21, -h * 0.4, h * 0.06, h * 0.11, 0.3 + Math.sin(ph) * 0.4);
+  ell(ctx, h * 0.21, -h * 0.4, h * 0.06, h * 0.11, -0.3 - Math.sin(ph) * 0.4);
+  ell(ctx, 0, -h * 0.39, h * 0.21, h * 0.22);
+  circ(ctx, 0, -h * 0.73, h * 0.2);
+  ctx.fillStyle = skin; circ(ctx, dir * h * 0.03, -h * 0.71, h * 0.145);
+  ctx.fillStyle = ink;
+  const lx = (o.look ? o.look[0] : dir) * h * 0.035, ly = (o.look ? o.look[1] : 0) * h * 0.035;
+  if (!o.back) { circ(ctx, -h * 0.05 + dir * h * 0.04 + lx, -h * 0.72 + ly, h * 0.018); circ(ctx, h * 0.05 + dir * h * 0.04 + lx, -h * 0.72 + ly, h * 0.018); }
+  ctx.restore();
+}
+// Shape-language characters built from one family each.
+function character(ctx, x, fy, h, kind, body, o = {}) {
+  const ink = P.ink, skin = o.skin || P.skin;
+  ctx.save(); ctx.translate(x, fy);
+  if (kind === 'round') {
+    ctx.fillStyle = ink; ell(ctx, -h * 0.1, -h * 0.05, h * 0.075, h * 0.06); ell(ctx, h * 0.1, -h * 0.05, h * 0.075, h * 0.06);
+    ctx.fillStyle = body; ell(ctx, -h * 0.25, -h * 0.34, h * 0.07, h * 0.1, 0.4); ell(ctx, h * 0.25, -h * 0.34, h * 0.07, h * 0.1, -0.4);
+    ell(ctx, 0, -h * 0.32, h * 0.25, h * 0.26);
+    ctx.fillStyle = skin; circ(ctx, 0, -h * 0.76, h * 0.22);
+    ctx.fillStyle = ink;
+    if (o.teeth) {
+      ell(ctx, -h * 0.075, -h * 0.79, h * 0.035, h * 0.012, -0.25); ell(ctx, h * 0.075, -h * 0.79, h * 0.035, h * 0.012, 0.25);
+      ctx.beginPath(); ctx.ellipse(0, -h * 0.7, h * 0.11, h * 0.07, 0, 0, Math.PI); ctx.fill();
+      ctx.fillStyle = '#FFF';
+      for (let i = 0; i < 6; i++) { const tx = -h * 0.09 + i * h * 0.036; fpoly(ctx, [[tx, -h * 0.7], [tx + h * 0.036, -h * 0.7], [tx + h * 0.018, -h * 0.655]]); }
+    } else {
+      circ(ctx, -h * 0.075, -h * 0.79, h * 0.024); circ(ctx, h * 0.075, -h * 0.79, h * 0.024);
+      ctx.strokeStyle = ink; ctx.lineWidth = h * 0.014; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(0, -h * 0.74, h * 0.06, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      ctx.fillStyle = 'rgba(229,120,130,.45)'; circ(ctx, -h * 0.14, -h * 0.72, h * 0.035); circ(ctx, h * 0.14, -h * 0.72, h * 0.035);
+    }
+  } else if (kind === 'square') {
+    ctx.fillStyle = ink; rect(ctx, -h * 0.17, -h * 0.16, h * 0.13, h * 0.16); rect(ctx, h * 0.04, -h * 0.16, h * 0.13, h * 0.16);
+    ctx.fillStyle = body; rect(ctx, -h * 0.37, -h * 0.56, h * 0.1, h * 0.34, h * 0.01); rect(ctx, h * 0.27, -h * 0.56, h * 0.1, h * 0.34, h * 0.01);
+    rect(ctx, -h * 0.28, -h * 0.58, h * 0.56, h * 0.44, h * 0.015);
+    ctx.fillStyle = skin; rect(ctx, -h * 0.17, -h * 0.96, h * 0.34, h * 0.36, h * 0.01);
+    ctx.fillStyle = '#6E6A70'; rect(ctx, -h * 0.17, -h * 0.98, h * 0.34, h * 0.08);
+    ctx.fillStyle = ink;
+    rect(ctx, -h * 0.12, -h * 0.84, h * 0.09, h * 0.02); rect(ctx, h * 0.03, -h * 0.84, h * 0.09, h * 0.02);
+    rect(ctx, -h * 0.095, -h * 0.8, h * 0.035, h * 0.035); rect(ctx, h * 0.06, -h * 0.8, h * 0.035, h * 0.035);
+    rect(ctx, -h * 0.07, -h * 0.69, h * 0.14, h * 0.018);
+    ctx.fillStyle = '#E8E4DA'; rect(ctx, -h * 0.13, -h * 0.66, h * 0.26, h * 0.06);
+  } else {
+    stroke(ctx, [[-h * 0.06, -h * 0.34], [-h * 0.12, 0]], h * 0.035, ink); stroke(ctx, [[h * 0.06, -h * 0.34], [h * 0.12, 0]], h * 0.035, ink);
+    fpoly(ctx, [[-h * 0.2, 0], [-h * 0.06, -h * 0.03], [-h * 0.06, 0]]); fpoly(ctx, [[h * 0.2, 0], [h * 0.06, -h * 0.03], [h * 0.06, 0]]);
+    stroke(ctx, [[-h * 0.25, -h * 0.64], [-h * 0.35, -h * 0.47], [-h * 0.26, -h * 0.34]], h * 0.03, body);
+    stroke(ctx, [[h * 0.25, -h * 0.64], [h * 0.35, -h * 0.47], [h * 0.26, -h * 0.34]], h * 0.03, body);
+    ctx.fillStyle = body; fpoly(ctx, [[-h * 0.28, -h * 0.67], [h * 0.28, -h * 0.67], [0, -h * 0.28]]);
+    ctx.fillStyle = skin; fpoly(ctx, [[-h * 0.12, -h * 0.9], [h * 0.12, -h * 0.9], [h * 0.07, -h * 0.75], [0, -h * 0.69], [-h * 0.07, -h * 0.75]]);
+    ctx.fillStyle = ink; fpoly(ctx, [[-h * 0.14, -h * 0.88], [-h * 0.09, -h * 1.02], [-h * 0.03, -h * 0.92], [h * 0.03, -h * 1.04], [h * 0.08, -h * 0.92], [h * 0.15, -h * 1.0], [h * 0.14, -h * 0.88]]);
+    stroke(ctx, [[-h * 0.09, -h * 0.85], [-h * 0.02, -h * 0.82]], h * 0.016, ink); stroke(ctx, [[h * 0.09, -h * 0.85], [h * 0.02, -h * 0.82]], h * 0.016, ink);
+    fpoly(ctx, [[-h * 0.075, -h * 0.805], [-h * 0.025, -h * 0.795], [-h * 0.06, -h * 0.785]]); fpoly(ctx, [[h * 0.075, -h * 0.805], [h * 0.025, -h * 0.795], [h * 0.06, -h * 0.785]]);
+    stroke(ctx, [[-h * 0.04, -h * 0.745], [h * 0.05, -h * 0.755]], h * 0.012, ink);
+  }
+  ctx.restore();
+}
+function shadow(ctx, x, y, rx, a = 0.15) { ctx.fillStyle = `rgba(20,16,30,${a})`; ell(ctx, x, y, rx, rx * 0.16); }
+// Thick-limbed stick figure from joints in units (8 units tall, feet at y = 0).
+function pose(ctx, x, fy, u, J, col) {
+  const T = ([a, b]) => [x + a * u, fy + b * u];
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const seg = (pts, w) => { ctx.lineWidth = w * u; path(ctx, pts.map(T), false); ctx.stroke(); };
+  seg([J.lf2, J.lk, J.hip], 0.9); seg([J.rf2, J.rk, J.hip], 0.9);
+  seg([J.neck, J.hip], 1.9);
+  seg([J.neck, J.le, J.lh], 0.75); seg([J.neck, J.re, J.rh], 0.75);
+  const [hx, hy] = T(J.head); circ(ctx, hx, hy, 0.8 * u);
+}
+const POSES = {
+  readable: { head: [1.3, -7.2], neck: [0.8, -6.2], hip: [0, -3.6], le: [2.2, -6.6], lh: [3.5, -7.6], re: [-0.7, -5.1], rh: [-2.1, -4.6], lk: [1.7, -2.1], lf2: [2.3, 0], rk: [-0.9, -1.8], rf2: [-2.5, -0.6] },
+  muddled: { head: [0, -7.2], neck: [0, -6.2], hip: [0, -3.6], le: [-0.55, -4.8], lh: [0.45, -5.4], re: [0.55, -4.8], rh: [-0.45, -5.4], lk: [-0.3, -1.8], lf2: [-0.35, 0], rk: [0.3, -1.8], rf2: [0.35, 0] },
+  stiff: { head: [0, -7.2], neck: [0, -6.2], hip: [0, -3.6], le: [-0.95, -4.9], lh: [-1.05, -3.6], re: [0.95, -4.9], rh: [1.05, -3.6], lk: [-0.4, -1.8], lf2: [-0.45, 0], rk: [0.4, -1.8], rf2: [0.45, 0] },
+  throw: { head: [-1.9, -7.0], neck: [-1.3, -6.1], hip: [0, -3.6], le: [-2.7, -6.8], lh: [-3.7, -7.8], re: [0.3, -5.9], rh: [1.4, -6.4], lk: [1.2, -1.9], lf2: [2.0, 0], rk: [-0.8, -1.7], rf2: [-1.6, 0] }
+};
+
+/* ------------------------------------------------------------ tile plumbing */
+function makeTile(gridId, [name, spec, intent], onClick) {
+  const el = document.createElement(onClick ? 'button' : 'figure');
+  el.className = 'tile';
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const cap = document.createElement(onClick ? 'span' : 'figcaption');
+  cap.style.display = 'contents';
+  for (const [cls, text] of [['tn', name], ['ts', spec], ['td', intent]]) { const p = document.createElement(onClick ? 'span' : 'p'); p.className = cls; p.style.display = 'block'; p.textContent = text; cap.append(p); }
+  el.append(cv, cap);
+  if (onClick) { el.type = 'button'; el.setAttribute('aria-label', `${name}. ${intent} Open in the lab.`); el.addEventListener('click', () => onClick(el)); }
+  else cv.setAttribute('aria-hidden', 'true');
+  document.getElementById(gridId).append(el);
+  return cv;
+}
+function gallery(gridId, list) { for (const [meta, draw] of list) { const cv = makeTile(gridId, meta); draw(cv.getContext('2d')); } }
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const anims = [];
+const io = new IntersectionObserver(es => { for (const e of es) if (e.target.__anim) e.target.__anim.visible = e.isIntersecting; }, { rootMargin: '60px' });
+function animate(cv, draw) { const a = { ctx: cv.getContext('2d'), draw, visible: false }; cv.__anim = a; anims.push(a); io.observe(cv); draw(a.ctx, 1.3); }
+function loop(now) { const t = now / 1000; for (const a of anims) if (a.visible) a.draw(a.ctx, t); requestAnimationFrame(loop); }
+
+/* ------------------------------------------------------------ gallery 1: shape families */
+gallery('t-shape', [
+  [['Circle', 'round · no corners', 'Soft, safe, friendly, young. Nothing points anywhere and nothing can hurt you, so circles feel at rest and approachable.'], ctx => {
+    fill(ctx, '#F5ECDD');
+    for (const [x, y, r, c] of [[200, 215, 112, '#EDB23C'], [335, 160, 72, '#E59AA0'], [420, 262, 96, '#E6CFA6'], [300, 312, 52, '#D96C4E'], [488, 120, 40, '#EDB23C'], [104, 318, 42, '#E59AA0'], [120, 110, 26, '#D96C4E']]) { ctx.fillStyle = c; ctx.globalAlpha = 0.92; circ(ctx, x, y, r); }
+    ctx.globalAlpha = 1;
+  }],
+  [['Square', 'square · right angles', 'Stable, dependable, stubborn, heavy. Right angles sit flat on the ground and resist being pushed over.'], ctx => {
+    fill(ctx, '#E6EAF0'); ctx.fillStyle = '#C9CFD9'; ctx.fillRect(0, 352, W, 48);
+    for (const [x, y, w, h, c] of [[120, 252, 360, 100, '#3E5CA8'], [160, 168, 170, 84, '#6B7FA8'], [330, 192, 110, 60, '#2D3A5C'], [200, 98, 96, 70, '#9AA6BF'], [360, 140, 56, 52, '#6B7FA8']]) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+  }],
+  [['Triangle', 'triangle · points', 'Active, dangerous, directional: a point aims somewhere. Pointing down or sideways it feels unstable. On a wide base pointing up it feels stable and aspiring, like a mountain.'], ctx => {
+    fill(ctx, '#F2E7E1'); ctx.fillStyle = '#DCCBC2'; ctx.fillRect(0, 330, W, 70);
+    ctx.fillStyle = '#7E3A3A'; fpoly(ctx, [[50, 330], [270, 330], [160, 120]]);
+    ctx.fillStyle = '#D24B3E';
+    for (const [x, y, s, r] of [[380, 120, 50, 0.6], [470, 210, 64, 2.4], [360, 270, 40, -1.2], [520, 100, 34, 3.6], [440, 320, 30, 1.3]]) { ctx.save(); ctx.translate(x, y); ctx.rotate(r); fpoly(ctx, [[0, -s], [s * 0.42, s * 0.6], [-s * 0.42, s * 0.6]]); ctx.restore(); }
+    ctx.fillStyle = P.ink; ctx.save(); ctx.translate(430, 170); ctx.rotate(-2.2); fpoly(ctx, [[0, -40], [16, 30], [-16, 30]]); ctx.restore();
+  }],
+  [['A round character', 'round family', 'Warm, harmless, lovable, often young or comic. Think of Baymax, Totoro or Kirby.'], ctx => {
+    fill(ctx, '#F6EEDF'); shadow(ctx, 300, 352, 90); character(ctx, 300, 350, 270, 'round', P.yellow);
+  }],
+  [['A square character', 'square family', 'Reliable, rigid, protective, stubborn: the grumpy guardian, the strongman, the old man who won\'t move, like Carl in Up.'], ctx => {
+    fill(ctx, '#E6EAF0'); shadow(ctx, 300, 352, 100); character(ctx, 300, 350, 290, 'square', '#4C6A9C');
+  }],
+  [['A triangular character', 'triangle family', 'Cunning, aggressive, quick. Villains and tricksters, but also heroes in action: broad shoulders, narrow waist, pointed features.'], ctx => {
+    fill(ctx, '#EFE6EE'); shadow(ctx, 300, 352, 70); character(ctx, 300, 350, 290, 'tri', '#6B3F8C');
+  }],
+  [['Shapes as a relationship', 'square + round', 'Pair opposite shapes and the relationship writes itself: stiff and soft, old and young, order and chaos.'], ctx => {
+    fill(ctx, '#EEEBE4'); shadow(ctx, 230, 354, 100); shadow(ctx, 410, 354, 60);
+    character(ctx, 230, 352, 300, 'square', '#4C6A9C'); character(ctx, 410, 352, 160, 'round', P.yellow);
+  }],
+  [['Breaking the rule', 'round + one sharp detail', 'A round, cute face with one sharp detail (teeth, a pointed shadow) is creepier than an obvious villain. Shape language runs on expectation, so you can betray it.'], ctx => {
+    fill(ctx, '#2A2632'); ctx.fillStyle = '#3B3546'; ctx.fillRect(0, 0, W, 330); ctx.fillStyle = '#1D1A23'; ctx.fillRect(0, 330, W, 70);
+    ctx.fillStyle = '#15131A'; fpoly(ctx, [[260, 330], [330, 330], [420, 40], [390, 150], [360, 60], [345, 170], [300, 90]]);
+    character(ctx, 300, 345, 230, 'round', P.pink, { teeth: true });
+  }]
+]);
+
+/* ------------------------------------------------------------ gallery 2: shape at scale */
+gallery('t-scale', [
+  [['A round world', 'round · environment', 'Cosy, safe, pastoral: the Shire, a children\'s picture book. Domes, puffy trees, rolling hills.'], ctx => {
+    vgrad(ctx, 0, 250, '#CFE3E6', '#F1EAD2');
+    ctx.fillStyle = '#F4D58A'; circ(ctx, 470, 80, 34);
+    hills(ctx, 250, 90, 6, 13, 0.4, '#A9C98E'); hills(ctx, 320, 80, 5, 11, 2.2, '#86B26F');
+    for (const [x, y, h] of [[90, 300, 110], [170, 286, 80], [520, 296, 120]]) { ctx.fillStyle = '#6E4C35'; rect(ctx, x - 5, y - h * 0.35, 10, h * 0.35, 4); ctx.fillStyle = '#5C9A55'; circ(ctx, x, y - h * 0.62, h * 0.3); circ(ctx, x - h * 0.18, y - h * 0.48, h * 0.2); circ(ctx, x + h * 0.18, y - h * 0.48, h * 0.2); }
+    for (const [x, y, r, c] of [[300, 330, 70, '#E9C9A0'], [420, 336, 46, '#E6B98E']]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#8A5A3C'; ctx.beginPath(); ctx.arc(x, y, r * 0.3, Math.PI, 0); ctx.fill(); }
+    ctx.fillStyle = '#7FAF67'; ctx.fillRect(0, 330, W, 70);
+  }],
+  [['A square world', 'square · environment', 'Order, rules, bureaucracy. When the blocks tower over people, it becomes oppression.'], ctx => {
+    fill(ctx, '#D9DEE5');
+    const r = rng(3);
+    for (let i = 0; i < 9; i++) {
+      const x = i * 68 - 10, w = 60 + r() * 20, h = 140 + r() * 200, c = ['#5D6B80', '#77849A', '#4A566A'][i % 3];
+      ctx.fillStyle = c; ctx.fillRect(x, 360 - h, w, h);
+      ctx.fillStyle = 'rgba(230,236,245,.55)';
+      for (let y = 360 - h + 14; y < 340; y += 22) for (let wx = x + 8; wx < x + w - 14; wx += 16) ctx.fillRect(wx, y, 9, 12);
+    }
+    ctx.fillStyle = '#9BA3AE'; ctx.fillRect(0, 360, W, 40);
+    ctx.fillStyle = '#3F4A3A'; for (const x of [80, 260, 440]) ctx.fillRect(x, 334, 26, 26);
+  }],
+  [['A pointed world', 'triangle · environment', 'Danger and hostility: the villain\'s lair, the dark forest, the place you shouldn\'t go.'], ctx => {
+    vgrad(ctx, 0, 300, '#2D2840', '#5B4A6E');
+    ctx.fillStyle = '#433A58'; fpoly(ctx, [[0, 300], [60, 150], [110, 230], [190, 70], [260, 210], [330, 110], [400, 240], [470, 60], [540, 200], [600, 130], [600, 300]]);
+    ctx.fillStyle = '#231F30'; ctx.fillRect(0, 300, W, 100);
+    const r = rng(9);
+    for (let i = 0; i < 14; i++) { const x = r() * W, h = 90 + r() * 140, y = 310 + r() * 70; ctx.fillStyle = i % 2 ? '#16131F' : '#1E1A2A'; for (let k = 0; k < 3; k++) fpoly(ctx, [[x, y - h + k * h * 0.22], [x + h * (0.18 + k * 0.05), y - h * 0.45 + k * h * 0.2], [x - h * (0.18 + k * 0.05), y - h * 0.45 + k * h * 0.2]]); }
+  }],
+  [['One shape against its world', 'round in a pointed world', 'The character\'s shape contrasts with everything around it, so it\'s the first thing you see, and you feel it doesn\'t belong there.'], ctx => {
+    vgrad(ctx, 0, 300, '#2D2840', '#5B4A6E');
+    ctx.fillStyle = '#433A58'; fpoly(ctx, [[0, 300], [70, 120], [150, 240], [230, 90], [320, 230], [420, 80], [520, 220], [600, 140], [600, 300]]);
+    ctx.fillStyle = '#231F30'; ctx.fillRect(0, 300, W, 100);
+    for (const [x, y, h] of [[60, 380, 250], [150, 330, 160], [470, 340, 190], [560, 390, 260]]) { ctx.fillStyle = '#16131F'; for (let k = 0; k < 3; k++) fpoly(ctx, [[x, y - h + k * h * 0.22], [x + h * (0.18 + k * 0.05), y - h * 0.45 + k * h * 0.2], [x - h * (0.18 + k * 0.05), y - h * 0.45 + k * h * 0.2]]); }
+    ctx.fillStyle = 'rgba(237,178,60,.18)'; circ(ctx, 300, 300, 90);
+    kid(ctx, 300, 345, 120, P.yellow);
+  }],
+  [['Equal sizes', 'monotone', 'Seven stones of the same size. The eye has no order to follow, so the picture feels flat and uneventful.'], ctx => {
+    fill(ctx, '#EFE9DC'); ctx.fillStyle = '#D9CFBA'; ctx.fillRect(0, 280, W, 120);
+    for (let i = 0; i < 7; i++) { ctx.fillStyle = '#6F6A78'; ell(ctx, 60 + i * 80, 285, 30, 26); }
+  }],
+  [['Big, medium, small', 'variety', 'The same stones as a dominant shape, a secondary one and small accents. Now there\'s an order: big first, then medium, then the scatter.'], ctx => {
+    fill(ctx, '#EFE9DC'); ctx.fillStyle = '#D9CFBA'; ctx.fillRect(0, 280, W, 120);
+    ctx.fillStyle = '#6F6A78'; ell(ctx, 210, 250, 130, 110); ell(ctx, 410, 282, 62, 52);
+    for (const [x, y, r] of [[500, 300, 18], [530, 296, 12], [70, 306, 14], [470, 312, 9], [560, 310, 8]]) ell(ctx, x, y, r, r * 0.85);
+  }],
+  [['Silhouette: readable', 'pose · filled black', 'Fill the figure black. If you can still read the action, the shape is doing the work. Limbs away from the body, profile view, clear negative space.'], ctx => {
+    fill(ctx, '#ECE6DA'); ctx.fillStyle = '#D6CCBA'; ctx.fillRect(0, 352, W, 48);
+    pose(ctx, 290, 352, 34, POSES.readable, P.ink);
+  }],
+  [['Silhouette: muddled', 'pose · filled black', 'The same figure with arms in front of the body and a straight-on stance. The black shape tells you almost nothing about what it\'s doing.'], ctx => {
+    fill(ctx, '#ECE6DA'); ctx.fillStyle = '#D6CCBA'; ctx.fillRect(0, 352, W, 48);
+    pose(ctx, 300, 352, 34, POSES.muddled, P.ink);
+  }]
+]);
+
+/* ------------------------------------------------------------ gallery 3: line */
+gallery('t-line', [
+  [['Horizontal', 'rest · stability', 'Calm, rest, open space. A horizon, a still sea, a figure lying down. Horizontals feel like nothing is about to happen.'], ctx => {
+    vgrad(ctx, 0, 230, '#E7DFCE', '#F4EEE2');
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; for (const [x, y, w] of [[60, 70, 230], [330, 108, 190], [160, 150, 260]]) rect(ctx, x, y, w, 9, 5);
+    ctx.fillStyle = '#7FA3B5'; ctx.fillRect(0, 230, W, 110);
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; for (let y = 245; y < 335; y += 16) ctx.fillRect(40 + (y * 7) % 90, y, 220 + (y * 13) % 200, 2);
+    ctx.fillStyle = '#E0C79B'; ctx.fillRect(0, 335, W, 65);
+    ctx.fillStyle = '#5B4A3C'; fpoly(ctx, [[340, 228], [440, 228], [425, 238], [355, 238]]); ctx.fillRect(388, 205, 3, 24);
+    ctx.fillStyle = P.red; rect(ctx, 150, 350, 70, 14, 7); ctx.fillStyle = P.skin; circ(ctx, 232, 356, 9);
+  }],
+  [['Vertical', 'standing · strength', 'Strength, dignity, formality, reaching upward. Columns, cathedrals, tall trees, people standing to attention.'], ctx => {
+    fill(ctx, '#EDE6D6'); ctx.fillStyle = '#CDBF9F'; ctx.fillRect(0, 345, W, 55);
+    const r = rng(5);
+    for (let x = 14; x < W; x += 48 + r() * 18) { ctx.fillStyle = ['#3E4A3D', '#56614F', '#2F3A30'][Math.floor(r() * 3)]; ctx.fillRect(x, 0, 12 + r() * 12, 348); }
+    kid(ctx, 310, 350, 70, P.red);
+  }],
+  [['Diagonal', 'motion · instability', 'Movement, effort, conflict, imbalance. Things that lean look like they are about to fall, or fighting not to.'], ctx => {
+    fill(ctx, '#E4DED0');
+    ctx.strokeStyle = 'rgba(70,85,100,.45)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 40; i++) { const x = (i * 53) % 700 - 50, y = (i * 97) % 380; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 16, y + 34); ctx.stroke(); }
+    ctx.fillStyle = '#8E9B6B'; fpoly(ctx, [[0, 400], [0, 380], [W, 140], [W, 400]]);
+    for (const [x, h] of [[110, 120], [250, 150], [420, 130], [540, 110]]) tree(ctx, x, 380 - x * 0.4 + 4, h, 0.6, '#4E6B3E', '#4A3A2E', 0.38);
+    kid(ctx, 330, 252, 80, P.red, { lean: 0.35, dir: 1, phase: 1 });
+  }],
+  [['Curved', 'flowing · organic', 'Gentle, natural, sensual, slow. An S-curve leads the eye through the picture at an easy pace.'], ctx => {
+    vgrad(ctx, 0, 200, '#F3E5CF', '#F6EEE0');
+    hills(ctx, 210, 70, 7, 3, 0.2, '#B7C98F'); hills(ctx, 270, 70, 5, 9, 1.8, '#94B57A'); hills(ctx, 330, 50, 4, 7, 3.1, '#76A066');
+    ctx.fillStyle = '#7FB0C8'; ctx.beginPath();
+    ctx.moveTo(300, 205); ctx.bezierCurveTo(240, 240, 420, 270, 330, 310); ctx.bezierCurveTo(240, 350, 160, 360, 130, 400);
+    ctx.lineTo(330, 400); ctx.bezierCurveTo(330, 370, 420, 340, 400, 305); ctx.bezierCurveTo(390, 270, 280, 240, 310, 205); ctx.closePath(); ctx.fill();
+  }],
+  [['Jagged', 'tension · violence', 'Zigzags feel like tension, danger, electricity, pain. Lightning, broken glass, cracked ice, a heart monitor.'], ctx => {
+    fill(ctx, '#2B2840');
+    ctx.fillStyle = '#4A4466'; fpoly(ctx, [[0, 280], [50, 170], [90, 230], [150, 120], [200, 210], [260, 150], [320, 240], [380, 100], [440, 200], [500, 140], [560, 230], [600, 180], [600, 400], [0, 400]]);
+    ctx.fillStyle = '#1C1A2A'; fpoly(ctx, [[0, 330], [60, 280], [100, 320], [170, 260], [230, 330], [300, 290], [360, 340], [430, 270], [500, 330], [560, 290], [600, 320], [600, 400], [0, 400]]);
+    ctx.shadowColor = '#F4E3A1'; ctx.shadowBlur = 24;
+    stroke(ctx, [[400, 0], [370, 70], [410, 90], [350, 180], [395, 195], [330, 300]], 6, '#F8EDC0');
+    ctx.shadowBlur = 0;
+  }],
+  [['Converging', 'leading lines', 'Lines that converge pull the eye to the point where they meet. Put the subject there and the whole picture points at it.'], ctx => {
+    vgrad(ctx, 0, 180, '#E9DCC4', '#F2E9D8'); ctx.fillStyle = '#C9B48F'; ctx.fillRect(0, 180, W, 220);
+    ctx.fillStyle = '#6E6A66'; fpoly(ctx, [[120, 400], [480, 400], [306, 180], [294, 180]]);
+    stroke(ctx, [[300, 400], [300, 182]], 3, '#E9E2D2', [16, 14]);
+    for (let i = 0; i < 9; i++) { const D = 1 + i * 1.15, s = 1 / D; for (const side of [-1, 1]) { const x = 300 + side * 270 * s, y = 180 + 220 * s; ctx.fillStyle = '#5B4A3C'; ctx.fillRect(x - 5 * s, y - 120 * s, 10 * s, 120 * s); } }
+    kid(ctx, 300, 196, 26, P.red);
+  }],
+  [['Line of action', 'stiff vs curved', 'Draw one line through the pose before the figure. A clear C or S curve feels alive and energetic; a stiff vertical feels wooden.'], ctx => {
+    fill(ctx, '#EEE8DC'); ctx.fillStyle = '#D9CFBD'; ctx.fillRect(0, 354, W, 46);
+    pose(ctx, 170, 354, 30, POSES.stiff, '#4A4752'); pose(ctx, 420, 354, 30, POSES.throw, P.ink);
+    stroke(ctx, [[170, 354], [170, 105]], 4, P.red, [10, 8]);
+    ctx.strokeStyle = P.red; ctx.lineWidth = 4; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.moveTo(420 + 2.0 * 30, 354); ctx.quadraticCurveTo(420 + 0.8 * 30, 354 - 3.25 * 30, 420 - 3.7 * 30, 354 - 7.8 * 30); ctx.stroke(); ctx.setLineDash([]);
+  }],
+  [['Implied line', 'gaze · pointing', 'Gazes, pointing and movement make lines that aren\'t drawn. The eye follows where characters look.'], ctx => {
+    vgrad(ctx, 0, 300, '#25304A', '#4C4E6E'); ctx.fillStyle = '#2C2B3A'; ctx.fillRect(0, 330, W, 70);
+    ctx.fillStyle = 'rgba(255,240,190,.25)'; circ(ctx, 300, 90, 40); ctx.fillStyle = '#FFF0BE'; morph(ctx, 300, 90, 20, 20, 5, 0.85); ctx.fill();
+    stroke(ctx, [[160, 222], [290, 100]], 2.5, 'rgba(255,240,190,.6)', [6, 8]); stroke(ctx, [[440, 232], [310, 100]], 2.5, 'rgba(255,240,190,.6)', [6, 8]);
+    kid(ctx, 150, 340, 140, P.yellow, { look: [0.7, -0.7] }); kid(ctx, 450, 340, 120, P.red, { look: [-0.7, -0.7] });
+  }]
+]);
+
+/* ------------------------------------------------------------ gallery 4: tone */
+function valueScene(ctx, v, noise) {
+  ctx.fillStyle = gray(v.sky); ctx.fillRect(0, 0, W, H);
+  if (v.glow != null) { const g = ctx.createRadialGradient(340, 230, 10, 340, 230, 190); g.addColorStop(0, gray(v.glow)); g.addColorStop(1, gray(v.sky)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  hills(ctx, 230, 60, 7, 15, 0.8, gray(v.far));
+  ctx.fillStyle = gray(v.ground); ctx.beginPath(); ctx.moveTo(0, H); for (let x = 0; x <= W; x += 6) ctx.lineTo(x, 290 + 12 * Math.sin(x / 90)); ctx.lineTo(W, H); ctx.fill();
+  ctx.fillStyle = gray(v.wall); ctx.fillRect(70, 220, 150, 92);
+  ctx.fillStyle = gray(v.roof); fpoly(ctx, [[54, 224], [236, 224], [145, 156]]);
+  ctx.fillStyle = gray(v.win); ctx.fillRect(92, 244, 34, 30); ctx.fillRect(160, 252, 34, 60);
+  ctx.fillStyle = gray(v.trunk); ctx.fillRect(492, 210, 16, 100);
+  ctx.fillStyle = gray(v.tree); circ(ctx, 500, 180, 58); circ(ctx, 462, 214, 38); circ(ctx, 540, 214, 40);
+  if (noise) {
+    const r = rng(21);
+    for (let i = 0; i < 90; i++) { ctx.fillStyle = gray(r()); const x = r() * W, y = r() * H, s = 6 + r() * 26; r() < 0.5 ? ctx.fillRect(x, y, s, s * (0.3 + r())) : circ(ctx, x, y, s * 0.5); }
+  }
+  kid(ctx, 340, 336, 104, gray(v.fig), { skin: gray(clamp(v.fig + 0.12)), ink: gray(clamp(v.fig - 0.14)) });
+}
+gallery('t-tone', [
+  [['Full range', 'black to white', 'Crisp, clear, dramatic. Every value from black to white, spread across the picture.'], ctx => valueScene(ctx, { sky: 0.92, far: 0.72, ground: 0.48, wall: 0.86, roof: 0.22, win: 0.06, trunk: 0.18, tree: 0.3, fig: 0.08 })],
+  [['High key', 'light values only', 'Light and airy: innocence, morning, dreams, heaven. Shapes separate by small steps.'], ctx => valueScene(ctx, { sky: 0.97, far: 0.88, ground: 0.8, wall: 0.93, roof: 0.72, win: 0.66, trunk: 0.7, tree: 0.76, fig: 0.6 })],
+  [['Low key', 'dark values only', 'Night, mystery, menace, intimacy. The few lighter shapes become precious.'], ctx => valueScene(ctx, { sky: 0.26, far: 0.19, ground: 0.13, wall: 0.24, roof: 0.08, win: 0.42, trunk: 0.07, tree: 0.11, fig: 0.36 })],
+  [['Compressed', 'mid values only', 'Low contrast: fog, memory, calm, or boredom. Nothing pulls the eye very hard.'], ctx => valueScene(ctx, { sky: 0.66, far: 0.6, ground: 0.53, wall: 0.62, roof: 0.48, win: 0.45, trunk: 0.46, tree: 0.5, fig: 0.47 })],
+  [['Focal contrast', 'extremes at the subject', 'Most of the picture stays close in value, and the darkest dark meets the lightest light at the subject. That\'s where the eye goes.'], ctx => valueScene(ctx, { sky: 0.6, glow: 0.97, far: 0.55, ground: 0.5, wall: 0.58, roof: 0.47, win: 0.45, trunk: 0.44, tree: 0.5, fig: 0.06 })],
+  [['Three values', 'grouped', 'Sky light, land middle, accents dark. If a picture reads in three values, it will read in thirty.'], ctx => valueScene(ctx, { sky: 0.92, far: 0.55, ground: 0.55, wall: 0.55, roof: 0.12, win: 0.12, trunk: 0.12, tree: 0.12, fig: 0.12 })],
+  [['No grouping', 'scattered values', 'Every shape a different value, plus noise everywhere. Lots of detail, but nothing reads and the subject is lost.'], ctx => valueScene(ctx, { sky: 0.7, far: 0.3, ground: 0.6, wall: 0.4, roof: 0.85, win: 0.2, trunk: 0.75, tree: 0.45, fig: 0.55 }, true)],
+  [['Light on dark', 'spotlight', 'Reversed: a lit figure against darkness. Exposure, revelation, the one hopeful thing in the night.'], ctx => valueScene(ctx, { sky: 0.16, glow: 0.34, far: 0.11, ground: 0.08, wall: 0.14, roof: 0.05, win: 0.5, trunk: 0.05, tree: 0.08, fig: 0.95 })]
+]);
+
+/* ------------------------------------------------------------ gallery 6: movement (animated) */
+const MOVES = [
+  [['Horizontal', 'actual · across', 'Travel, journey, calm progress. Crossing the frame sideways reads as getting somewhere.'], (ctx, t) => {
+    vgrad(ctx, 0, 260, '#DCE7EA', '#F1EBDD'); hills(ctx, 260, 50, 5, 11, 1, '#B9C9A2'); ctx.fillStyle = '#9DB585'; ctx.fillRect(0, 300, W, 100);
+    for (const x of [90, 300, 500]) tree(ctx, x, 304, 90, 0.2, '#6E9A5C', '#6B5040');
+    const u = (t * 0.12) % 1, x = -40 + u * 680;
+    for (let k = 3; k >= 1; k--) { ctx.globalAlpha = 0.12 * (4 - k) / 3; kid(ctx, x - k * 22, 330, 90, P.red, { dir: 1 }); }
+    ctx.globalAlpha = 1; kid(ctx, x, 330, 90, P.red, { dir: 1, phase: t * 9 });
+  }],
+  [['Vertical', 'rising · falling', 'Rising feels hopeful, light, free. Falling feels like loss, failure or danger, and it speeds up.'], (ctx, t) => {
+    fill(ctx, '#E9EEF2'); ctx.fillStyle = '#C9D2C0'; ctx.fillRect(0, 360, W, 40);
+    const u = (t * 0.15) % 1, by = 380 - u * 470;
+    stroke(ctx, [[180, by + 50], [176, by + 90], [184, by + 130]], 1.5, '#555');
+    ctx.fillStyle = P.red; ell(ctx, 180, by, 34, 42); fpoly(ctx, [[180, by + 40], [173, by + 50], [187, by + 50]]);
+    const v = (t * 0.45) % 1, ry = -40 + v * v * 420;
+    for (let k = 1; k <= 3; k++) { const vv = Math.max(0, v - k * 0.05); ctx.fillStyle = `rgba(80,74,90,${0.12 * (4 - k) / 3})`; ell(ctx, 420, -40 + vv * vv * 420, 26, 22); }
+    ctx.fillStyle = '#504A5A'; ell(ctx, 420, ry, 26, 22);
+  }],
+  [['Diagonal', 'actual · up a slope', 'The most energetic direction: effort, conflict, speed. Upward diagonals feel like struggle or progress, downward ones like falling or charging.'], (ctx, t) => {
+    fill(ctx, '#ECE3D3'); ctx.fillStyle = '#B3A27F'; fpoly(ctx, [[0, 400], [0, 390], [W, 120], [W, 400]]);
+    const u = (t * 0.2) % 1, x = -30 + u * 660, y = 390 - (x / W) * 270 + 4;
+    for (let k = 1; k <= 4; k++) stroke(ctx, [[x - 30 - k * 18, y - 40 + k * 8 + (k * 18) * 0.45], [x - 46 - k * 18, y - 40 + k * 8 + (k * 18 + 16) * 0.45]], 3, 'rgba(60,50,40,.3)');
+    kid(ctx, x, y, 84, P.red, { dir: 1, lean: 0.38, phase: t * 14 });
+  }],
+  [['Toward camera', 'actual · approach', 'Something coming at us grows in the frame: arrival, confrontation, threat. Moving away reads as departure or escape.'], (ctx, t) => {
+    vgrad(ctx, 0, 170, '#E4D8C4', '#F0E6D2'); ctx.fillStyle = '#C2AE88'; ctx.fillRect(0, 170, W, 230);
+    ctx.fillStyle = '#77716A'; fpoly(ctx, [[60, 400], [540, 400], [306, 170], [294, 170]]);
+    const u = (t * 0.22) % 1, D = lerp(14, 1.15, u * u);
+    kid(ctx, 300, 170 + 240 / D, 260 / D, P.red, { phase: t * 10 });
+  }],
+  [['Against the flow', 'contrast of direction', 'A crowd moves one way and one figure moves the other. Opposed direction makes it the subject immediately.'], (ctx, t) => {
+    fill(ctx, '#E7E3DA');
+    for (let row = 0; row < 3; row++) {
+      const y = 150 + row * 95, sp = 32 + row * 6;
+      for (let i = 0; i < 9; i++) { const x = ((i * 76 + row * 30 - t * sp) % 690 + 690) % 690 - 45; kid(ctx, x, y, 62, '#8D8994', { dir: -1, phase: t * 7 + i, ink: '#5E5A66' }); }
+    }
+    const x = ((t * 42) % 690) - 45; kid(ctx, x, 245, 66, P.red, { dir: 1, phase: t * 8 });
+  }],
+  [['One moves, all still', 'still vs moving', 'In a still frame, the eye goes to motion before anything else. Same shape, same color: only the movement differs.'], (ctx, t) => {
+    fill(ctx, '#EEEAE2');
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) { const hit = r === 2 && c === 4; const b = hit ? Math.abs(Math.sin(t * 3)) * 26 : 0; ctx.fillStyle = '#5E5A72'; circ(ctx, 75 + c * 90, 80 + r * 82 - b, 22); }
+  }],
+  [['Camera move', 'apparent · tracking', 'The subject holds its place in the frame while the world slides past. The camera travels with them, so we do too.'], (ctx, t) => {
+    vgrad(ctx, 0, 260, '#D3E1E6', '#F0E9DA');
+    const layer = (sp, f) => { ctx.save(); ctx.translate(-((t * sp) % W), 0); f(0); f(W); ctx.restore(); };
+    layer(8, o => { ctx.save(); ctx.translate(o, 0); hills(ctx, 230, 70, TAU, TAU * 2, 0, '#AFC1C7'); ctx.restore(); });
+    layer(30, o => { ctx.save(); ctx.translate(o, 0); hills(ctx, 280, 50, TAU * 2, TAU * 3, 1, '#9DB585'); ctx.restore(); });
+    ctx.fillStyle = '#8AA571'; ctx.fillRect(0, 300, W, 100);
+    layer(110, o => { for (const x of [60, 250, 420]) tree(ctx, o + x, 312, 130, 0.25, '#5F8C50', '#5B4636'); });
+    kid(ctx, 300, 340, 100, P.red, { dir: 1, phase: t * 9 });
+    layer(260, o => { ctx.fillStyle = '#6F8C5B'; for (let x = 0; x < W; x += 50) fpoly(ctx, [[o + x, 400], [o + x + 10, 362], [o + x + 20, 400]]); });
+  }],
+  [['Eye movement', 'induced · still image', 'Nothing in the picture moves, but its arrangement walks the eye along a path: biggest contrast first, then down the size steps.'], (ctx, t) => {
+    fill(ctx, '#F1ECE2');
+    const pts = [[150, 120], [430, 150], [210, 270], [470, 320], [560, 360]];
+    stroke(ctx, pts, 2, 'rgba(43,60,209,.35)', [5, 7]);
+    ctx.fillStyle = P.ink; circ(ctx, 150, 120, 70);
+    ctx.fillStyle = P.red; morph(ctx, 430, 150, 44, 48, 3, 1); ctx.fill();
+    ctx.fillStyle = '#6F6A78'; circ(ctx, 210, 270, 30); circ(ctx, 470, 320, 16); circ(ctx, 560, 360, 8);
+    const segs = pts.length - 1, u = ((t * 0.3) % 1) * segs, i = Math.floor(u), f = u - i;
+    const x = lerp(pts[i][0], pts[i + 1][0], f), y = lerp(pts[i][1], pts[i + 1][1], f);
+    ctx.fillStyle = 'rgba(43,60,209,.85)'; circ(ctx, x, y, 7);
+  }]
+];
+for (const [meta, draw] of MOVES) animate(makeTile('t-move', meta), draw);
+
+/* ------------------------------------------------------------ gallery 7: rhythm */
+gallery('t-rhythm', [
+  [['Regular', 'repetition', 'Even intervals: order, calm, a march. Too much of it becomes monotony.'], ctx => {
+    vgrad(ctx, 0, 270, '#DDE6EA', '#F0EADC'); ctx.fillStyle = '#B8C59C'; ctx.fillRect(0, 270, W, 130);
+    ctx.fillStyle = '#6B5040'; ctx.fillRect(0, 238, W, 7); ctx.fillRect(0, 272, W, 7);
+    for (let x = 20; x < W; x += 50) rect(ctx, x, 210, 14, 100, 3);
+  }],
+  [['Alternation', 'A B A B', 'A pattern with two beats: livelier than plain repetition, and still predictable.'], ctx => {
+    fill(ctx, '#EDE5D8'); ctx.fillStyle = '#CDBFA6'; ctx.fillRect(0, 330, W, 70);
+    for (let i = 0; i < 11; i++) { const tall = i % 2 === 0; ctx.fillStyle = tall ? '#7A5C8E' : '#C98A5B'; rect(ctx, 22 + i * 52, tall ? 90 : 210, 30, tall ? 240 : 120, 15); }
+  }],
+  [['Progression', 'accelerating', 'Intervals that shrink feel like speeding up, or plunging into depth.'], ctx => {
+    vgrad(ctx, 0, 200, '#E9DFCB', '#F3ECDE'); ctx.fillStyle = '#B9A780'; ctx.fillRect(0, 200, W, 200);
+    let x = 20;
+    for (let i = 0; i < 16; i++) { const s = Math.pow(0.82, i), h = 260 * s; ctx.fillStyle = '#5B4A3C'; ctx.fillRect(x, 200 + 150 * s - h, Math.max(2, 22 * s), h); x += 120 * s; }
+    stroke(ctx, [[20, 200 + 150 - 260 + 30], [x, 200]], 4, '#5B4A3C'); stroke(ctx, [[20, 200 + 150 - 130], [x, 200 + 4]], 4, '#5B4A3C');
+  }],
+  [['Irregular', 'syncopated', 'Uneven intervals feel natural and alive, like a forest or a crowd, and a little restless.'], ctx => {
+    fill(ctx, '#E8E4D6'); ctx.fillStyle = '#B7B08F'; ctx.fillRect(0, 330, W, 70);
+    const r = rng(41); let x = 4;
+    while (x < W) { const w = 6 + r() * 30; ctx.fillStyle = ['#48553F', '#5F6B4E', '#3B4434', '#6E7A5C'][Math.floor(r() * 4)]; ctx.fillRect(x, 0, w, 335); x += w + 4 + r() * 60; }
+  }],
+  [['Broken', 'pattern + exception', 'Set up a rhythm, then break it. The break becomes the focal point.'], ctx => {
+    fill(ctx, '#EEEAE1'); ctx.fillStyle = '#D8D0BF'; ctx.fillRect(0, 260, W, 140);
+    for (let i = 0; i < 11; i++) { const odd = i === 7; ctx.fillStyle = odd ? P.red : '#6F6A78'; circ(ctx, 40 + i * 52, odd ? 150 : 240, 20); }
+  }],
+  [['Grouped', 'phrases and rests', 'Clusters with gaps, like musical phrases. The rests matter as much as the beats.'], ctx => {
+    fill(ctx, '#D7DEE3'); ctx.fillStyle = '#C59B7A'; ctx.fillRect(30, 60, 540, 300); ctx.fillStyle = '#8F6A55'; ctx.fillRect(30, 340, 540, 20);
+    for (const row of [100, 210]) for (const g of [60, 250, 440]) for (let k = 0; k < 3; k++) { ctx.fillStyle = '#2F3A48'; ctx.fillRect(g + k * 36, row, 26, 70); }
+  }],
+  [['Dense and sparse', 'contrast of density', 'A crowded area next to an empty one. The emptiness becomes a stage, and whatever stands in it is the subject.'], ctx => {
+    fill(ctx, '#EDE7D9'); const r = rng(77);
+    for (let i = 0; i < 900; i++) { const x = Math.pow(r(), 1.7) * 380, y = r() * H; stroke(ctx, [[x, y], [x + 4, y - 12]], 2.2, ['#6F7F5A', '#8A9A6E', '#55634A'][i % 3]); }
+    kid(ctx, 480, 300, 90, P.red);
+  }],
+  [['Rhythm in time', 'shot lengths', 'In film, rhythm is also the length of shots. Long, even shots feel calm; short, uneven ones feel frantic. The bars are two sequences of the same running time.'], ctx => {
+    fill(ctx, '#F0ECE4');
+    ctx.font = '500 16px "JetBrains Mono", monospace'; ctx.fillStyle = '#5E5A66'; ctx.fillText('calm', 30, 120); ctx.fillText('chase', 30, 260);
+    let x = 30; for (const [i, w] of [130, 150, 120, 140].entries()) { ctx.fillStyle = i % 2 ? '#8FA6C2' : '#6C86A8'; ctx.fillRect(x, 138, w - 4, 50); x += w; }
+    x = 30; for (const [i, w] of [42, 20, 56, 14, 30, 18, 46, 12, 26, 16, 40, 22, 34, 12, 24, 38, 20, 20].entries()) { ctx.fillStyle = i % 2 ? '#E08A6E' : '#C4523E'; ctx.fillRect(x, 278, w - 3, 50); x += w; }
+  }]
+]);
+
+/* ------------------------------------------------------------ gallery 9: Molly Bang */
+function wolf(ctx, x, y, s, pointy, col = '#1E1B22', eye = '#F4F0E6') {
+  const pts = [[-0.5, 0], [-0.42, -0.22], [-0.62, -0.3], [-0.42, -0.43], [-0.36, -0.6], [-0.26, -0.47], [-0.05, -0.5], [0.15, -0.6], [0.3, -0.5], [0.5, -0.42], [0.64, -0.62], [0.56, -0.3], [0.45, 0], [0.3, 0], [0.25, -0.15], [-0.2, -0.15], [-0.28, 0]].map(([a, b]) => [x + a * s, y + b * s]);
+  ctx.fillStyle = col; spoly(ctx, pts, pointy); ctx.fill();
+  ctx.fillStyle = eye;
+  if (pointy > 0.5) { fpoly(ctx, [[x - 0.46 * s, y - 0.4 * s], [x - 0.36 * s, y - 0.37 * s], [x - 0.4 * s, y - 0.34 * s]]); for (let i = 0; i < 4; i++) { const tx = x + (-0.58 + i * 0.035) * s; fpoly(ctx, [[tx, y - 0.29 * s], [tx + 0.03 * s, y - 0.285 * s], [tx + 0.016 * s, y - 0.24 * s]]); } }
+  else circ(ctx, x - 0.41 * s, y - 0.37 * s, 0.025 * s);
+}
+const red = (ctx, x, y, s, c = '#D0342C') => { ctx.fillStyle = c; fpoly(ctx, [[x - s * 0.35, y], [x + s * 0.35, y], [x, y - s]]); };
+function bangTrees(ctx, col, tilt = 0, seed = 3) { const r = rng(seed); for (const x of [40, 112, 180, 300, 430, 530]) { const w = 22 + r() * 22, a = tilt ? (r() - 0.5) * tilt : 0; ctx.save(); ctx.translate(x, 360); ctx.rotate(a); ctx.fillStyle = col; ctx.fillRect(-w / 2, -420, w, 420); ctx.restore(); } }
+gallery('t-bang', [
+  [['The setup', 'triangle · rectangles', 'Little Red Riding Hood in cut paper. Red is a small triangle, the forest is vertical strips, the wolf is a dark mass.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55'); ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 355, W, 45);
+    red(ctx, 140, 360, 70); wolf(ctx, 430, 360, 230, 0.6);
+  }],
+  [['Pointed wolf', 'sharp corners · teeth', 'Sharp points feel threatening. We read them as teeth and claws.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55'); ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 355, W, 45);
+    red(ctx, 140, 360, 70); wolf(ctx, 420, 360, 260, 1);
+  }],
+  [['Rounded wolf', 'smoothed corners', 'Round off the same outline and it becomes a dog you\'d want to pat.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55'); ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 355, W, 45);
+    red(ctx, 140, 360, 70); wolf(ctx, 420, 360, 260, 0);
+  }],
+  [['Bigger is stronger', 'size', 'The wolf fills half the frame and Red shrinks. Size reads as power.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55'); ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 355, W, 45);
+    red(ctx, 64, 362, 40); wolf(ctx, 440, 400, 480, 1);
+  }],
+  [['Higher is stronger', 'position', 'The wolf looks down from the top of the frame and Red is pressed to the bottom edge. The top feels dominant; the bottom feels trapped.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55');
+    ctx.fillStyle = '#7C6E62'; fpoly(ctx, [[260, 400], [330, 190], [600, 160], [600, 400]]);
+    ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 375, W, 25);
+    red(ctx, 110, 392, 60); wolf(ctx, 470, 180, 200, 1);
+  }],
+  [['Diagonal forest', 'tilted verticals', 'Upright trees feel stable. Tilt them and the forest seems to be falling, and the danger grows.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55', 0.75, 8); ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 355, W, 45);
+    red(ctx, 140, 360, 70); wolf(ctx, 430, 360, 230, 0.8);
+  }],
+  [['Night', 'dark ground', 'A dark background frightens because we can\'t see what\'s in it. Red, the only bright shape, draws all the attention and feels exposed.'], ctx => {
+    fill(ctx, '#15131B'); bangTrees(ctx, '#272131'); ctx.fillStyle = '#1D1A24'; ctx.fillRect(0, 355, W, 45);
+    red(ctx, 140, 360, 70, '#E5392F'); wolf(ctx, 430, 360, 250, 1, '#0A090D', '#F2D46B');
+  }],
+  [['Red everywhere', 'color spread', 'Scatter the red around the picture and Red stops standing out. The eye has nowhere to land: focus comes from contrast, not from the color itself.'], ctx => {
+    fill(ctx, '#F3EDE1'); bangTrees(ctx, '#4A3F55'); ctx.fillStyle = '#CBBFA6'; ctx.fillRect(0, 355, W, 45);
+    const r = rng(12); ctx.fillStyle = '#D0342C';
+    for (let i = 0; i < 40; i++) { const x = r() * W, y = r() * 390; r() < 0.5 ? circ(ctx, x, y, 5 + r() * 9) : fpoly(ctx, [[x, y - 14], [x + 8, y + 4], [x - 8, y + 4]]); }
+    ctx.fillRect(180 - 13, -60, 26, 420); ctx.fillRect(530 - 15, -60, 30, 420);
+    red(ctx, 140, 360, 70); wolf(ctx, 430, 360, 230, 0.6);
+  }]
+]);
+
+/* ------------------------------------------------------------ the lab world */
+// Seven numbers, 0 = affinity, 1 = contrast. Everything in the scene is derived from them.
+const COMP = [
+  ['shape', 'Shape', 'Everything round', 'Round kid among points', 'everything round, nothing points', 'a few edges creep into a round world', 'a round kid among sharp, pointed shapes'],
+  ['line', 'Line', 'Horizontals at rest', 'Diagonals fight', 'horizontals at rest', 'some leaning lines', 'diagonals everywhere: leaning trees, tilted ridges, slanting rain'],
+  ['tone', 'Tone', 'Close values', 'Darkest by lightest', 'values close together, soft', 'a moderate value range', 'the full range, the lightest light on the kid against a dark world'],
+  ['color', 'Color', 'One hue family', 'Complements', 'one family of muted hues', 'a hue shift with some saturation', 'complementary hues, a saturated accent on the kid'],
+  ['space', 'Space', 'Flat', 'Deep', 'flat: one plane, even sizes, no haze', 'some depth', 'deep: overlap, size change, a converging path, haze'],
+  ['rhythm', 'Rhythm', 'Even beats', 'Irregular beats', 'evenly spaced, same-sized trees', 'slightly uneven spacing', 'irregular spacing and sizes'],
+  ['move', 'Movement', 'Still', 'Fast, bouncing', 'stillness', 'gentle motion', 'fast, bouncing, darting motion']
+];
+const CALM = { shape: 0.08, line: 0.08, tone: 0.1, color: 0.1, space: 0.08, rhythm: 0.08, move: 0.08 };
+const intensity = p => COMP.reduce((s, [k]) => s + p[k], 0) / COMP.length;
+const intensityWord = v => v < 0.22 ? 'calm' : v < 0.42 ? 'gentle' : v < 0.65 ? 'tense' : 'intense';
+function describe(p) {
+  const parts = COMP.map(([k, label, , , a, m, c]) => `${label}: ${p[k] < 0.34 ? a : p[k] > 0.66 ? c : m}.`);
+  const v = intensity(p);
+  return `Overall ${intensityWord(v)} (${v.toFixed(2)}). ` + parts.join(' ');
+}
+
+function drawWorld(ctx, p, t = 0) {
+  const s = p.shape, l = p.line, tn = p.tone, c = p.color, d = p.space, r = p.rhythm, m = p.move;
+  // Each lightness goes from a soft, close-valued arrangement (tone 0) to a dark world with a bright kid (tone 1).
+  const HUE = 255, V = (a, b) => lerp(a, b, tn);
+  const wc = lerp(0.04, 0.08, c), skyL = V(0.84, 0.36);
+  const C = (L, dh = 0, haze = 0) => oklch(lerp(L, skyL, haze), lerp(wc, wc * 0.6, haze), HUE + dh);
+  const hz = H * 0.56;
+
+  vgrad(ctx, 0, hz + 2, oklch(V(0.8, 0.24), wc, HUE - 8), oklch(V(0.86, 0.42), wc, HUE + 4));
+  ctx.fillStyle = oklch(V(0.93, 0.75), wc * 0.5, HUE + 20); circ(ctx, W * 0.16, H * 0.17, H * 0.05);
+
+  // clouds: stretched and level at low line contrast, tilted at high
+  const drift = lerp(0.004, 0.05, m);
+  for (let i = 0; i < 3; i++) {
+    const cx = ((0.2 + i * 0.33 + t * drift * (1 + i * 0.3)) % 1.2 - 0.1) * W, cy = H * (0.11 + 0.08 * i);
+    const rx = lerp(70, 44, l), ry = lerp(11, 17, l);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-l * 0.5); ctx.fillStyle = oklch(V(0.93, 0.5), wc * 0.6, HUE);
+    for (let k = -1; k <= 1; k++) { morph(ctx, k * rx * 0.6, k === 0 ? -ry * 0.4 : 0, rx * 0.55, ry * (k === 0 ? 1.4 : 1), 3, s); ctx.fill(); }
+    ctx.restore();
+  }
+
+  // ridges: smooth to jagged with shape, level to tilted with line
+  const tilt = Math.tan(l * 0.3);
+  const ridgeY = (x, base, amp, seed) => {
+    const u = x / W, sm = 0.5 + 0.3 * Math.sin(u * 7.5 + seed) + 0.2 * Math.sin(u * 17 + seed * 2.3);
+    const k = u * 6 + seed, fr = k - Math.floor(k), jg = (1 - Math.abs(2 * fr - 1)) * (0.55 + 0.45 * Math.abs(Math.sin(Math.floor(k) * 12.9898 + seed)));
+    return base - amp * lerp(sm, jg, s) + (x - W / 2) * tilt;
+  };
+  const ridge = (base, amp, seed, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, H); for (let x = 0; x <= W; x += 4) ctx.lineTo(x, ridgeY(x, base, amp, seed)); ctx.lineTo(W, H); ctx.closePath(); ctx.fill(); };
+  ridge(hz, H * 0.17, 1.3, C(V(0.76, 0.34), -15, d * 0.5));
+  ridge(hz + H * 0.02, H * 0.09, 4.1, C(V(0.7, 0.26), -25, d * 0.25));
+
+  ctx.fillStyle = C(V(0.64, 0.3), -45); ctx.fillRect(0, hz, W, H - hz);
+  const vpX = W * 0.6;
+  if (d > 0.02) {
+    ctx.globalAlpha = d; ctx.fillStyle = C(V(0.72, 0.42), -30);
+    fpoly(ctx, [[vpX - W * 0.26, H], [vpX + W * 0.26, H], [vpX + 2, hz], [vpX - 2, hz]]);
+    ctx.globalAlpha = 1;
+  }
+
+  // trees: frieze (flat) to scattered in depth (deep); jitter with rhythm
+  const N = 9, rnd = rng(7), trees = [];
+  for (let i = 0; i < N; i++) {
+    const j1 = rnd(), j2 = rnd(), j3 = rnd(), j4 = rnd(), j5 = rnd();
+    const fx = (i + 0.5) / N * W + r * (j1 - 0.5) * W / N * 1.5, fy = H * 0.8, fs = H * 0.24;
+    const side = i % 2 ? 1 : -1, wx = side * (0.75 + j2 * 1.5), z = (i * 0.618 + j3 * 0.25) % 1, D = 1 + z * 6;
+    const dx = vpX + wx * W * 0.25 / D, dy = hz + (H * 1.02 - hz) / D, ds = H * 0.55 / D;
+    trees.push({ x: lerp(fx, dx, d), y: lerp(fy, dy, d), h: lerp(fs, ds, d) * (1 + r * (j4 - 0.5) * 1.1), lean: l * 0.38 * (j5 < 0.5 ? -1 : 1), haze: d * z * 0.5 });
+  }
+  trees.sort((a, b) => a.y - b.y);
+
+  const om = lerp(0.6, 4.2, m), amp = m * W * 0.16, fh = H * lerp(0.27, 0.33, d);
+  const kidAt = tt => ({ x: W * 0.6 + Math.sin(tt * om * 0.5) * amp, y: H * lerp(0.86, 0.9, d) - Math.abs(Math.sin(tt * om)) * m * H * 0.07, dir: Math.cos(tt * om * 0.5) >= 0 ? 1 : -1 });
+  const k0 = kidAt(t);
+  const coat = oklch(V(0.7, 0.93), lerp(0.05, 0.17, c), HUE + lerp(28, 178, c));
+  const skin = oklch(V(0.82, 0.9), lerp(0.02, 0.06, c), lerp(HUE + 20, 420, c));
+  const ink = C(V(0.42, 0.12), -20);
+  const drawTree = tr => tree(ctx, tr.x, tr.y, tr.h, s, C(V(0.52, 0.07), -60, tr.haze), C(V(0.46, 0.05), -80, tr.haze), tr.lean);
+  const drawKid = () => {
+    if (m > 0.25) for (let k = 3; k >= 1; k--) { const g = kidAt(t - k * 0.05); ctx.globalAlpha = (m - 0.25) * 0.4 * (1 - k / 4); kid(ctx, g.x, g.y, fh, coat, { skin, ink, dir: g.dir, lean: g.dir * m * 0.3 }); }
+    ctx.globalAlpha = 1;
+    kid(ctx, k0.x, k0.y, fh, coat, { skin, ink, dir: m > 0.05 ? k0.dir : 0, lean: k0.dir * m * 0.3, phase: t * om * 2 * Math.min(1, m * 4) });
+  };
+  for (const tr of trees) if (tr.y <= k0.y) drawTree(tr);
+  drawKid();
+  for (const tr of trees) if (tr.y > k0.y) drawTree(tr);
+
+  // kite
+  if (p.kite) {
+    const loose = p.kite === 'loose';
+    const kx = loose ? W * 0.86 : k0.x + W * 0.15, ky = loose ? H * 0.12 : H * 0.18 + Math.sin(t * 1.3) * 6;
+    const hx = k0.x + fh * 0.2, hy = k0.y - fh * 0.42;
+    ctx.strokeStyle = C(V(0.45, 0.8)); ctx.lineWidth = 1.2; ctx.beginPath();
+    if (loose) { ctx.moveTo(kx, ky + 20); ctx.bezierCurveTo(kx - 10, ky + 60, kx + 14, ky + 90, kx - 4, ky + 120); }
+    else { ctx.moveTo(hx, hy); ctx.quadraticCurveTo((hx + kx) / 2 + 30, (hy + ky) / 2 + 30, kx, ky + 20); }
+    ctx.stroke();
+    ctx.save(); ctx.translate(kx, ky); ctx.rotate(loose ? 0.9 : 0.15);
+    ctx.fillStyle = oklch(V(0.62, 0.86), lerp(0.06, 0.16, c), HUE + lerp(80, 150, c)); morph(ctx, 0, 0, 16, 22, 4, 1); ctx.fill();
+    ctx.restore();
+  }
+
+  // birds and rain
+  const nb = Math.round(m * 6);
+  for (let k = 0; k < nb; k++) {
+    const u = (k * 0.21 + t * m * 0.18) % 1, bx = u * W * 1.1 - W * 0.05, by = H * 0.42 - u * H * 0.3 - k * 8, w = 7;
+    stroke(ctx, [[bx - w, by - w * 0.6], [bx, by], [bx + w, by - w * 0.6]], 2, C(V(0.4, 0.1)));
+  }
+  if (l > 0.45) {
+    ctx.strokeStyle = oklch(V(0.55, 0.7), wc * 0.5, HUE, 0.4); ctx.lineWidth = 1.4; ctx.beginPath();
+    const nr = Math.round((l - 0.45) * 150), off = (t * 260) % H, rr = rng(99);
+    for (let i = 0; i < nr; i++) { const x = rr() * (W + 80), y = ((rr() * H + off) % H); ctx.moveTo(x, y); ctx.lineTo(x - 14, y + 30); }
+    ctx.stroke();
+  }
+}
+
+/* ------------------------------------------------------------ gallery 8 + idea tiles: open in the lab */
+let lab = { ...CALM }, lastTile = null;
+function openInLab(p) { return el => { lastTile = el; loadLab(p); document.getElementById('back').hidden = false; document.getElementById('lab').scrollIntoView(); }; }
+function worldTile(gridId, meta, p) { const cv = makeTile(gridId, meta, openInLab(p)); drawWorld(cv.getContext('2d'), p, 0.9); }
+
+const ALL = v => Object.fromEntries(COMP.map(([k]) => [k, v]));
+worldTile('t-idea', ['Affinity everywhere', 'all seven dials at 0.05', 'Round shapes, level lines, close values, one hue family, a flat frieze of evenly spaced trees, nothing moving. Calm, unified, a little sleepy.'], ALL(0.05));
+worldTile('t-idea', ['Contrast everywhere', 'all seven dials at 0.95', 'The same elements: a round kid among points, diagonals, the darkest beside the lightest, complementary color, deep space, irregular rhythm, fast motion. Intense, and tiring if it never lets up.'], ALL(0.95));
+const PAIR_NOTES = {
+  shape: ['Every shape round: hills, clouds, trees, kid. Soft and safe.', 'The world turns pointed and only the kid stays round, so it stands out and looks out of place.'],
+  line: ['Level ridges, level clouds, upright trees. At rest.', 'Tilted ridges, leaning trees, slanting rain. Unstable and windy.'],
+  tone: ['Values bunched in the middle: misty and quiet.', 'Dark world, bright kid. The eye goes straight to the extreme.'],
+  color: ['One blue-violet family, low saturation.', 'The kid turns to the complementary yellow at high saturation.'],
+  space: ['A flat frieze: trees on one baseline, same size, no haze.', 'Overlap, size change, a converging path and haze.'],
+  rhythm: ['Even spacing, equal sizes: a march.', 'Uneven spacing and sizes: alive, restless.'],
+  move: ['Nothing moves.', 'The kid bounces and darts, birds cut across.']
+};
+for (const [k, label] of COMP) {
+  worldTile('t-pairs', [`${label}: affinity`, `${k} 0.0 · rest 0.1`, PAIR_NOTES[k][0]], { ...CALM, [k]: 0 });
+  worldTile('t-pairs', [`${label}: contrast`, `${k} 1.0 · rest 0.1`, PAIR_NOTES[k][1]], { ...CALM, [k]: 1 });
+}
+
+/* ------------------------------------------------------------ lab UI */
+const labcv = document.getElementById('labcv'), labctx = labcv.getContext('2d');
+const ctl = document.getElementById('labctl'), refs = [];
+const PRESETS = [
+  ['Calm', CALM],
+  ['Uneasy', { shape: 0.25, line: 0.6, tone: 0.35, color: 0.2, space: 0.25, rhythm: 0.6, move: 0.3 }],
+  ['Climax', ALL(0.95)],
+  ['Only color', { ...ALL(0.05), color: 1 }],
+  ['Only space', { ...ALL(0.05), space: 1 }]
+];
+{
+  const box = document.createElement('div'); box.className = 'group';
+  box.innerHTML = '<h3>Overall</h3><p class="gnote">Moves all seven dials to one value. Presets show some common mixes.</p>';
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = '<div class="lab2"><span>All components</span><output></output></div><input type="range" min="0" max="100" aria-label="All components">';
+  const inp = row.querySelector('input'), out = row.querySelector('output');
+  inp.addEventListener('input', () => { const v = inp.value / 100; for (const [k] of COMP) lab[k] = v; syncLab(); });
+  refs.push(() => { const v = intensity(lab); inp.value = Math.round(v * 100); out.textContent = v.toFixed(2); });
+  const seg = document.createElement('div'); seg.className = 'seg'; seg.style.marginBottom = '12px';
+  const btns = PRESETS.map(([name, p]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = name; b.addEventListener('click', () => { lab = { ...p }; syncLab(); }); seg.append(b); return [p, b]; });
+  refs.push(() => { for (const [p, b] of btns) b.setAttribute('aria-pressed', COMP.every(([k]) => Math.abs(p[k] - lab[k]) < 0.005)); });
+  box.append(row, seg); ctl.append(box);
+}
+{
+  const box = document.createElement('div'); box.className = 'group';
+  box.innerHTML = '<h3>Components</h3><p class="gnote">Left is affinity, right is contrast.</p>';
+  for (const [k, label, aff, con] of COMP) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<div class="lab2"><span>${label}</span><output></output></div><input type="range" min="0" max="100" aria-label="${label}, affinity to contrast"><div class="ends"><span>${aff}</span><span>${con}</span></div>`;
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => { lab[k] = inp.value / 100; syncLab(); });
+    refs.push(() => { inp.value = Math.round(lab[k] * 100); out.textContent = lab[k] < 0.34 ? 'affinity' : lab[k] > 0.66 ? 'contrast' : 'between'; });
+    box.append(row);
+  }
+  ctl.append(box);
+}
+function syncLab() {
+  for (const f of refs) f();
+  const v = intensity(lab);
+  document.getElementById('meterbar').style.width = (v * 100).toFixed(1) + '%';
+  document.getElementById('meterval').textContent = `${v.toFixed(2)} ${intensityWord(v)}`;
+  document.getElementById('labdesc').textContent = describe(lab);
+  if (reduceMotion) drawLab(1.2);
+}
+function loadLab(p) { lab = { ...CALM, ...p }; syncLab(); }
+function sizeLab() { const dpr = Math.min(devicePixelRatio || 1, 2); labcv.width = Math.round(labcv.clientWidth * dpr) || W; labcv.height = Math.round(labcv.width * 2 / 3); if (reduceMotion) drawLab(1.2); }
+function drawLab(t) { labctx.setTransform(labcv.width / W, 0, 0, labcv.height / H, 0, 0); drawWorld(labctx, lab, t); }
+let labVisible = true;
+new IntersectionObserver(es => { labVisible = es[0].isIntersecting; }).observe(labcv);
+new ResizeObserver(sizeLab).observe(labcv);
+document.getElementById('reset').addEventListener('click', () => loadLab(CALM));
+document.getElementById('back').addEventListener('click', () => { if (lastTile) { lastTile.scrollIntoView({ block: 'center' }); lastTile.focus({ preventScroll: true }); } });
+document.getElementById('copy').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  try { await navigator.clipboard.writeText(describe(lab)); btn.textContent = 'Copied'; } catch (err) { btn.textContent = 'Copy failed'; }
+  setTimeout(() => { btn.textContent = 'Copy description'; }, 1400);
+});
+anims.push({ visible: true, draw: (_, t) => { if (labVisible) drawLab(t); } });
+loadLab(CALM); sizeLab();
+
+/* ------------------------------------------------------------ story */
+const STORY = [
+  ['1 · A still afternoon', 'Pip flies a kite. Every component sits in affinity.', { shape: 0.05, line: 0.05, tone: 0.12, color: 0.15, space: 0.1, rhythm: 0.05, move: 0.15, kite: 'held' }],
+  ['2 · The wind rises', 'Line and movement wake up first: leaning trees, a tugging kite, rain on the way.', { shape: 0.1, line: 0.55, tone: 0.2, color: 0.2, space: 0.2, rhythm: 0.3, move: 0.45, kite: 'held' }],
+  ['3 · Snap', 'The string breaks. Shapes sharpen and tone starts to open up.', { shape: 0.55, line: 0.65, tone: 0.45, color: 0.35, space: 0.3, rhythm: 0.45, move: 0.6, kite: 'loose' }],
+  ['4 · The chase', 'Space goes deep and rhythm goes irregular: running through the trees.', { shape: 0.6, line: 0.75, tone: 0.55, color: 0.45, space: 0.95, rhythm: 0.85, move: 0.95, kite: 'loose' }],
+  ['5 · At the wall', 'The climax. Every component near full contrast at once, used here and nowhere else.', { shape: 0.95, line: 0.9, tone: 1, color: 1, space: 0.75, rhythm: 0.8, move: 0.7, kite: 'loose' }],
+  ['6 · Home', 'Back to affinity, kite in hand. Color keeps a little contrast, as a memory of the day.', { shape: 0.05, line: 0.05, tone: 0.2, color: 0.45, space: 0.1, rhythm: 0.05, move: 0.05, kite: 'held' }]
+];
+for (const [name, note, p] of STORY) worldTile('t-story', [name, `intensity ${intensity(p).toFixed(2)}`, note], p);
+
+const curvecv = document.getElementById('curvecv');
+function drawCurve() {
+  const dpr = Math.min(devicePixelRatio || 1, 2), cw = curvecv.clientWidth, ch = curvecv.clientHeight;
+  curvecv.width = Math.round(cw * dpr); curvecv.height = Math.round(ch * dpr);
+  const ctx = curvecv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cs = getComputedStyle(document.documentElement), fg = cs.getPropertyValue('--fg').trim(), muted = cs.getPropertyValue('--muted').trim(), line = cs.getPropertyValue('--line').trim(), accent = cs.getPropertyValue('--accent').trim();
+  const L = 44, R = 18, T = 18, B = 40, pw = cw - L - R, ph = ch - T - B;
+  const X = i => L + pw * (i / (STORY.length - 1)), Y = v => T + ph * (1 - v);
+  ctx.font = '500 11px "JetBrains Mono", monospace'; ctx.textBaseline = 'middle';
+  for (const v of [0, 0.5, 1]) { ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(L + pw, Y(v)); ctx.stroke(); ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.fillText(v.toFixed(1), L - 8, Y(v)); }
+  ctx.globalAlpha = 0.45;
+  for (const [k] of COMP) { ctx.strokeStyle = muted; ctx.lineWidth = 1; ctx.beginPath(); STORY.forEach(([, , p], i) => i ? ctx.lineTo(X(i), Y(p[k])) : ctx.moveTo(X(i), Y(p[k]))); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath();
+  STORY.forEach(([, , p], i) => i ? ctx.lineTo(X(i), Y(intensity(p))) : ctx.moveTo(X(i), Y(intensity(p)))); ctx.stroke();
+  ctx.fillStyle = accent; STORY.forEach(([, , p], i) => circ(ctx, X(i), Y(intensity(p)), 4.5));
+  ctx.fillStyle = fg; ctx.textAlign = 'center';
+  STORY.forEach(([name], i) => { const label = cw < 560 ? name.split(' · ')[0] : name.split(' · ')[1]; ctx.textAlign = i === 0 ? 'left' : i === STORY.length - 1 ? 'right' : 'center'; ctx.fillText(label, X(i), ch - B / 2); });
+}
+new ResizeObserver(drawCurve).observe(curvecv);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawCurve);
+
+if (!reduceMotion) requestAnimationFrame(loop);
+
+/* ------------------------------------------------------------ gallery 5: space (three.js) */
+const DEPTH_STEPS = [
+  [['Flat', 'ortho · one plane', 'No depth cues: everything on one plane, flat color, no ground. A frieze.'], { arr: 'line', cam: 'front' }],
+  [['+ Overlap', 'ortho · front', 'Spread the same objects in depth. Now some hide others. The only cue so far: one thing is in front of another.'], { arr: 'depth', cam: 'front' }],
+  [['+ Height in frame', 'ortho · from above', 'Look down a little and farther things sit higher in the frame, nearer the horizon.'], { arr: 'depth', cam: 'high', floor: 'flat' }],
+  [['+ Size change', 'perspective · 35 mm', 'Switch to a perspective camera: farther objects get smaller.'], { arr: 'depth', cam: 'persp', floor: 'flat' }],
+  [['+ Converging lines', 'road edges', 'Parallel edges, like a road, meet at a vanishing point.'], { arr: 'depth', cam: 'persp', floor: 'lines' }],
+  [['+ Texture gradient', 'tiled ground', 'A repeating texture gets finer and denser with distance.'], { arr: 'depth', cam: 'persp', floor: 'tex' }],
+  [['+ Light and shade', 'sun + shadows', 'Directional light: shading turns flat shapes into volumes, and cast shadows pin them to the ground.'], { arr: 'depth', cam: 'persp', floor: 'tex', lit: true }],
+  [['+ Aerial perspective', 'fog', 'Haze lightens and cools distant things. All the cues together: deep space.'], { arr: 'depth', cam: 'persp', floor: 'tex', lit: true, fog: true }]
+];
+const SPACE_TYPES = [
+  [['Deep space', 'wide lens · low · diagonal', 'Every cue at full strength and the layout on a diagonal into the distance. Immersive, real, energetic.'], { arr: 'deep', cam: 'deep', floor: 'tex', lit: true, fog: true }],
+  [['Flat space', 'ortho · frontal planes', 'Figures lined up against a wall square to the camera, flat light. Formal, graphic, deadpan, like a Wes Anderson tableau or an Egyptian frieze.'], { arr: 'frieze', cam: 'frieze' }],
+  [['Limited space', 'frontal flats · overlap · size', 'Every surface faces the camera like theatre flats, but overlap and size change still give depth. No diagonals, so it feels staged and contained.'], { arr: 'stage', cam: 'stage', floor: 'flat', lit: true }],
+  [['Ambiguous space', 'no scale cues', 'No ground, no horizon, nothing of known size, and the sizes are set to cancel perspective. You can\'t tell how big anything is or where it sits. Dreams, disorientation, the abstract.'], { arr: 'float', cam: 'float', lit: true, dark: true }]
+];
+const depthCanvases = DEPTH_STEPS.map(([meta]) => makeTile('t-depth', meta));
+const typeCanvases = SPACE_TYPES.map(([meta]) => makeTile('t-space', meta));
+try {
+  const THREE = await import('three');
+  const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  R.setPixelRatio(1); R.setSize(W, H, false);
+  R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap;
+  const G = { body: new THREE.CapsuleGeometry(0.26, 0.85, 6, 14), head: new THREE.SphereGeometry(0.19, 20, 14), pillar: new THREE.BoxGeometry(0.6, 3.6, 0.6), crate: new THREE.BoxGeometry(0.9, 0.7, 0.7), cone: new THREE.ConeGeometry(0.9, 2.4, 9), trunk: new THREE.CylinderGeometry(0.1, 0.14, 1, 8), plane: new THREE.PlaneGeometry(1, 1), cube: new THREE.BoxGeometry(1, 1, 1), ball: new THREE.SphereGeometry(0.6, 28, 18) };
+  const checker = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+    x.fillStyle = '#CDB78F'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#B49C72'; x.fillRect(0, 0, 32, 32); x.fillRect(32, 32, 32, 32);
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(100, 100); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = R.capabilities.getMaxAnisotropy(); t.magFilter = THREE.NearestFilter;
+    return t;
+  })();
+  const FIG_COLORS = ['#D24B3E', '#EDB23C', '#2E8A87', '#5A4787'];
+
+  function build(cfg) {
+    const scene = new THREE.Scene(), lit = !!cfg.lit;
+    const mats = [];
+    const mat = (color, extra = {}) => { const m = lit ? new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra }) : new THREE.MeshBasicMaterial({ color, ...extra }); mats.push(m); return m; };
+    const add = (geo, m, x, y, z, sx = 1, sy = 1, sz = 1) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = o.receiveShadow = lit; scene.add(o); return o; };
+    const fig = (x, z, i, s = 1) => { add(G.body, mat(FIG_COLORS[i % 4]), x, 0.685 * s, z, s, s, s); add(G.head, mat('#F2C9A6'), x, 1.55 * s, z, s, s, s); };
+    const sky = cfg.dark ? '#1B1D26' : cfg.fog ? '#D7DEE4' : '#EDE6D6';
+    scene.background = new THREE.Color(sky);
+    if (cfg.fog) scene.fog = new THREE.Fog(sky, 6, 42);
+
+    if (cfg.floor) {
+      const fm = cfg.floor === 'tex' ? mat('#FFFFFF', { map: checker }) : mat('#CDB78F');
+      const f = add(G.plane, fm, 0, 0, 0, 200, 200, 1); f.rotation.x = -Math.PI / 2; f.castShadow = false;
+      if (cfg.floor === 'lines' || cfg.floor === 'tex') {
+        for (const x of [-1.8, 1.8]) add(G.cube, mat('#4A4038'), x, 0.01, -50, 0.12, 0.02, 120);
+        for (let z = 4; z > -90; z -= 2.4) add(G.cube, mat('#F4EFE4'), 0, 0.01, z, 0.1, 0.02, 1.1);
+      }
+    }
+    if (cfg.arr === 'line') {
+      [-1.6, -0.55, 0.55, 1.6].forEach((x, i) => fig(x, 0, i));
+      for (const x of [-2.7, 2.7]) add(G.pillar, mat('#B9AFA0'), x, 1.8, 0);
+    }
+    if (cfg.arr === 'depth' || cfg.arr === 'deep') {
+      [[-0.8, 2], [-0.35, -4], [0.7, -10], [1.0, -18]].forEach(([x, z], i) => fig(x, z, i));
+      for (let z = 2; z >= -26; z -= 4) for (const x of [-2.6, 2.6]) add(G.pillar, mat('#B9AFA0'), x, 1.8, z);
+      for (const [x, z] of [[1.4, -1], [-1.6, -12], [0.3, -22]]) add(G.crate, mat('#9C6B45'), x, 0.35, z);
+      if (cfg.arr === 'deep') for (const [x, z] of [[-5, -3], [5.5, -8], [-6, -16], [6, -24], [-5, -32], [4, -40]]) { add(G.trunk, mat('#6B4F3A'), x, 0.5, z); add(G.cone, mat('#4E7A48'), x, 2.1, z); }
+    }
+    if (cfg.arr === 'frieze') {
+      add(G.plane, mat('#D99A8A'), 0, 2, -1, 14, 6, 1);
+      add(G.plane, mat('#B66E5E'), 0, -0.4, -0.9, 14, 0.8, 1);
+      for (const x of [-2.4, 0, 2.4]) add(G.plane, mat('#F3E2C8'), x, 2.35, -0.95, 1.1, 1.3, 1);
+      [-2.1, -0.7, 0.7, 2.1].forEach((x, i) => fig(x, 0, i));
+    }
+    if (cfg.arr === 'stage') {
+      for (const x of [-3.4, 3.4]) add(G.cube, mat('#8E5B6E'), x, 2, -3, 3, 4, 0.1);
+      add(G.cube, mat('#C99A6B'), -2.8, 2, -9, 4.2, 4, 0.1); add(G.cube, mat('#C99A6B'), 3.2, 2, -9, 4.2, 4, 0.1);
+      add(G.cube, mat('#9DB3B8'), 0, 3, -16, 30, 6, 0.1);
+      fig(-1.1, 0, 0); fig(0.9, -6, 1); fig(0.1, -12.5, 2);
+    }
+    if (cfg.arr === 'float') {
+      const r = rng(5);
+      for (let k = 0; k < 11; k++) {
+        const z = 2 - k * 3.4 + r(), D = 10 - z, s = 0.065 * D * (0.6 + 0.8 * r());
+        const o = add(r() < 0.5 ? G.cube : G.ball, mat(['#D24B3E', '#EDB23C', '#E6E1D6', '#2E8A87'][k % 4]), (r() - 0.5) * 0.75 * D, (r() - 0.5) * 0.48 * D, z, s, s, s);
+        o.rotation.set(r() * 3, r() * 3, r() * 3);
+      }
+    }
+    if (lit) {
+      scene.add(new THREE.HemisphereLight(0xE8EEF5, 0x8A7A66, cfg.dark ? 0.35 : 1.0));
+      const sun = new THREE.DirectionalLight(0xFFF0DC, cfg.dark ? 3.2 : 2.6);
+      sun.position.set(cfg.dark ? -8 : 6, cfg.dark ? -3 : 9, cfg.dark ? 6 : 6); sun.target.position.set(0, 0, -8);
+      sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+      Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 0.5, far: 70 });
+      sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+      scene.add(sun, sun.target);
+    }
+
+    const aspect = W / H;
+    const ortho = (hh, pos, look) => { const c = new THREE.OrthographicCamera(-hh * aspect, hh * aspect, hh, -hh, 0.1, 200); c.position.set(...pos); c.lookAt(...look); return c; };
+    const persp = (fov, pos, look, roll = 0) => { const c = new THREE.PerspectiveCamera(fov, aspect, 0.1, 300); c.position.set(...pos); if (roll) c.up.set(Math.sin(roll), Math.cos(roll), 0); c.lookAt(...look); return c; };
+    const camera = {
+      front: () => ortho(2.1, [0, 1.0, 30], [0, 1.0, 0]),
+      high: () => ortho(4.4, [0, 7, 22], [0, 1.6, -10]),
+      persp: () => persp(38, [0, 2.6, 8], [0, 1.0, -10]),
+      deep: () => persp(62, [-1.4, 1.3, 6], [1.6, 1.4, -14]),
+      frieze: () => ortho(2.3, [0, 1.6, 30], [0, 1.6, 0]),
+      stage: () => persp(34, [0, 1.5, 9], [0, 1.5, -10]),
+      float: () => persp(30, [0, 0, 10], [0, 0, 0], 0.3)
+    }[cfg.cam]();
+    return { scene, camera, mats };
+  }
+  const render = (cv, cfg) => {
+    const { scene, camera, mats } = build(cfg);
+    R.toneMapping = cfg.lit ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping; R.toneMappingExposure = 1.15;
+    R.render(scene, camera);
+    cv.getContext('2d').drawImage(R.domElement, 0, 0, W, H);
+    for (const m of mats) m.dispose();
+  };
+  DEPTH_STEPS.forEach(([, cfg], i) => render(depthCanvases[i], cfg));
+  SPACE_TYPES.forEach(([, cfg], i) => render(typeCanvases[i], cfg));
+} catch (err) {
+  console.error(err);
+  for (const id of ['t-depth', 't-space']) { const g = document.getElementById(id); g.className = 'nogl'; g.textContent = 'This gallery needs WebGL, which is not available in this browser.'; }
+}
+</script>
+</body>
+</html>
