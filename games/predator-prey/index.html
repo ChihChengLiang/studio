@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hunters and the Hunted</title>
+<meta name="description" content="Predator and prey tricks as live simulations: Lévy search, pursuit laws and the falcon's spiral, motion camouflage, the selfish herd, confusion and oddity, the escape repertoire, the C-start, countershading, and an arena that scores them.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Sections are static HTML; every canvas is a simulation run by the script at the bottom (2D canvas only). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#F6F3EC;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards a{font:500 12px/1 var(--font-mono)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+table.plain th,table.plain td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td{color:var(--muted);font-variant-numeric:tabular-nums}
+table.plain td:first-child{font-weight:600;white-space:nowrap;color:var(--fg)}
+table.num td{font-family:var(--font-mono);font-size:12.5px}
+
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel canvas{display:block;width:100%;height:auto;background:var(--stage);border:1px solid var(--line);touch-action:none}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.bar input[type=range]{flex:1 1 160px;accent-color:var(--accent);margin:0}
+.bar label,.lbl{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.bar label.tg{display:flex;align-items:center;gap:6px;cursor:pointer}
+.bar label.tg input{accent-color:var(--accent);margin:0}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.desc b{color:var(--accent);font-weight:500}
+.ctlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 12px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.group>.gnote{font-size:12.5px;line-height:1.45;color:var(--muted)}
+.map{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.map>div{background:var(--surface);border:1px solid var(--line);padding:12px 14px;font-size:14px;color:var(--muted)}
+.map b{color:var(--fg);font-weight:600}
+
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+
+@media (max-width:900px){ .desc{font-size:11.5px} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Games · canvas · behavioural ecology</p>
+  <h1>Hunters and the hunted</h1>
+  <p class="lede">Predators and prey have been running an arms race for half a billion years, and many of the moves on both sides turn out to be simple rules: how to search, how to steer, where to stand in a crowd, which way to jump, how to paint your own body. Each section below is a live simulation of one such rule, with the numbers it produces measured as it runs. They make good steering behaviours for game agents, good beats for animation, and they read as alive because real animals use them.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#borrow">Elements to borrow</a></li>
+    <li><a href="#levy">Lévy search</a></li>
+    <li><a href="#pursuit">Pursuit laws</a></li>
+    <li><a href="#camo">Motion camouflage</a></li>
+    <li><a href="#herd">Selfish herd</a></li>
+    <li><a href="#confusion">Confusion and oddity</a></li>
+    <li><a href="#escape">Escape repertoire</a></li>
+    <li><a href="#cstart">C-start</a></li>
+    <li><a href="#counter">Countershading</a></li>
+    <li><a href="#arena">Arena</a></li>
+    <li><a href="#ascii">For ascii-sharks</a></li>
+    <li><a href="#glossary">Glossary and sources</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="borrow" aria-labelledby="borrow-h">
+  <header><p class="eyebrow">Overview</p><h2 id="borrow-h">Elements to borrow</h2></header>
+  <div class="cards">
+    <div><h3>A search that looks purposeful</h3><p>Long straight runs between bursts of local looping read as hunting, not wandering. <a href="#levy">Lévy search</a></p></div>
+    <div><h3>A chase with style</h3><p>Pure pursuit tail-chases; proportional navigation cuts across and arrives. Pick the law that fits the character. <a href="#pursuit">Pursuit</a></p></div>
+    <div><h3>The hunter who never moves</h3><p>An approach that holds still against the background until it is very close. Unnerving on screen. <a href="#camo">Motion camouflage</a></p></div>
+    <div><h3>Crowds that tighten under threat</h3><p>Everyone pushes inward to put someone else on the edge. <a href="#herd">Selfish herd</a></p></div>
+    <div><h3>The odd one gets eaten</h3><p>A predator facing many lookalikes struggles; one different colour is a target painted on. <a href="#confusion">Oddity</a></p></div>
+    <div><h3>A vocabulary of panic</h3><p>Vacuole, fountain, flash, split, ball: named group shapes you can trigger. <a href="#escape">Escape repertoire</a></p></div>
+    <div><h3>A two-frame startle</h3><p>A C-bend, then a snap: the fastest move in the animal kingdom, and the clearest pose for "fright". <a href="#cstart">C-start</a></p></div>
+    <div><h3>Shading that erases shape</h3><p>Paint the light side dark and the shadow side light and a round body goes flat. <a href="#counter">Countershading</a></p></div>
+  </div>
+</section>
+
+<section class="demo" id="levy" aria-labelledby="levy-h">
+  <header><p class="eyebrow">1 · Viswanathan et al., 1999 · Sims et al., 2008</p><h2 id="levy-h">Lévy search</h2></header>
+  <div class="prose">
+    <p>A forager that cannot see food far away moves in straight runs and turns at random. The question is how long the runs should be. In a <b>Lévy walk</b> run lengths follow a power law, P(ℓ) ∝ ℓ<sup>−μ</sup>: mostly short steps, with rare very long ones. μ near 3 is ordinary random wandering; μ near 1 is nearly straight-line travel. Viswanathan and colleagues showed that when food is <b>sparse and patches can be revisited</b>, μ ≈ 2 finds the most food per distance travelled. Sims and colleagues found Lévy-like runs in sharks, tuna and turtles where prey is scarce, and ordinary random walks where it is plentiful.</p>
+    <p>Set μ and watch one forager; the chart measures food found per 1000 units travelled for every μ in the current world. The theory is contested for real animals (Pyke 2015), so read the chart as what this model predicts.</p>
+  </div>
+  <div class="panel">
+    <canvas id="lvcv" width="1000" height="460" aria-label="One forager searching for food dots"></canvas>
+    <canvas id="lvch" width="1000" height="250" aria-label="Food found against mu, and the step-length histogram"></canvas>
+    <div class="bar"><label for="lv-mu">μ</label><input type="range" id="lv-mu" min="11" max="30" value="20"><output id="lv-muo" class="lbl"></output></div>
+    <div class="bar"><label>Food</label><div class="seg" id="lv-dens" role="group" aria-label="Food density"></div><label>After eating</label><div class="seg" id="lv-mode" role="group" aria-label="Food regrowth"></div></div>
+    <p class="desc" id="lv-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="pursuit" aria-labelledby="pursuit-h">
+  <header><p class="eyebrow">2 · Guidance laws · Brighton et al., 2017</p><h2 id="pursuit-h">Pursuit laws</h2></header>
+  <div class="prose">
+    <p>Four hunters chase the same prey with the same speed and the same maximum turn rate; only the steering rule differs. <b>Pure pursuit</b> always points at the prey and ends up chasing its tail. <b>Constant bearing</b> heads for the interception point, keeping the line of sight from rotating. <b>Proportional navigation</b> turns N times as fast as the line of sight rotates, like a missile; peregrine falcons do this with N ≈ 3. Harris's hawks mix it with a little pure pursuit (Brighton and Taylor 2019), which copes better with a jinking target at close range.</p>
+  </div>
+  <div class="panel">
+    <canvas id="pucv" width="1000" height="460" aria-label="Four pursuers chasing one prey"></canvas>
+    <div class="bar"><label>Prey</label><div class="seg" id="pu-prey" role="group" aria-label="Prey motion"></div><label for="pu-n">PN gain N</label><input type="range" id="pu-n" min="10" max="60" value="30"><output id="pu-no" class="lbl"></output></div>
+    <div class="bar"><button class="btn" id="pu-again">New chase</button><button class="btn" id="pu-batch">Run 100 chases</button></div>
+    <div class="tablewrap"><table class="plain num" id="pu-table"></table></div>
+  </div>
+  <div class="prose"><p><b>The falcon's spiral.</b> A falcon's sharpest vision looks out about 40° to the side, not straight ahead. Turning its head to look forward costs drag in a high-speed dive, so it keeps the prey at that fixed angle instead, which puts it on a logarithmic spiral (Tucker 2000). The spiral is longer than the straight line by exactly 1/cos α.</p></div>
+  <div class="panel">
+    <canvas id="spcv" width="1000" height="340" aria-label="A dive along a logarithmic spiral"></canvas>
+    <div class="bar"><label for="sp-a">Viewing angle α</label><input type="range" id="sp-a" min="0" max="60" value="40"><output id="sp-ao" class="lbl"></output></div>
+    <p class="desc" id="sp-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="camo" aria-labelledby="camo-h">
+  <header><p class="eyebrow">3 · Srinivasan and Davey, 1995 · Mizutani et al., 2003</p><h2 id="camo-h">Motion camouflage</h2></header>
+  <div class="prose">
+    <p>Prey detect a hunter largely by its movement against the background. A hunter can cancel that cue by approaching along a path that keeps it at <b>the same direction</b> as seen from the prey. Two versions: stay on the line between the prey and a fixed landmark, so the hunter sits on top of the landmark in the prey's view; or keep a constant compass direction from the prey, so the hunter matches the infinitely distant background. Male hoverflies and dragonflies do the second during territorial chases. The only remaining cue is looming: the hunter grows.</p>
+    <p>The strip below is the prey's panorama, compass bearing left to right, with distant rocks as the background. The pure-pursuit hunter slides across it; the camouflaged ones stay put.</p>
+  </div>
+  <div class="panel">
+    <canvas id="mccv" width="1000" height="420" aria-label="Three hunters approach one prey"></canvas>
+    <canvas id="mcstrip" width="1000" height="120" aria-label="What the prey sees: bearing of each hunter against the background"></canvas>
+    <div class="bar"><button class="btn" id="mc-again">New approach</button></div>
+    <p class="desc" id="mc-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="herd" aria-labelledby="herd-h">
+  <header><p class="eyebrow">4 · Hamilton, 1971</p><h2 id="herd-h">The selfish herd</h2></header>
+  <div class="prose">
+    <p>If a predator strikes at a random spot and eats whoever is closest, each animal's risk is the area of its <b>domain of danger</b>: the patch of ground nearer to it than to anyone else (its Voronoi cell). Animals on the edge own huge open domains. So every animal gains by moving toward its neighbours, and a group forms with no one wanting it to: a herd made of selfishness. Which rule animals use to move inward matters; Viscido and colleagues found that heading for the local crowd beats heading for the single nearest neighbour.</p>
+    <p>Cells are shaded by size, and red crosses are random strikes. Compare the rules by how fast the mean domain shrinks and how much risk stays with whoever started on the outside.</p>
+  </div>
+  <div class="panel">
+    <canvas id="shcv" width="1000" height="460" aria-label="Animals with their domains of danger"></canvas>
+    <canvas id="shch" width="1000" height="150" aria-label="Mean domain of danger over time"></canvas>
+    <div class="bar"><label>Movement rule</label><div class="seg" id="sh-rule" role="group" aria-label="Movement rule"></div><button class="btn" id="sh-reset">Scatter again</button></div>
+    <p class="desc" id="sh-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="confusion" aria-labelledby="confusion-h">
+  <header><p class="eyebrow">5 · Landeau and Terborgh, 1986 · Ioannou et al., 2008</p><h2 id="confusion-h">Confusion and oddity</h2></header>
+  <div class="prose">
+    <p>A predator has to follow one target until it strikes. Many similar animals moving around that target make it hard to keep the lock, so attack success falls as the group grows: the <b>confusion effect</b>. Landeau and Terborgh found largemouth bass caught silvery minnows fast when they were alone and almost never in groups of 15, <b>unless</b> some minnows were dyed blue, in which case the bass caught the blue ones quickly. Being different removes your lookalikes and with them your protection: the <b>oddity effect</b>. This is one reason mixed-species schools sort themselves by size and colour.</p>
+    <p>Test it on yourself. One fish flashes red, then turns back into the crowd. Follow it with your eyes, and click it when everything stops.</p>
+  </div>
+  <div class="panel">
+    <canvas id="tgcv" width="1000" height="420" aria-label="Tracking game: follow the marked fish and click it"></canvas>
+    <div class="bar"><label>Group size</label><div class="seg" id="tg-n" role="group" aria-label="Group size"></div><label class="tg"><input type="checkbox" id="tg-odd"> Target stays odd</label><button class="btn" id="tg-go">Start a round</button></div>
+    <p class="desc" id="tg-desc"></p>
+    <div class="tablewrap"><table class="plain num" id="tg-table"></table></div>
+  </div>
+  <div class="prose"><p><b>The model behind it.</b> A predator attacks a group spread at constant density. Each attack succeeds with probability 0.9 / (1 + 0.35 k), where k is the number of lookalikes within 4° of the target from where the predator sits. An odd animal has no lookalikes, and the predator picks it half the time. The constants are assumptions; the shapes of the curves are the point.</p></div>
+  <div class="panel"><canvas id="cfch" width="1000" height="240" aria-label="Model attack success against group size"></canvas><p class="desc" id="cf-desc"></p></div>
+</section>
+
+<section class="demo" id="escape" aria-labelledby="escape-h">
+  <header><p class="eyebrow">6 · Pitcher and Parrish, 1993 · Couzin et al., 2002</p><h2 id="escape-h">The escape repertoire</h2></header>
+  <div class="prose">
+    <p>Fish schools answer a predator with a small set of recognisable shapes, catalogued by Pitcher: <b>compaction</b> (close up), <b>vacuole</b> (a hole that travels with the predator), <b>fountain</b> (split ahead, stream past both flanks, rejoin behind), <b>flash expansion</b> (everyone bolts outward in a fraction of a second), <b>split</b> (the school divides into two that rejoin later) and the <b>bait ball</b> (a tight rotating sphere). Each shape here comes from the same schooling model (repulsion, alignment and attraction zones) plus one extra response rule. Drive the shark with your pointer, or let it make passes.</p>
+  </div>
+  <div class="panel">
+    <canvas id="escv" width="1000" height="500" aria-label="A school reacting to a shark"></canvas>
+    <div class="bar"><label>Response</label><div class="seg" id="es-pre" role="group" aria-label="Escape response"></div></div>
+    <div class="bar"><label>Shark</label><div class="seg" id="es-mode" role="group" aria-label="Shark control"></div></div>
+    <p class="desc" id="es-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="cstart" aria-labelledby="cstart-h">
+  <header><p class="eyebrow">7 · Eaton et al., 2001 · Domenici and Blake, 1997</p><h2 id="cstart-h">The C-start</h2></header>
+  <div class="prose">
+    <p>A pair of giant neurons in the fish hindbrain, the <b>Mauthner cells</b>, each connect straight to the muscles of one side of the body. A sudden sound or pressure wave fires one of them, and 5–10 ms later the whole body contracts on one side: <b>stage 1</b>, a C-bend that turns the head away. In <b>stage 2</b> the fish straightens with a stroke the other way and shoots off. The whole move takes about 30–50 ms. Compare it with an ordinary turn on the right, at the same slowed-down clock. The figures are a kinematic sketch at typical published values for a 10 cm fish.</p>
+  </div>
+  <div class="panel">
+    <canvas id="cscv" width="1000" height="360" aria-label="A C-start and a routine turn, in slow motion"></canvas>
+    <div class="bar"><button class="btn" id="cs-play" aria-pressed="false">Play slowly</button><label for="cs-t">Time</label><input type="range" id="cs-t" min="0" max="1200" value="0"><output id="cs-to" class="lbl"></output></div>
+    <p class="desc" id="cs-desc"></p>
+  </div>
+  <div class="prose"><p><b>Unpredictability is a defence.</b> Real escape angles are not fixed: fish choose among a few preferred angles, mostly 90–180° away from the threat, and pick the side. A predator that learns from its misses can beat any fixed escape, but not a varied one. Here a predator aims each lunge at the 30° direction its prey has escaped toward most often so far.</p></div>
+  <div class="panel">
+    <canvas id="prcv" width="1000" height="260" aria-label="Escape directions and predator aims, fixed and variable"></canvas>
+    <div class="bar"><button class="btn" id="pr-run">Run 300 strikes each</button></div>
+    <p class="desc" id="pr-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="counter" aria-labelledby="counter-h">
+  <header><p class="eyebrow">8 · Thayer, 1909 · Kiltie, 1988</p><h2 id="counter-h">Countershading</h2></header>
+  <div class="prose">
+    <p>Light comes from above, so a uniformly coloured round body has a bright back and a dark belly. That gradient is exactly how eyes read three-dimensional shape. <b>Countershading</b> paints the opposite gradient onto the body, darker where it is lit and lighter where it is shaded, so the two cancel and the body looks flat (Thayer's law). The same paint helps from other angles too: a dark back is hard to see from above against the deep, and a pale belly is less obvious from below against the bright surface. Seen from directly below, though, no paint matches the surface light, so some fish and squid make their own light on the belly (counter-illumination). Slide from uniform to fully countershaded.</p>
+  </div>
+  <div class="panel">
+    <canvas id="ctcv" width="1000" height="360" aria-label="A fish seen from the side, with shading profile"></canvas>
+    <div class="bar"><label for="ct-s">Countershading</label><input type="range" id="ct-s" min="0" max="130" value="0"><output id="ct-so" class="lbl"></output></div>
+    <p class="desc" id="ct-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="arena" aria-labelledby="arena-h">
+  <header><p class="eyebrow">9 · All together</p><h2 id="arena-h">Arena</h2></header>
+  <div class="prose"><p>A hunting shark against a school. Choose how the shark steers and whom it picks, how the school responds, and whether the shark can be confused by lookalikes (losing its lock when many fish crowd around its target). Then run five simulated minutes and compare catches per minute. Each row in the table is one configuration. The shark lunges at close range, rests briefly after each catch, and gives up on a fish it is not gaining on. Model fish never tire, so the burst responses (flash expansion above all) come out stronger here than in the sea.</p></div>
+  <div class="panel">
+    <canvas id="arcv" width="1000" height="500" aria-label="A hunting shark and a school"></canvas>
+  </div>
+  <div class="ctlgrid">
+    <div class="group"><h3>Shark</h3><div class="bar"><label>Steering</label><div class="seg" id="ar-law" role="group" aria-label="Steering law"></div></div><div class="bar"><label>Picks</label><div class="seg" id="ar-pick" role="group" aria-label="Target choice"></div></div><label class="lbl"><input type="checkbox" id="ar-conf" checked> Can be confused by lookalikes</label></div>
+    <div class="group"><h3>School</h3><div class="seg" id="ar-pre" role="group" aria-label="Escape response"></div><label class="lbl"><input type="checkbox" id="ar-odd"> Three odd-coloured fish</label></div>
+    <div class="group"><h3>Score</h3><p class="desc" id="ar-desc"></p><button class="btn" id="ar-run">Run 5 simulated minutes</button></div>
+  </div>
+  <div class="tablewrap"><table class="plain num" id="ar-table"></table></div>
+</section>
+
+<section class="demo" id="ascii" aria-labelledby="ascii-h">
+  <header><p class="eyebrow">Notes</p><h2 id="ascii-h">For ascii-sharks</h2></header>
+  <div class="prose"><p>Where each idea would slot into the <a href="https://github.com/stackedlol/ascii-sharks"><code>ascii-sharks</code></a> project, whose fish already school by Couzin zones and already use the fountain effect, flash expansion and a spreading alarm.</p></div>
+  <div class="map">
+    <div><b>Lévy patrol.</b> The shark's "lazy circuit around the headline" in <code>World.step</code> could become runs drawn from a μ ≈ 2 power law between turns when no school is in range, and tight local loops (μ ≈ 3) after a meal.</div>
+    <div><b>Proportional navigation.</b> The "aim at where the fish is about to be" pursuit could become turn rate = N × line-of-sight rate with N ≈ 3, clamped by the existing speed-dependent turning circle. It produces the cutting arcs in section 2 without predicting anything.</div>
+    <div><b>Oddity and stragglers.</b> The target-selection step ("stick with the current target unless something is clearly better") could add a bonus for fish far from their school's centre or of a minority species, and a lock-loss chance that grows with lookalikes nearby.</div>
+    <div><b>C-start.</b> Alarmed fish could hold one frame of C-bend before bolting, with a 5–10 ms equivalent latency, and pick between two or three preferred escape angles at random instead of fleeing straight away.</div>
+    <div><b>Countershading.</b> The renderer lights the shark's back from the top-left with flanks falling into shadow. A countershading slider that dims the lit back glyphs and brightens the flank glyphs would let a shark fade into the dark water and pop out when it turns.</div>
+  </div>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and sources</h2></header>
+  <div class="tablewrap"><table class="plain">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Lévy walk</td><td>Straight runs with lengths drawn from a power law P(ℓ) ∝ ℓ^−μ, 1 &lt; μ ≤ 3.</td></tr>
+      <tr><td>Line of sight (LOS)</td><td>The direction from hunter to prey. Its rotation rate drives proportional navigation.</td></tr>
+      <tr><td>Proportional navigation</td><td>Turn rate = N × LOS rotation rate. Keeps the bearing constant, which leads to interception.</td></tr>
+      <tr><td>Motion camouflage</td><td>An approach path that keeps the hunter at a constant direction from the prey, or on the line to a fixed landmark.</td></tr>
+      <tr><td>Domain of danger</td><td>The area nearer to an animal than to any other: its Voronoi cell.</td></tr>
+      <tr><td>Confusion effect</td><td>Lower capture success against groups of similar-looking prey.</td></tr>
+      <tr><td>Oddity effect</td><td>Predators preferentially catch individuals that look different from the group.</td></tr>
+      <tr><td>Mauthner cell</td><td>A giant hindbrain neuron that triggers the fast C-start escape.</td></tr>
+      <tr><td>Protean behaviour</td><td>Unpredictable escape moves that a predator cannot learn to anticipate.</td></tr>
+      <tr><td>Countershading</td><td>Darker above, lighter below, cancelling the shading from overhead light.</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="reading">
+    <li><b>Viswanathan et al. (1999).</b> Optimizing the success of random searches. <i>Nature</i> 401, 911–914. <b>Sims et al. (2008).</b> Scaling laws of marine predator search behaviour. <i>Nature</i> 451, 1098–1102. <b>Humphries et al. (2010).</b> Environmental context explains Lévy and Brownian movement patterns of marine predators. <i>Nature</i> 465, 1066–1069. <b>Pyke (2015).</b> Understanding movements of organisms: it's time to abandon the Lévy foraging hypothesis. <i>Methods in Ecology and Evolution</i> 6, 1–16.</li>
+    <li><b>Brighton, Thomas and Taylor (2017).</b> Terminal attack trajectories of peregrine falcons are described by the proportional navigation guidance law of missiles. <i>PNAS</i> 114, 13495–13500. <b>Brighton and Taylor (2019).</b> Hawks steer attacks using a guidance system tuned for close pursuit of erratically manoeuvring targets. <i>Nature Communications</i> 10, 2462.</li>
+    <li><b>Tucker (2000).</b> The deep fovea, sideways vision and spiral flight paths in raptors. <i>Journal of Experimental Biology</i> 203, 3745–3754.</li>
+    <li><b>Srinivasan and Davey (1995).</b> Strategies for active camouflage of motion. <i>Proc. R. Soc. B</i> 259, 19–25. <b>Mizutani, Chahl and Srinivasan (2003).</b> Motion camouflage in dragonflies. <i>Nature</i> 423, 604.</li>
+    <li><b>Hamilton (1971).</b> Geometry for the selfish herd. <i>Journal of Theoretical Biology</i> 31, 295–311. <b>Viscido, Miller and Wethey (2002).</b> The dilemma of the selfish herd. <i>Journal of Theoretical Biology</i> 217, 183–194.</li>
+    <li><b>Landeau and Terborgh (1986).</b> Oddity and the 'confusion effect' in predation. <i>Animal Behaviour</i> 34, 1372–1380. <b>Ioannou, Tosh, Neville and Krause (2008).</b> The confusion effect: from neural networks to reduced predation risk. <i>Behavioral Ecology</i> 19, 126–130.</li>
+    <li><b>Pitcher and Parrish (1993).</b> Functions of shoaling behaviour in teleosts. In <i>Behaviour of Teleost Fishes</i>. <b>Couzin, Krause, James, Ruxton and Franks (2002).</b> Collective memory and spatial sorting in animal groups. <i>Journal of Theoretical Biology</i> 218, 1–11.</li>
+    <li><b>Eaton, Lee and Foreman (2001).</b> The Mauthner cell and other identified neurons of the brainstem escape network of fish. <i>Progress in Neurobiology</i> 63, 467–485. <b>Domenici and Blake (1997).</b> The kinematics and performance of fish fast-start swimming. <i>Journal of Experimental Biology</i> 200, 1165–1178. <b>Domenici, Blagburn and Bacon (2011).</b> Animal escapology I: theoretical issues and emerging trends in escape trajectories. <i>JEB</i> 214, 2463–2473.</li>
+    <li><b>Thayer (1909).</b> <i>Concealing-Coloration in the Animal Kingdom.</i> <b>Kiltie (1988).</b> Countershading: universally deceptive or deceptively universal? <i>Trends in Ecology and Evolution</i> 3, 21–23. <b>Rowland (2009).</b> From Abbott Thayer to the present day: what have we learned about the function of countershading? <i>Phil. Trans. R. Soc. B</i> 364, 519–527.</li>
+  </ol>
+  <p class="note">All simulations, drawings and code on this page are original. They are simplified models with stated assumptions: they reproduce the direction of each published effect, not its exact size for any species.</p>
+</section>
+
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PAPER = '#F6F3EC', WATER = '#E6EEF0', INK = '#1B1F2A', GRID = '#DDD7CA', MUTED = '#7A7F8C', ACC = '#2B3CD1', HOT = '#D2452F', OK = '#16856F', GOLD = '#C98A00';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+const smooth = (a, b, t) => { const k = clamp((t - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function text(x, t, px, py, { align = 'left', size = 12, color = MUTED, base = 'middle', weight = 400 } = {}) {
+  x.fillStyle = color; x.font = `${weight} ${size}px ${MONO}`; x.textAlign = align; x.textBaseline = base; x.fillText(t, px, py);
+}
+function seg(host, items, cur, onPick) {
+  host.textContent = '';
+  return items.map(([v, lab]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.setAttribute('aria-pressed', String(v === cur)); b.onclick = () => { host.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b))); onPick(v); }; host.append(b); return b; });
+}
+function canvasPoint(cv, e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+/* run tick(dt) every frame while the element is on screen; with reduced motion, settle once and draw a still */
+function runner(el, tick, settle = 3) {
+  let raf = 0, last = 0;
+  const loop = t => { const dt = Math.min(0.05, (t - last) / 1000); last = t; tick(dt); raf = requestAnimationFrame(loop); };
+  if (REDUCE) { for (let i = 0; i < settle * 60; i++) tick(1 / 60, true); tick(0); return; }
+  new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); } }).observe(el);
+  tick(0);
+}
+function fishAt(x, px, py, a, L, col) {
+  x.save(); x.translate(px, py); x.rotate(a); x.fillStyle = col; x.beginPath();
+  x.moveTo(L * 0.5, 0); x.quadraticCurveTo(0, L * 0.3, -L * 0.32, 0); x.quadraticCurveTo(0, -L * 0.3, L * 0.5, 0); x.fill();
+  x.beginPath(); x.moveTo(-L * 0.26, 0); x.lineTo(-L * 0.55, L * 0.22); x.lineTo(-L * 0.55, -L * 0.22); x.closePath(); x.fill(); x.restore();
+}
+function sharkAt(x, px, py, a, L, col = INK) {
+  x.save(); x.translate(px, py); x.rotate(a); x.fillStyle = col; x.beginPath();
+  x.moveTo(L * 0.5, 0); x.quadraticCurveTo(L * 0.2, L * 0.16, -L * 0.3, L * 0.04); x.lineTo(-L * 0.3, -L * 0.04); x.quadraticCurveTo(L * 0.2, -L * 0.16, L * 0.5, 0); x.fill();
+  x.beginPath(); x.moveTo(L * 0.12, L * 0.08); x.lineTo(-L * 0.05, L * 0.3); x.lineTo(-L * 0.02, L * 0.06); x.fill();
+  x.beginPath(); x.moveTo(L * 0.12, -L * 0.08); x.lineTo(-L * 0.05, -L * 0.3); x.lineTo(-L * 0.02, -L * 0.06); x.fill();
+  x.beginPath(); x.moveTo(-L * 0.28, 0); x.lineTo(-L * 0.52, L * 0.16); x.lineTo(-L * 0.46, 0); x.lineTo(-L * 0.52, -L * 0.16); x.closePath(); x.fill(); x.restore();
+}
+function legend(x, items, px, py) { for (const [lab, col] of items) { x.fillStyle = col; x.fillRect(px, py - 5, 10, 10); text(x, lab, px + 15, py, { size: 11, color: INK }); x.font = `400 11px ${MONO}`; px += x.measureText(lab).width + 34; } }
+function frame(x, W, H, bg = PAPER) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = bg; x.fillRect(0, 0, W, H); }
+
+/* ------------------------------------------------------------ 1. Lévy search */
+function levy() {
+  const cv = $('lvcv'), x = cv.getContext('2d'), ch = $('lvch').getContext('2d'), W = 1000, H = 460, RV = 6, G = 24, LMAX = 4000, REGROW = 3000, SPEED = 320;
+  const S = { mu: 2, dens: 'sparse', mode: 'stay' }, COUNT = { sparse: 40, dense: 900 };
+  const wrapd = (d, P) => d - P * Math.round(d / P);
+  function world(seed) {
+    const rnd = rng(seed), n = COUNT[S.dens], cols = Math.ceil(W / G), rows = Math.ceil(H / G);
+    const w = { rnd, n, tx: new Float64Array(n), ty: new Float64Array(n), back: new Float64Array(n), cols, rows, cells: Array.from({ length: cols * rows }, () => []), stamp: new Uint32Array(n), st: 0, x: rnd() * W, y: rnd() * H, dist: 0, hits: 0 };
+    for (let i = 0; i < n; i++) { w.tx[i] = rnd() * W; w.ty[i] = rnd() * H; w.cells[cellOf(w, w.tx[i], w.ty[i])].push(i); }
+    return w;
+  }
+  function cellOf(w, px, py) { return Math.min(w.cols - 1, Math.floor(px / G)) + Math.min(w.rows - 1, Math.floor(py / G)) * w.cols; }
+  function firstHit(w, dx, dy, L) {
+    let best = Infinity, bi = -1; w.st++;
+    for (let t = 0; ; t += G) {
+      const tt = Math.min(t, L); if (best < tt - G) break;
+      const sx = w.x + dx * tt, sy = w.y + dy * tt, wx = ((sx % W) + W) % W, wy = ((sy % H) + H) % H;
+      const cx = Math.min(w.cols - 1, Math.floor(wx / G)), cy = Math.min(w.rows - 1, Math.floor(wy / G));
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+        for (const i of w.cells[((cx + ox + w.cols) % w.cols) + ((cy + oy + w.rows) % w.rows) * w.cols]) {
+          if (w.stamp[i] === w.st) continue; w.stamp[i] = w.st; if (w.back[i] > w.dist) continue;
+          const ix = sx + wrapd(w.tx[i] - sx, W), iy = sy + wrapd(w.ty[i] - sy, H), rx = ix - w.x, ry = iy - w.y, p = rx * dx + ry * dy, q2 = rx * rx + ry * ry - p * p;
+          if (q2 > RV * RV) continue; const h = Math.sqrt(RV * RV - q2); if (p + h < 0) continue;
+          const th = Math.max(0, p - h); if (th <= L && th < best) { best = th; bi = i; }
+        }
+      }
+      if (tt >= L) break;
+    }
+    return { t: best, i: bi };
+  }
+  function segment(w, mu) { const l = Math.min(LMAX, RV * Math.pow(1 - w.rnd(), -1 / (mu - 1))), a = w.rnd() * TAU, dx = Math.cos(a), dy = Math.sin(a), h = firstHit(w, dx, dy, l); return { dx, dy, len: h.i >= 0 ? h.t : l, hit: h.i }; }
+  function finish(w, sg) {
+    w.x = (((w.x + sg.dx * sg.len) % W) + W) % W; w.y = (((w.y + sg.dy * sg.len) % H) + H) % H; w.dist += sg.len;
+    if (sg.hit < 0) return; w.hits++;
+    const i = sg.hit;
+    if (S.mode === 'stay') w.back[i] = w.dist + REGROW;
+    else { const c = w.cells[cellOf(w, w.tx[i], w.ty[i])]; c.splice(c.indexOf(i), 1); w.tx[i] = w.rnd() * W; w.ty[i] = w.rnd() * H; w.cells[cellOf(w, w.tx[i], w.ty[i])].push(i); }
+  }
+  // the efficiency sweep over mu, run in slices so the page stays responsive
+  const MUS = [1.1, 1.3, 1.5, 1.7, 1.9, 2.1, 2.3, 2.5, 2.7, 3.0];
+  let eff = [], job = 0;
+  function sweep() {
+    const my = ++job; eff = []; let k = 0;
+    const next = () => {
+      if (my !== job || k >= MUS.length) { drawChart(); return; }
+      const w = world(101 + k), budget = S.dens === 'sparse' ? 2.5e5 : 4e4;
+      while (w.dist < budget) finish(w, segment(w, MUS[k]));
+      eff.push(w.hits / w.dist * 1000); k++; drawChart(); setTimeout(next, 0);
+    };
+    next();
+  }
+  // live forager
+  let L = null, sg = null, done = 0, trail = [], steps = [];
+  function reset() { L = world(7); sg = null; trail = [[L.x, L.y]]; steps = []; }
+  function tick(dt) {
+    let move = SPEED * dt;
+    while (move > 0) {
+      if (!sg) { sg = segment(L, S.mu); done = 0; }
+      const take = Math.min(move, sg.len - done); done += take; move -= take;
+      if (done >= sg.len - 1e-9) { const ox = L.x, oy = L.y; finish(L, sg); steps.push(sg.len); if (steps.length > 4000) steps.shift(); const jump = Math.abs(L.x - (ox + sg.dx * sg.len)) > 1 || Math.abs(L.y - (oy + sg.dy * sg.len)) > 1; trail.push(jump ? null : [L.x, L.y], [L.x, L.y]); sg = null; if (dt === 0) break; }
+      if (dt === 0) break;
+    }
+    if (trail.length > 900) trail.splice(0, trail.length - 900);
+    draw();
+  }
+  function draw() {
+    frame(x, W, H, WATER);
+    for (let i = 0; i < L.n; i++) { const on = L.back[i] <= L.dist; x.fillStyle = on ? GOLD : 'rgba(201,138,0,.25)'; x.beginPath(); x.arc(L.tx[i], L.ty[i], S.dens === 'sparse' ? 5 : 2.4, 0, TAU); x.fill(); }
+    x.strokeStyle = 'rgba(43,60,209,.55)'; x.lineWidth = 1.4; x.beginPath(); let pen = false;
+    for (const p of trail) { if (!p) { pen = false; continue; } pen ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]); pen = true; }
+    let cx = L.x, cy = L.y; if (sg) { cx = (((L.x + sg.dx * done) % W) + W) % W; cy = (((L.y + sg.dy * done) % H) + H) % H; if (pen) x.lineTo(L.x + sg.dx * done, L.y + sg.dy * done); }
+    x.stroke(); fishAt(x, cx, cy, sg ? Math.atan2(sg.dy, sg.dx) : 0, 16, ACC);
+    $('lv-desc').innerHTML = `μ = <b>${S.mu.toFixed(1)}</b> · ${L.hits} food found in ${(L.dist / 1000).toFixed(1)}k units · <b>${L.dist ? (L.hits / L.dist * 1000).toFixed(2) : '—'}</b> per 1000 units · ${steps.length} steps` + (eff.length === MUS.length ? `<br>Best μ in this world: <b>${MUS[eff.indexOf(Math.max(...eff))].toFixed(1)}</b> (${Math.max(...eff).toFixed(2)} per 1000 units) · worst ${MUS[eff.indexOf(Math.min(...eff))].toFixed(1)} (${Math.min(...eff).toFixed(2)})` : '<br>Measuring every μ…');
+  }
+  function drawChart() {
+    const Wc = 1000, Hc = 250; frame(ch, Wc, Hc);
+    // left: efficiency vs mu
+    const L0 = 50, R0 = 470, T = 26, B = 36;
+    const mx = Math.max(0.01, ...eff) * 1.15, X = m => L0 + (m - 1.1) / 1.9 * (R0 - L0), Y = v => Hc - B - v / mx * (Hc - T - B);
+    ch.strokeStyle = GRID; for (const m of MUS) { ch.beginPath(); ch.moveTo(X(m), T); ch.lineTo(X(m), Hc - B); ch.stroke(); }
+    for (const m of [1.1, 1.5, 2, 2.5, 3]) text(ch, m.toFixed(1), X(m), Hc - B + 13, { align: 'center', size: 11 });
+    text(ch, 'food per 1000 units, by μ (each point measured)', L0, 12, { size: 11 });
+    ch.strokeStyle = ACC; ch.lineWidth = 2.5; ch.beginPath(); eff.forEach((v, i) => i ? ch.lineTo(X(MUS[i]), Y(v)) : ch.moveTo(X(MUS[i]), Y(v))); ch.stroke();
+    eff.forEach((v, i) => { ch.fillStyle = ACC; ch.beginPath(); ch.arc(X(MUS[i]), Y(v), 4, 0, TAU); ch.fill(); });
+    ch.strokeStyle = HOT; ch.setLineDash([4, 4]); ch.beginPath(); ch.moveTo(X(S.mu), T); ch.lineTo(X(S.mu), Hc - B); ch.stroke(); ch.setLineDash([]);
+    // right: step histogram, log-log
+    const L1 = 560, R1 = 985;
+    text(ch, 'step lengths of the live forager (log–log) · dashed: slope −μ', L1, 12, { size: 11 });
+    if (steps.length > 30) {
+      const bins = new Array(14).fill(0), lo = Math.log10(RV);
+      for (const s of steps) { const b = Math.floor((Math.log10(s) - lo) / 0.25); if (b >= 0 && b < 14) bins[b]++; }
+      const dens = bins.map((c, b) => c / (10 ** (lo + (b + 1) * 0.25) - 10 ** (lo + b * 0.25)));
+      const nz = dens.filter(v => v > 0), dmax = Math.log10(Math.max(...nz)), dmin = dmax - 6;
+      const XX = b => L1 + (b + 0.5) / 14 * (R1 - L1), YY = v => Hc - B - clamp((Math.log10(v) - dmin) / (dmax - dmin), 0, 1) * (Hc - T - B);
+      dens.forEach((v, b) => { if (v > 0) { ch.fillStyle = 'rgba(43,60,209,.35)'; ch.fillRect(XX(b) - 11, YY(v), 22, Hc - B - YY(v)); } });
+      const b0 = dens.findIndex(v => v > 0); if (b0 >= 0) { ch.strokeStyle = HOT; ch.setLineDash([4, 4]); ch.beginPath(); ch.moveTo(XX(b0), YY(dens[b0])); const b1 = 13; ch.lineTo(XX(b1), YY(dens[b0] * 10 ** (-S.mu * (b1 - b0) * 0.25))); ch.stroke(); ch.setLineDash([]); }
+      for (const v of [10, 100, 1000]) { const b = (Math.log10(v) - lo) / 0.25 - 0.5; text(ch, String(v), XX(b), Hc - B + 13, { align: 'center', size: 11 }); }
+    }
+  }
+  $('lv-mu').oninput = () => { S.mu = +$('lv-mu').value / 10; $('lv-muo').textContent = S.mu.toFixed(1); reset(); drawChart(); };
+  seg($('lv-dens'), [['sparse', 'Sparse (40)'], ['dense', 'Dense (900)']], S.dens, v => { S.dens = v; reset(); sweep(); });
+  seg($('lv-mode'), [['stay', 'Regrows in place'], ['move', 'Gone, new one elsewhere']], S.mode, v => { S.mode = v; reset(); sweep(); });
+  $('lv-muo').textContent = S.mu.toFixed(1);
+  reset(); sweep();
+  let ct = 0; runner(cv, dt => { tick(dt); if ((ct += dt) > 0.5) { ct = 0; drawChart(); } }, 6);
+}
+
+/* ------------------------------------------------------------ 2. pursuit laws */
+const LAWS = [['pp', 'Pure pursuit', HOT], ['cb', 'Constant bearing', OK], ['pn', 'Proportional nav.', ACC], ['mix', 'PN + pursuit (hawk)', GOLD]];
+function pursuit() {
+  const cv = $('pucv'), x = cv.getContext('2d'), W = 1000, H = 460, VE = 90, VP = 135, WMAX = 2.4, CAP = 12, TMAX = 25;
+  const S = { prey: 'zig', N: 3 };
+  function preyStep(e, dt) {
+    e.t += dt;
+    const m = 90, cx = W / 2 - e.x, cy = H / 2 - e.y;
+    if (e.x < m || e.x > W - m || e.y < m || e.y > H - m) e.base += clamp(wrapA(Math.atan2(cy, cx) - e.base), -1.6 * dt, 1.6 * dt);
+    if (S.prey === 'circle') e.base += 0.7 * dt;
+    e.h = e.base + (S.prey === 'zig' ? (Math.floor(e.t / 1.4) % 2 ? 0.8 : -0.8) : 0);
+    e.x += VE * Math.cos(e.h) * dt; e.y += VE * Math.sin(e.h) * dt;
+  }
+  function steer(p, law, e, dt) {
+    if (p.caught !== null) return;
+    const lam = Math.atan2(e.y - p.y, e.x - p.x), ldot = p.lam === null ? 0 : wrapA(lam - p.lam) / dt; p.lam = lam;
+    let w;
+    if (law === 'pp') w = 6 * wrapA(lam - p.h);
+    else if (law === 'cb') { const lead = Math.asin(clamp(VE * Math.sin(wrapA(e.h - lam)) / VP, -1, 1)); w = 6 * wrapA(lam + lead - p.h); }
+    else if (law === 'pn') w = S.N * ldot;
+    else w = 0.7 * ldot - 1.2 * wrapA(p.h - lam);
+    w = clamp(w, -WMAX, WMAX); p.wmax = Math.max(p.wmax, Math.abs(w) / WMAX);
+    p.h += w * dt; p.x += VP * Math.cos(p.h) * dt; p.y += VP * Math.sin(p.h) * dt; p.path += VP * dt;
+    if (Math.hypot(e.x - p.x, e.y - p.y) < CAP) p.caught = e.t;
+  }
+  function setup(rnd) {
+    const e = { x: W * (0.45 + 0.2 * rnd()), y: H * (0.35 + 0.3 * rnd()), base: rnd() * TAU, h: 0, t: 0 };
+    const a = rnd() * TAU, px = clamp(e.x + Math.cos(a) * 380, 30, W - 30), py = clamp(e.y + Math.sin(a) * 380, 30, H - 30), h0 = Math.atan2(e.y - py, e.x - px);
+    return { e, ps: LAWS.map(([k]) => ({ k, x: px, y: py, h: h0, lam: null, path: 0, wmax: 0, caught: null, trail: [] })) };
+  }
+  let st = null, seed = 1;
+  function again() { st = setup(rng(seed++)); }
+  function tick(dt) {
+    if (dt > 0) {
+      const sub = 4, h = dt / sub;
+      for (let k = 0; k < sub; k++) { preyStep(st.e, h); st.ps.forEach(p => steer(p, p.k, st.e, h)); }
+      st.ps.forEach(p => { if (p.caught === null) { p.trail.push([p.x, p.y]); if (p.trail.length > 600) p.trail.shift(); } });
+      (st.e.trail = st.e.trail || []).push([st.e.x, st.e.y]); if (st.e.trail.length > 600) st.e.trail.shift();
+      if (st.ps.every(p => p.caught !== null) || st.e.t > TMAX) { if ((st.hold = (st.hold || 0) + dt) > 1.5) again(); }
+    }
+    frame(x, W, H, WATER);
+    const tr = (pts, col) => { x.strokeStyle = col; x.lineWidth = 2; x.beginPath(); (pts || []).forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+    tr(st.e.trail, 'rgba(27,31,42,.35)');
+    st.ps.forEach((p, i) => { tr(p.trail, LAWS[i][2]); sharkAt(x, p.x, p.y, p.h, 30, LAWS[i][2]); });
+    fishAt(x, st.e.x, st.e.y, st.e.h, 16, INK);
+    LAWS.forEach(([, n, c], i) => { const p = st.ps[i]; text(x, `■ ${n}${p.caught !== null ? ` · caught ${p.caught.toFixed(1)} s` : ''}`, 12, 16 + i * 17, { color: c, weight: 500, size: 12 }); });
+    text(x, `t = ${st.e.t.toFixed(1)} s`, W - 12, 16, { align: 'right', color: INK });
+  }
+  function batch() {
+    const rnd = rng(9001), res = LAWS.map(() => ({ n: 0, t: 0, path: 0, w: 0 })), N = 100, dt = 1 / 120;
+    for (let k = 0; k < N; k++) {
+      const s = setup(rnd);
+      while (s.e.t < TMAX && s.ps.some(p => p.caught === null)) { preyStep(s.e, dt); s.ps.forEach(p => steer(p, p.k, s.e, dt)); }
+      s.ps.forEach((p, i) => { if (p.caught !== null) { res[i].n++; res[i].t += p.caught; res[i].path += p.path; } res[i].w += p.wmax; });
+    }
+    $('pu-table').innerHTML = `<thead><tr><th>Law</th><th>Caught</th><th>Mean time</th><th>Mean path</th><th>Peak turn / limit</th></tr></thead><tbody>${res.map((r, i) => `<tr><td style="color:${LAWS[i][2]}">${LAWS[i][1]}</td><td>${r.n} / ${N}</td><td>${r.n ? (r.t / r.n).toFixed(2) + ' s' : '—'}</td><td>${r.n ? (r.path / r.n).toFixed(0) + ' px' : '—'}</td><td>${(r.w / N * 100).toFixed(0)}%</td></tr>`).join('')}</tbody>`;
+    $('pu-table').dataset.prey = S.prey;
+  }
+  seg($('pu-prey'), [['straight', 'Straight'], ['circle', 'Circling'], ['zig', 'Zigzag']], S.prey, v => { S.prey = v; again(); batch(); });
+  $('pu-n').oninput = () => { S.N = +$('pu-n').value / 10; $('pu-no').textContent = S.N.toFixed(1); batch(); };
+  $('pu-no').textContent = S.N.toFixed(1);
+  $('pu-again').onclick = again; $('pu-batch').onclick = batch;
+  again(); batch();
+  runner(cv, tick, 6);
+
+  // the falcon's spiral
+  const sx = $('spcv').getContext('2d');
+  function spiral() {
+    const a = +$('sp-a').value * Math.PI / 180, Ws = 1000, Hs = 340; frame(sx, Ws, Hs, '#EEF2F6');
+    const px = 720, py = 70, r0 = 440; let fx = px - r0, fy = py + 10, len = 0;
+    const start = [fx, fy]; sx.strokeStyle = HOT; sx.lineWidth = 2.5; sx.beginPath(); sx.moveTo(fx, fy);
+    const d0 = Math.hypot(px - fx, py - fy);
+    for (let i = 0; i < 20000; i++) { const lam = Math.atan2(py - fy, px - fx), h = lam + a, s = 0.5; fx += Math.cos(h) * s; fy += Math.sin(h) * s; len += s; sx.lineTo(fx, fy); if (Math.hypot(px - fx, py - fy) < 1) break; }
+    sx.stroke();
+    sx.strokeStyle = 'rgba(27,31,42,.35)'; sx.setLineDash([5, 5]); sx.beginPath(); sx.moveTo(...start); sx.lineTo(px, py); sx.stroke(); sx.setLineDash([]);
+    fishAt(sx, px, py, 0, 18, INK); text(sx, 'prey', px + 14, py + 14, { color: INK });
+    text(sx, 'falcon keeps the prey α off its heading →', start[0] + 6, start[1] - 14, { color: HOT });
+    $('sp-ao').textContent = Math.round(a * 180 / Math.PI) + '°';
+    $('sp-desc').innerHTML = `Measured path ÷ straight distance = <b>${(len / d0).toFixed(3)}</b> · theory 1/cos α = <b>${(1 / Math.cos(a)).toFixed(3)}</b>`;
+  }
+  $('sp-a').oninput = spiral; spiral();
+}
+
+/* ------------------------------------------------------------ 3. motion camouflage */
+function camo() {
+  const cv = $('mccv'), x = cv.getContext('2d'), sx = $('mcstrip').getContext('2d'), W = 1000, H = 420, VE = 70, VP = 100, WMAX = 3;
+  const KIND = [['pp', 'Pure pursuit', HOT], ['catd', 'Constant direction', ACC], ['ref', 'Landmark line', OK]];
+  let st = null, seed = 3;
+  const rocks = Array.from({ length: 14 }, (_, i) => ({ b: -Math.PI + (i + 0.3 * Math.sin(i * 7)) / 14 * TAU, s: 6 + (i * 37 % 9) }));
+  function reset() {
+    const rnd = rng(seed++);
+    const E = { x: 640 + rnd() * 80, y: 170 + rnd() * 80, h: Math.PI * (0.8 + 0.4 * rnd()), t: 0, ph: rnd() * 10 };
+    const P0 = { x: 120 + rnd() * 60, y: 340 + rnd() * 40 }, dx = E.x - P0.x, dy = E.y - P0.y, d = Math.hypot(dx, dy), u = { x: dx / d, y: dy / d };
+    const R = { x: P0.x - u.x * 220, y: P0.y - u.y * 220 };
+    st = { E, u, R, t: 0, preds: KIND.map(([k]) => ({ k, x: P0.x, y: P0.y, h: Math.atan2(dy, dx), d, kk: 220 / (d + 220), caught: null, trail: [], prevB: null, sq: 0, n: 0, sqRel: 0 })), etrail: [] };
+  }
+  function step(dt) {
+    const E = st.E; E.t += dt; st.t += dt;
+    E.h += (0.9 * Math.sin(0.8 * E.t + E.ph) + 0.6 * Math.sin(2.1 * E.t)) * dt;
+    if (E.x < 80 || E.x > W - 80 || E.y < 60 || E.y > H - 60) E.h += clamp(wrapA(Math.atan2(H / 2 - E.y, W / 2 - E.x) - E.h), -2 * dt, 2 * dt);
+    E.x += VE * Math.cos(E.h) * dt; E.y += VE * Math.sin(E.h) * dt;
+    const s = VP * dt;
+    for (const p of st.preds) {
+      if (p.caught !== null) continue;
+      const ox = p.x, oy = p.y;
+      if (p.k === 'pp') { const lam = Math.atan2(E.y - p.y, E.x - p.x); p.h += clamp(6 * wrapA(lam - p.h), -WMAX, WMAX) * dt; p.x += VP * Math.cos(p.h) * dt; p.y += VP * Math.sin(p.h) * dt; }
+      else if (p.k === 'catd') { // stay on E - d u: solve |E - d u - P| = s for the smaller d
+        const wx = E.x - p.x, wy = E.y - p.y, wu = wx * st.u.x + wy * st.u.y, disc = wu * wu - (wx * wx + wy * wy) + s * s;
+        p.d = disc >= 0 ? wu - Math.sqrt(disc) : wu; p.x = E.x - p.d * st.u.x; p.y = E.y - p.d * st.u.y;
+      } else { // stay on R + k (E - R): solve for the larger k
+        const ax = E.x - st.R.x, ay = E.y - st.R.y, bx = p.x - st.R.x, by = p.y - st.R.y, aa = ax * ax + ay * ay, ab = ax * bx + ay * by, disc = ab * ab - aa * (bx * bx + by * by - s * s);
+        p.kk = disc >= 0 ? (ab + Math.sqrt(disc)) / aa : ab / aa; p.x = st.R.x + p.kk * ax; p.y = st.R.y + p.kk * ay;
+      }
+      if (Math.hypot(p.x - ox, p.y - oy) > 1e-6) p.h = Math.atan2(p.y - oy, p.x - ox);
+      const b = Math.atan2(p.y - E.y, p.x - E.x), bR = Math.atan2(st.R.y - E.y, st.R.x - E.x);
+      if (p.prevB !== null && st.t > 0.4) { const r = wrapA(b - p.prevB) / dt * 180 / Math.PI; p.sq += r * r; p.n++; const rel = wrapA(b - bR) * 180 / Math.PI; p.sqRel += rel * rel; }
+      p.prevB = b;
+      if (Math.hypot(E.x - p.x, E.y - p.y) < 12) p.caught = st.t;
+    }
+  }
+  function tick(dt) {
+    if (dt > 0) {
+      for (let k = 0; k < 3; k++) step(dt / 3);
+      st.preds.forEach(p => { if (p.caught === null) { p.trail.push([p.x, p.y]); } }); st.etrail.push([st.E.x, st.E.y]);
+      if (st.preds.every(p => p.caught !== null) || st.t > 22) { if ((st.hold = (st.hold || 0) + dt) > 1.8) reset(); }
+    }
+    const E = st.E;
+    frame(x, W, H, WATER);
+    x.fillStyle = 'rgba(22,133,111,.18)'; x.beginPath(); x.arc(st.R.x, st.R.y, 16, 0, TAU); x.fill(); text(x, 'landmark', st.R.x, st.R.y + 26, { align: 'center', color: OK, size: 11 });
+    x.strokeStyle = 'rgba(22,133,111,.3)'; x.setLineDash([3, 5]); x.beginPath(); x.moveTo(st.R.x, st.R.y); x.lineTo(E.x, E.y); x.stroke(); x.setLineDash([]);
+    const tr = (pts, col) => { x.strokeStyle = col; x.lineWidth = 2; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+    tr(st.etrail, 'rgba(27,31,42,.35)');
+    st.preds.forEach((p, i) => { tr(p.trail, KIND[i][2]); sharkAt(x, p.x, p.y, p.h, 28, KIND[i][2]); });
+    fishAt(x, E.x, E.y, E.h, 16, INK);
+    KIND.forEach(([, n, c], i) => { const p = st.preds[i]; text(x, `■ ${n}${p.caught !== null ? ` · caught ${p.caught.toFixed(1)} s` : ''}`, 12, 16 + i * 17, { color: c, weight: 500 }); });
+    // the prey's panorama: world bearing, centred on the hunters' starting direction
+    const Ws = 1000, Hs = 120, c0 = Math.atan2(-st.u.y, -st.u.x), BX = b => Ws / 2 + wrapA(b - c0) / Math.PI * (Ws / 2);
+    frame(sx, Ws, Hs, '#EEF2F6');
+    sx.fillStyle = '#B9C3C8'; for (const r of rocks) { const px = BX(r.b); sx.beginPath(); sx.moveTo(px - r.s, Hs - 22); sx.lineTo(px, Hs - 22 - r.s * 2.2); sx.lineTo(px + r.s, Hs - 22); sx.fill(); }
+    sx.fillStyle = 'rgba(22,133,111,.35)'; const bR = Math.atan2(st.R.y - E.y, st.R.x - E.x); sx.beginPath(); sx.arc(BX(bR), 52, 9, 0, TAU); sx.fill();
+    st.preds.forEach((p, i) => { const b = Math.atan2(p.y - E.y, p.x - E.x), dd = Math.hypot(p.x - E.x, p.y - E.y), r = clamp(900 / dd, 3, 30); sx.fillStyle = KIND[i][2]; sx.globalAlpha = p.caught === null ? 0.85 : 0.25; sx.beginPath(); sx.arc(BX(b), 52 + (i - 1) * 4, r, 0, TAU); sx.fill(); sx.globalAlpha = 1; });
+    text(sx, 'what the prey sees: compass bearing →   (dot size = looming)', 8, 10, { size: 11 });
+    const rms = p => p.n ? Math.sqrt(p.sq / p.n) : 0;
+    $('mc-desc').innerHTML = `Drift across the prey’s background (RMS, °/s): ${st.preds.map((p, i) => `<span style="color:${KIND[i][2]}">${KIND[i][1]}</span> <b>${rms(p).toFixed(2)}</b>`).join(' · ')}<br>Landmark-line hunter, offset from the landmark in the prey’s view: <b>${Math.sqrt(st.preds[2].sqRel / Math.max(1, st.preds[2].n)).toFixed(3)}°</b> RMS (it moves across the background only because the near landmark does)`;
+  }
+  $('mc-again').onclick = reset;
+  reset(); runner(cv, tick, 6);
+}
+
+/* ------------------------------------------------------------ 4. selfish herd */
+function herd() {
+  const cv = $('shcv'), x = cv.getContext('2d'), cx2 = $('shch').getContext('2d'), W = 1000, H = 460, SC = 4, GW = W / SC, GH = H / SC, N = 40, V = 34;
+  let rule = 'lch', P = [], t = 0, hist = [], strikes = [], seed = 21, owner = new Int16Array(GW * GH), area = new Float64Array(N), rank0 = [];
+  const img = x.createImageData(GW, GH), off = document.createElement('canvas'); off.width = GW; off.height = GH; const ox = off.getContext('2d');
+  function reset() {
+    const rnd = rng(seed++); P = Array.from({ length: N }, () => ({ x: 40 + rnd() * (W - 80), y: 40 + rnd() * (H - 80) })); t = 0; hist = []; strikes = [];
+    const mx = P.reduce((s, p) => s + p.x, 0) / N, my = P.reduce((s, p) => s + p.y, 0) / N;
+    const d = P.map((p, i) => [Math.hypot(p.x - mx, p.y - my), i]).sort((a, b) => b[0] - a[0]); rank0 = new Array(N); d.forEach(([, i], r) => { rank0[i] = r < N / 4 ? 'edge' : r >= N * 3 / 4 ? 'core' : 'mid'; });
+    domains();
+  }
+  function domains() {
+    area.fill(0);
+    for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { const px = gx * SC + SC / 2, py = gy * SC + SC / 2; let b = 0, bd = Infinity; for (let i = 0; i < N; i++) { const d = (P[i].x - px) ** 2 + (P[i].y - py) ** 2; if (d < bd) { bd = d; b = i; } } owner[gy * GW + gx] = b; area[b] += SC * SC; }
+  }
+  function step(dt) {
+    t += dt;
+    const mv = P.map((a, i) => {
+      let dx = 0, dy = 0;
+      const ds = P.map((b, j) => [Math.hypot(b.x - a.x, b.y - a.y), j]).filter(([, j]) => j !== i).sort((p, q) => p[0] - q[0]);
+      if (rule === 'nn') { const b = P[ds[0][1]]; dx = b.x - a.x; dy = b.y - a.y; }
+      else if (rule === 'k3') { for (let k = 0; k < 3; k++) { const b = P[ds[k][1]]; dx += b.x - a.x; dy += b.y - a.y; } }
+      else if (rule === 'lch') { for (const [d, j] of ds) { const w = Math.exp(-d / 120) / (d || 1); dx += (P[j].x - a.x) * w; dy += (P[j].y - a.y) * w; } }
+      let m = Math.hypot(dx, dy); if (rule === 'still' || m < 1e-6) return [0, 0];
+      let vx = dx / m, vy = dy / m;
+      if (ds[0][0] < 14) { const b = P[ds[0][1]]; vx -= (b.x - a.x) / ds[0][0] * 1.4; vy -= (b.y - a.y) / ds[0][0] * 1.4; }
+      if (ds[0][0] < 10 && rule === 'nn') return [vx * 0.2, vy * 0.2];
+      m = Math.hypot(vx, vy) || 1; return [vx / m, vy / m];
+    });
+    P.forEach((a, i) => { a.x = clamp(a.x + mv[i][0] * V * dt, 6, W - 6); a.y = clamp(a.y + mv[i][1] * V * dt, 6, H - 6); });
+  }
+  const shade = a => { const k = clamp(Math.log10(a / (W * H / N) * 4) / 1.6, 0, 1); return [246 - 40 * k, 243 - 150 * k, 236 - 160 * k]; };
+  function draw() {
+    for (let p = 0; p < GW * GH; p++) { const o = owner[p], c = shade(area[o]); const edge = (p % GW < GW - 1 && owner[p + 1] !== o) || (p + GW < GW * GH && owner[p + GW] !== o); img.data[p * 4] = edge ? 140 : c[0]; img.data[p * 4 + 1] = edge ? 134 : c[1]; img.data[p * 4 + 2] = edge ? 124 : c[2]; img.data[p * 4 + 3] = 255; }
+    ox.putImageData(img, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(off, 0, 0, W, H);
+    for (const s of strikes) { x.strokeStyle = `rgba(210,69,47,${clamp(1 - s.age / 2, 0, 1)})`; x.lineWidth = 3; x.beginPath(); x.moveTo(s.x - 8, s.y - 8); x.lineTo(s.x + 8, s.y + 8); x.moveTo(s.x + 8, s.y - 8); x.lineTo(s.x - 8, s.y + 8); x.stroke(); }
+    P.forEach((a, i) => { x.fillStyle = rank0[i] === 'edge' ? HOT : rank0[i] === 'core' ? ACC : INK; x.beginPath(); x.arc(a.x, a.y, 5, 0, TAU); x.fill(); });
+    x.fillStyle = 'rgba(246,243,236,.85)'; x.fillRect(4, 4, 470, 20); legend(x, [['started on the edge', HOT], ['started in the core', ACC], ['between', INK]], 10, 14);
+    const total = W * H, mean = total / N, share = k => P.reduce((s, _, i) => s + (rank0[i] === k ? area[i] : 0), 0) / total;
+    let nn = 0; P.forEach((a, i) => { let b = Infinity; P.forEach((c, j) => { if (i !== j) b = Math.min(b, Math.hypot(a.x - c.x, a.y - c.y)); }); nn += b; });
+    const mx = P.reduce((s, p) => s + p.x, 0) / N, my = P.reduce((s, p) => s + p.y, 0) / N;
+    const cur = P.map((p, i) => [Math.hypot(p.x - mx, p.y - my), i]).sort((a, b) => b[0] - a[0]).slice(0, N / 4).reduce((s, [, i]) => s + area[i], 0) / total;
+    const med = [...area].sort((a, b) => a - b)[N >> 1];
+    $('sh-desc').innerHTML = `t = ${t.toFixed(0)} s · median domain <b>${(med / total * 100).toFixed(2)}%</b> of the arena (an even split would be ${(100 / N).toFixed(1)}%) · mean nearest-neighbour ${(nn / N).toFixed(1)} px<br>Risk from a random strike held by the 10 animals that <b>started</b> on the edge: <b>${(share('edge') * 100).toFixed(0)}%</b> · by the 10 that started in the core: <b>${(share('core') * 100).toFixed(0)}%</b> · by whoever is on the edge <b>now</b>: ${(cur * 100).toFixed(0)}%`;
+    // history chart
+    const Wc = 1000, Hc = 150, L = 50, B = 26, T = 14; frame(cx2, Wc, Hc);
+    const tm = Math.max(30, t), Y = v => Hc - B - clamp(v / 0.08, 0, 1) * (Hc - T - B), X = s => L + s / tm * (Wc - L - 16);
+    cx2.strokeStyle = GRID; for (const v of [0, 0.02, 0.04, 0.06, 0.08]) { cx2.beginPath(); cx2.moveTo(L, Y(v)); cx2.lineTo(Wc - 16, Y(v)); cx2.stroke(); text(cx2, (v * 100).toFixed(0) + '%', L - 6, Y(v), { align: 'right', size: 10.5 }); }
+    cx2.strokeStyle = ACC; cx2.lineWidth = 2.5; cx2.beginPath(); hist.forEach(([s, v], i) => i ? cx2.lineTo(X(s), Y(v)) : cx2.moveTo(X(s), Y(v))); cx2.stroke();
+    text(cx2, 'median domain of danger, % of the arena, over time', L, 8, { size: 11 });
+  }
+  let acc = 0, sacc = 0;
+  function tick(dt) {
+    if (dt > 0) { step(dt); acc += dt; sacc += dt; strikes.forEach(s => s.age += dt); strikes = strikes.filter(s => s.age < 2); if (sacc > 0.6) { sacc = 0; strikes.push({ x: Math.random() * W, y: Math.random() * H, age: 0 }); } }
+    if (acc > 0.1 || dt === 0) { acc = 0; domains(); hist.push([t, [...area].sort((a, b) => a - b)[N >> 1] / (W * H)]); }
+    draw();
+  }
+  seg($('sh-rule'), [['still', 'Stay put'], ['nn', 'Nearest neighbour'], ['k3', 'Three nearest'], ['lch', 'Local crowd']], rule, v => { rule = v; seed--; reset(); });
+  $('sh-reset').onclick = reset;
+  reset(); runner(cv, tick, 20);
+}
+
+/* ------------------------------------------------------------ 5. confusion: tracking game and model */
+function confusion() {
+  const cv = $('tgcv'), x = cv.getContext('2d'), W = 1000, H = 420;
+  let n = 8, odd = false, phase = 'idle', F = [], target = 0, timer = 0, picked = -1;
+  const results = {};
+  function spawn() {
+    const rnd = Math.random; F = Array.from({ length: n }, () => ({ x: W / 2 + (rnd() - 0.5) * 300, y: H / 2 + (rnd() - 0.5) * 200, h: rnd() * TAU, w: 0 }));
+    target = Math.floor(rnd() * n);
+  }
+  function move(dt) {
+    const cxm = F.reduce((s, f) => s + f.x, 0) / F.length, cym = F.reduce((s, f) => s + f.y, 0) / F.length;
+    for (const f of F) {
+      f.w += (Math.random() - 0.5) * 8 * dt; f.w = clamp(f.w, -2.2, 2.2); f.h += f.w * dt;
+      let ax = (cxm - f.x) * 0.004, ay = (cym - f.y) * 0.004;
+      for (const g of F) { if (g === f) continue; const dx = f.x - g.x, dy = f.y - g.y, d = Math.hypot(dx, dy); if (d < 26 && d > 0) { ax += dx / d * (26 - d) * 0.05; ay += dy / d * (26 - d) * 0.05; } }
+      if (f.x < 60) ax += 0.6; if (f.x > W - 60) ax -= 0.6; if (f.y < 50) ay += 0.6; if (f.y > H - 50) ay -= 0.6;
+      const want = Math.atan2(Math.sin(f.h) + ay, Math.cos(f.h) + ax); f.h += clamp(wrapA(want - f.h), -3 * dt, 3 * dt);
+      f.x += Math.cos(f.h) * 95 * dt; f.y += Math.sin(f.h) * 95 * dt;
+    }
+  }
+  function table() {
+    const ks = Object.keys(results).sort((a, b) => parseInt(a) - parseInt(b));
+    $('tg-table').innerHTML = `<thead><tr><th>Group</th><th>Rounds</th><th>Correct</th><th>Your hit rate</th><th>Guessing would give</th></tr></thead><tbody>${ks.length ? ks.map(k => { const r = results[k]; return `<tr><td>${k}</td><td>${r.t}</td><td>${r.h}</td><td>${(r.h / r.t * 100).toFixed(0)}%</td><td>${(100 / parseInt(k)).toFixed(0)}%</td></tr>`; }).join('') : '<tr><td colspan="5">No rounds yet.</td></tr>'}</tbody>`;
+  }
+  function tick(dt) {
+    if (phase === 'cue' || phase === 'track') { move(dt); timer -= dt; if (timer <= 0) { if (phase === 'cue') { phase = 'track'; timer = 4; } else phase = 'pick'; } }
+    else if (phase === 'result') { timer -= dt; if (timer <= 0) { phase = 'idle'; } }
+    frame(x, W, H, WATER);
+    F.forEach((f, i) => { const isT = i === target, show = phase === 'cue' || phase === 'result' || (odd && phase !== 'idle'); fishAt(x, f.x, f.y, f.h, 20, isT && show ? HOT : INK); if (phase === 'result' && (isT || i === picked)) { x.strokeStyle = isT ? OK : HOT; x.lineWidth = 2.5; x.beginPath(); x.arc(f.x, f.y, 18, 0, TAU); x.stroke(); } });
+    const msg = { idle: F.length ? 'Start another round.' : 'Press "Start a round".', cue: 'Remember the red fish…', track: 'Follow it…', pick: 'Click the fish you followed.', result: picked === target ? 'Correct.' : 'Missed: the green ring was the target.' }[phase];
+    text(x, msg, 14, 18, { color: INK, weight: 500, size: 14 });
+    $('tg-desc').innerHTML = `Group of <b>${n}</b> · ${odd ? 'target stays red (oddity)' : 'target looks like the rest (confusion)'} · ${phase === 'track' ? `${timer.toFixed(1)} s left` : ' '}`;
+  }
+  cv.addEventListener('pointerdown', e => {
+    if (phase !== 'pick') return; const [px, py] = canvasPoint(cv, e); let b = -1, bd = 40;
+    F.forEach((f, i) => { const d = Math.hypot(f.x - px, f.y - py); if (d < bd) { bd = d; b = i; } }); if (b < 0) return;
+    picked = b; phase = 'result'; timer = 1.6; const k = n + (odd ? ' (odd)' : ''); results[k] = results[k] || { t: 0, h: 0 }; results[k].t++; if (b === target) results[k].h++; table();
+  });
+  $('tg-go').onclick = () => { spawn(); picked = -1; phase = 'cue'; timer = 1.4; };
+  seg($('tg-n'), [[1, '1'], [4, '4'], [8, '8'], [16, '16'], [32, '32']], n, v => { n = v; phase = 'idle'; F = []; });
+  $('tg-odd').onchange = () => { odd = $('tg-odd').checked; };
+  table();
+  let raf = 0, last = 0; const loop = t => { const dt = Math.min(0.05, (t - last) / 1000); last = t; tick(dt); raf = requestAnimationFrame(loop); };
+  new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); } }).observe(cv);
+  tick(0);
+
+  // the model
+  const c = $('cfch').getContext('2d'), SIZES = [1, 2, 4, 8, 16, 32, 64], rnd = rng(77);
+  function attack(nn, hasOdd) {
+    const R = 12 * Math.sqrt(nn), pts = [];
+    for (let i = 0; i < nn; i++) { const r = R * Math.sqrt(rnd()), a = rnd() * TAU; pts.push([r * Math.cos(a), r * Math.sin(a)]); }
+    const pa = rnd() * TAU, px = Math.cos(pa) * (R + 150), py = Math.sin(pa) * (R + 150);
+    const ti = hasOdd && rnd() < 0.5 ? 0 : Math.floor(rnd() * nn), tb = Math.atan2(pts[ti][1] - py, pts[ti][0] - px);
+    let k = 0; if (!(hasOdd && ti === 0)) for (let j = 0; j < nn; j++) { if (j === ti || (hasOdd && j === 0)) continue; if (Math.abs(wrapA(Math.atan2(pts[j][1] - py, pts[j][0] - px) - tb)) < 4 * Math.PI / 180) k++; }
+    return { ok: rnd() < 0.9 / (1 + 0.35 * k), ti };
+  }
+  const rows = SIZES.map(s => { let ok = 0, okO = 0, oddKills = 0; const T = 4000; for (let i = 0; i < T; i++) { if (attack(s, false).ok) ok++; if (s > 1) { const r = attack(s, true); if (r.ok) { okO++; if (r.ti === 0) oddKills++; } } } return { s, p: ok / T, pO: okO / T, ratio: s > 1 && okO > oddKills ? (oddKills / T) / ((okO - oddKills) / T / (s - 1)) : null }; });
+  const Wc = 1000, Hc = 240, L = 50, B = 34, T0 = 24; frame(c, Wc, Hc);
+  const X = s => L + Math.log2(s) / 6 * (Wc - L - 40), Y = v => Hc - B - v * (Hc - T0 - B);
+  c.strokeStyle = GRID; for (const v of [0, 0.25, 0.5, 0.75, 1]) { c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(Wc - 40, Y(v)); c.stroke(); text(c, (v * 100) + '%', L - 6, Y(v), { align: 'right', size: 10.5 }); }
+  SIZES.forEach(s => text(c, String(s), X(s), Hc - B + 13, { align: 'center', size: 11 }));
+  const line = (key, col) => { c.strokeStyle = col; c.lineWidth = 2.5; c.beginPath(); const rs = key === 'pO' ? rows.filter(r => r.s > 1) : rows; rs.forEach((r, i) => i ? c.lineTo(X(r.s), Y(r[key])) : c.moveTo(X(r.s), Y(r[key]))); c.stroke(); rs.forEach(r => { c.fillStyle = col; c.beginPath(); c.arc(X(r.s), Y(r[key]), 3.5, 0, TAU); c.fill(); }); };
+  line('p', ACC); line('pO', HOT);
+  legend(c, [['attack success, all alike', ACC], ['with one odd fish in the group', HOT]], L, 10); text(c, 'group size →', Wc - 40, Hc - 8, { align: 'right', size: 11 });
+  const r16 = rows.find(r => r.s === 16);
+  $('cf-desc').innerHTML = `Attack success, all alike: ${rows.map(r => `${r.s}: <b>${(r.p * 100).toFixed(0)}%</b>`).join(' · ')}<br>With one odd fish in a group of 16, it is <b>${r16.ratio ? r16.ratio.toFixed(0) : '—'}×</b> as likely to be eaten per attack as any one of the others.`;
+}
+
+/* ------------------------------------------------------------ the school (sections 6 and 9) */
+const ZOR = 9, ZOO = 24, ZOA = 70, BLIND = Math.cos(2.5);
+const PRE = { calm: 'No reaction', compact: 'Compaction', vacuole: 'Vacuole', fountain: 'Fountain', flash: 'Flash expansion', split: 'Split', ball: 'Bait ball' };
+function makeSchool(seed, W, H, n = 90) {
+  const rnd = rng(seed);
+  const P = Array.from({ length: n }, () => ({ x: W * 0.35 + rnd() * W * 0.3, y: H * 0.3 + rnd() * H * 0.4, h: rnd() - 0.5, v: 40, burst: 0, odd: false }));
+  return { P, W, H, rnd, t: 0, preset: 'fountain', mode: 'pass', law: 'pn', pick: 'nearest', confuse: true, catches: 0, ptr: null,
+    pred: { x: -60, y: H / 2, h: 0, v: 110, tgt: -1, lam: null, rest: 0, lunge: 0, cool: 0, best: Infinity, stale: 0 } };
+}
+function schoolStep(s, dt) {
+  const { P, pred, W, H } = s; s.t += dt;
+  // the predator
+  const cxm = P.reduce((a, p) => a + p.x, 0) / P.length, cym = P.reduce((a, p) => a + p.y, 0) / P.length;
+  if (s.mode === 'pass') {
+    pred.v = 110;
+    if (pred.x < -90 || pred.x > W + 90 || pred.y < -90 || pred.y > H + 90) { const a = s.rnd() * TAU; pred.x = cxm + Math.cos(a) * 560; pred.y = clamp(cym + Math.sin(a) * 560, -80, H + 80); pred.x = clamp(pred.x, -80, W + 80); pred.h = Math.atan2(cym - pred.y + (s.rnd() - 0.5) * 60, cxm - pred.x); }
+  } else if (s.mode === 'pointer') {
+    if (s.ptr) { const dx = s.ptr[0] - pred.x, dy = s.ptr[1] - pred.y, d = Math.hypot(dx, dy); if (d > 4) pred.h += clamp(wrapA(Math.atan2(dy, dx) - pred.h), -4 * dt, 4 * dt); pred.v = clamp(d * 2, 0, 170); } else pred.v *= 0.95;
+  } else { // hunt
+    pred.v = 62;
+    if (pred.rest > 0) { pred.rest -= dt; pred.v = 15; }   // handling time after a catch
+    const alive = i => i >= 0 && i < P.length;
+    if (!alive(pred.tgt)) { pred.tgt = pickTarget(s); pred.best = Infinity; pred.stale = 0; }
+    let T = P[pred.tgt];
+    // give up on a target it is not gaining on, as real predators do
+    const dT = Math.hypot(T.x - pred.x, T.y - pred.y);
+    if (dT < pred.best - 2) { pred.best = dT; pred.stale = 0; } else if ((pred.stale += dt) > 2.5) { const old = pred.tgt; pred.tgt = pickTarget(s, old); T = P[pred.tgt]; pred.best = Infinity; pred.stale = 0; pred.lam = null; }
+    // a short lunge at close range
+    pred.cool -= dt; if (pred.lunge > 0) { pred.lunge -= dt; pred.v = 150; } else if (dT < 45 && pred.cool <= 0 && pred.rest <= 0) { pred.lunge = 0.3; pred.cool = 1.5; }
+    if (s.confuse) { let k = 0; for (const q of P) if (q !== T && q.odd === T.odd && Math.hypot(q.x - T.x, q.y - T.y) < 22) k++; if (s.rnd() < 1 - Math.exp(-0.25 * k * dt)) { const near = P.map((q, i) => [Math.hypot(q.x - T.x, q.y - T.y), i]).filter(([d, i]) => d < 22 && i !== pred.tgt && P[i].odd === T.odd); if (near.length) { pred.tgt = near[Math.floor(s.rnd() * near.length)][1]; T = P[pred.tgt]; pred.lam = null; pred.best = Infinity; pred.stale = 0; } } }
+    const lam = Math.atan2(T.y - pred.y, T.x - pred.x), ldot = pred.lam === null ? 0 : wrapA(lam - pred.lam) / dt; pred.lam = lam;
+    const w = s.law === 'pp' ? 6 * wrapA(lam - pred.h) : 3 * ldot - 0.6 * wrapA(pred.h - lam);
+    pred.h += clamp(w, -3, 3) * dt;
+    if (pred.rest <= 0 && Math.hypot(T.x - pred.x, T.y - pred.y) < 10) { s.catches++; pred.rest = 1.5; if (T.odd) { s.oddCaught = (s.oddCaught || 0) + 1; T.odd = false; const o = P.filter(q => !q.odd && q !== T); o[Math.floor(s.rnd() * o.length)].odd = true; } const a = s.rnd() * TAU; T.x = clamp(cxm + Math.cos(a) * 600, 10, W - 10); T.y = clamp(cym + Math.sin(a) * 600, 10, H - 10); T.h = Math.atan2(cym - T.y, cxm - T.x); T.burst = 0; pred.tgt = -1; pred.lam = null; }
+    const m = 40; if (pred.x < m || pred.x > W - m || pred.y < m || pred.y > H - m) pred.h += clamp(wrapA(Math.atan2(H / 2 - pred.y, W / 2 - pred.x) - pred.h), -2 * dt, 2 * dt);
+  }
+  pred.x += Math.cos(pred.h) * pred.v * dt; pred.y += Math.sin(pred.h) * pred.v * dt;
+  const ux = Math.cos(pred.h), uy = Math.sin(pred.h);
+  // the prey
+  for (const a of P) {
+    const hx = Math.cos(a.h), hy = Math.sin(a.h);
+    let rx = 0, ry = 0, nr = 0, ox = 0, oy = 0, ax = 0, ay = 0, na = 0;
+    for (const b of P) {
+      if (b === a) continue; const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy; if (d2 > ZOA * ZOA) continue; const d = Math.sqrt(d2) || 1e-3;
+      if (d < ZOR) { rx -= dx / d; ry -= dy / d; nr++; continue; }
+      if ((dx * hx + dy * hy) / d < BLIND) continue;
+      if (d < ZOO) { ox += Math.cos(b.h); oy += Math.sin(b.h); } else { ax += dx / d; ay += dy / d; na++; }
+    }
+    const px = a.x - pred.x, py = a.y - pred.y, dp = Math.hypot(px, py) || 1, rpx = px / dp, rpy = py / dp;
+    let coh = 1, speed = 40, fx = 0, fy = 0, own = false;
+    const p = s.preset;
+    if (a.burst > 0) { a.burst -= dt; fx = rpx * 6; fy = rpy * 6; speed = 170; own = true; }
+    else if (p === 'calm') { if (dp < 25) { fx = rpx * 3; fy = rpy * 3; } }
+    else if (p === 'compact') { if (dp < 170) { coh = 3.5; speed = 55; fx = rpx * 0.6 * (170 - dp) / 170; fy = rpy * 0.6 * (170 - dp) / 170; } }
+    else if (p === 'vacuole') { if (dp < 75) { const k = 5 * (75 - dp) / 75; fx = rpx * k; fy = rpy * k; speed = 50; } }
+    else if (p === 'fountain') { if (dp < 110 && px * ux + py * uy > -30) { const side = Math.sign(ux * py - uy * px) || 1; fx = -uy * side * 2.2 - ux * 1.2; fy = ux * side * 2.2 - uy * 1.2; speed = 85; } }
+    else if (p === 'flash') { if (dp < 70) { a.burst = 0.45; } else if (dp < 140) { coh = 2; } }
+    else if (p === 'split') { if (dp < 180 && px * ux + py * uy > -40) { const side = Math.sign(ux * py - uy * px) || 1; fx = -uy * side * 3; fy = ux * side * 3; speed = 80; } }
+    else if (p === 'ball') { coh = 2.4; speed = 36; if (na) { const mx = ax / na, my = ay / na; fx = -my * 1.4; fy = mx * 1.4; } if (dp < 120) { fx += rpx * 1.5; fy += rpy * 1.5; } }
+    let dx, dy;
+    if (own) { dx = fx; dy = fy; }
+    else if (nr) { dx = rx + fx; dy = ry + fy; }
+    else { dx = hx * 0.6 + ox + ax * coh + fx; dy = hy * 0.6 + oy + ay * coh + fy; }
+    const m = 50; if (a.x < m) dx += (m - a.x) / m * 3; if (a.x > W - m) dx -= (a.x - W + m) / m * 3; if (a.y < m) dy += (m - a.y) / m * 3; if (a.y > H - m) dy -= (a.y - H + m) / m * 3;
+    a.nh = a.h + clamp(wrapA(Math.atan2(dy, dx) - a.h), -(own ? 12 : 5) * dt, (own ? 12 : 5) * dt);
+    a.v += (speed - a.v) * Math.min(1, (own ? 10 : 3) * dt);
+  }
+  for (const a of P) { a.h = a.nh; a.x = clamp(a.x + Math.cos(a.h) * a.v * dt, 2, W - 2); a.y = clamp(a.y + Math.sin(a.h) * a.v * dt, 2, H - 2); }
+}
+function pickTarget(s, not = -1) {
+  const P = s.P, pred = s.pred;
+  if (s.pick === 'random') { let i; do { i = Math.floor(s.rnd() * P.length); } while (i === not); return i; }
+  if (s.pick === 'odd') { const o = P.map((p, i) => [p, i]).filter(([p, i]) => p.odd && i !== not); if (o.length) return o[Math.floor(s.rnd() * o.length)][1]; }
+  if (s.pick === 'straggler') { const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cy = P.reduce((a, p) => a + p.y, 0) / P.length; let b = 0, bd = -1; P.forEach((p, i) => { const d = Math.hypot(p.x - cx, p.y - cy); if (d > bd && i !== not) { bd = d; b = i; } }); return b; }
+  let b = 0, bd = Infinity; P.forEach((p, i) => { const d = Math.hypot(p.x - pred.x, p.y - pred.y); if (d < bd && i !== not) { bd = d; b = i; } }); return b;
+}
+function schoolStats(s) {
+  const P = s.P; let hx = 0, hy = 0; for (const p of P) { hx += Math.cos(p.h); hy += Math.sin(p.h); }
+  const par = P.map((_, i) => i), find = i => par[i] === i ? i : (par[i] = find(par[i]));
+  for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) if (Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < 22) par[find(i)] = find(j);
+  const groups = new Set(P.map((_, i) => find(i))), sizes = {}; P.forEach((_, i) => { const r = find(i); sizes[r] = (sizes[r] || 0) + 1; });
+  const big = Object.values(sizes).filter(v => v >= 5).length;
+  const gap = Math.min(...P.map(p => Math.hypot(p.x - s.pred.x, p.y - s.pred.y)));
+  return { pol: Math.hypot(hx, hy) / P.length, groups: groups.size, big, gap };
+}
+function drawSchool(x, s) {
+  frame(x, s.W, s.H, WATER);
+  if (s.mode === 'hunt' && s.pred.tgt >= 0) { const T = s.P[s.pred.tgt]; x.strokeStyle = HOT; x.lineWidth = 1.5; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(s.pred.x, s.pred.y); x.lineTo(T.x, T.y); x.stroke(); x.setLineDash([]); x.beginPath(); x.arc(T.x, T.y, 10, 0, TAU); x.stroke(); }
+  for (const p of s.P) fishAt(x, p.x, p.y, p.h, 11, p.odd ? HOT : p.burst > 0 ? ACC : '#3C4658');
+  sharkAt(x, s.pred.x, s.pred.y, s.pred.h, 46, INK);
+}
+function escape() {
+  const cv = $('escv'), x = cv.getContext('2d'), s = makeSchool(31, 1000, 500);
+  s.preset = 'fountain';
+  seg($('es-pre'), Object.entries(PRE), s.preset, v => { s.preset = v; });
+  seg($('es-mode'), [['pass', 'Makes passes'], ['pointer', 'Follows your pointer']], s.mode, v => { s.mode = v; if (v === 'pass') s.pred.x = -200; });
+  cv.addEventListener('pointermove', e => { s.ptr = canvasPoint(cv, e); });
+  cv.addEventListener('pointerdown', e => { s.ptr = canvasPoint(cv, e); if (s.mode !== 'pointer') { s.mode = 'pointer'; $('es-mode').querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-pressed', String(i === 1))); } });
+  cv.addEventListener('pointerleave', () => { s.ptr = null; });
+  let acc = 0;
+  runner(cv, dt => {
+    if (dt > 0) { const n = Math.ceil(dt / (1 / 60)); for (let i = 0; i < n; i++) schoolStep(s, dt / n); }
+    drawSchool(x, s);
+    if ((acc += dt) > 0.25 || dt === 0) { acc = 0; const st = schoolStats(s); $('es-desc').innerHTML = `<b>${PRE[s.preset]}</b> · alignment ${st.pol.toFixed(2)} (1 = all one way) · ${st.big} group${st.big === 1 ? '' : 's'} of 5+ fish · nearest fish to the shark <b>${st.gap.toFixed(0)} px</b>`; }
+  }, 8);
+}
+
+/* ------------------------------------------------------------ 7. C-start */
+function cstart() {
+  const cv = $('cscv'), x = cv.getContext('2d'), W = 1000, H = 360, LEN = 160, M = 30, PXPM = 1600;   // 160 px = 10 cm
+  const C = { lat: 6, s1: 18, s2: 34, bend: 2.4, turn: 70, U: 1.3, name: 'C-start' };
+  const R = { lat: 0, s1: 45, s2: 100, bend: 1.3, turn: 45, U: 0.35, name: 'Routine turn' };
+  function curv(k, t, s) {   // curvature along the body (per unit length, as a multiple of 1/LEN)
+    const a1 = smooth(k.lat, k.s1, t) * (1 - smooth(k.s1, k.s2, t));
+    const c = (t - k.s1) / (k.s2 - k.s1), wave = t > k.s1 && t < k.s2 + 15 ? Math.exp(-(((s - c) / 0.22) ** 2)) * (1 - smooth(k.s2, k.s2 + 15, t)) : 0;
+    return k.bend * a1 - k.bend * 0.55 * wave;
+  }
+  function body(k, t, ox, oy) {
+    const pts = []; let phi = 0, px = 0, py = 0;
+    for (let i = 0; i <= M; i++) { pts.push([px, py, phi]); const s = i / M; phi += curv(k, t, s) / M; px -= Math.cos(phi) * LEN / M; py -= Math.sin(phi) * LEN / M; }
+    const mid = pts[M >> 1], heading = -(k.turn * Math.PI / 180) * smooth(k.lat, k.s2, t), rot = heading - mid[2];
+    const disp = k.U * PXPM * (t <= k.s1 ? 0 : (t - k.s1) / 1000 * smooth(k.s1, k.s2 + 10, t) * 0.6 + Math.max(0, t - k.s2 - 10) / 1000 * 0.4);
+    const fx = ox + Math.cos(-(k.turn * Math.PI / 180)) * disp, fy = oy + Math.sin(-(k.turn * Math.PI / 180)) * disp;
+    return { pts: pts.map(([a, b, p]) => { const xr = a - mid[0], yr = b - mid[1]; return [fx + xr * Math.cos(rot) - yr * Math.sin(rot), fy + xr * Math.sin(rot) + yr * Math.cos(rot), p + rot]; }), head: pts[0][2] + rot, disp };
+  }
+  function drawBody(b, col, alpha) {
+    x.globalAlpha = alpha; x.strokeStyle = col; x.lineCap = 'round';
+    for (let i = 0; i < M; i++) { const w = 14 * Math.sin(Math.PI * Math.min(1, (i + 2) / (M * 0.85))) + 2; x.lineWidth = w; x.beginPath(); x.moveTo(b.pts[i][0], b.pts[i][1]); x.lineTo(b.pts[i + 1][0], b.pts[i + 1][1]); x.stroke(); }
+    if (alpha === 1) { x.fillStyle = '#fff'; x.beginPath(); x.arc(b.pts[1][0] + Math.cos(b.head + 1.2) * 3, b.pts[1][1] + Math.sin(b.head + 1.2) * 3, 2.5, 0, TAU); x.fill(); }
+    x.globalAlpha = 1;
+  }
+  let t = 0, play = false;
+  function draw() {
+    frame(x, W, H, WATER);
+    x.strokeStyle = GRID; x.beginPath(); x.moveTo(W / 2, 10); x.lineTo(W / 2, H - 10); x.stroke();
+    const sides = [[C, 260, 230, HOT], [R, 760, 230, ACC]];
+    const info = [];
+    for (const [k, ox, oy, col] of sides) {
+      for (let g = 0; g < t; g += 8) drawBody(body(k, g, ox, oy), col, 0.1);
+      const b = body(k, t, ox, oy); drawBody(b, col, 1);
+      const stage = t < k.lat ? 'latency' : t < k.s1 ? 'stage 1: bend' : t < k.s2 ? 'stage 2: push-off' : 'gliding';
+      text(x, `${k.name} · ${stage}`, ox, 22, { align: 'center', color: col, weight: 500, size: 13 });
+      const headDeg = -b.head * 180 / Math.PI;
+      info.push(`<span style="color:${col}">${k.name}</span>: head turned <b>${headDeg.toFixed(0)}°</b>, body moved <b>${(b.disp / PXPM * 1000).toFixed(1)} mm</b>`);
+    }
+    if (t < 4) { x.strokeStyle = 'rgba(210,69,47,.5)'; x.lineWidth = 2; for (const r of [20, 34, 48]) { x.beginPath(); x.arc(150, 330, r + t * 8, Math.PI * 1.2, Math.PI * 1.8); x.stroke(); } }
+    text(x, 'stimulus', 150, 345, { align: 'center', color: HOT, size: 11 });
+    $('cs-to').textContent = t.toFixed(1) + ' ms'; $('cs-desc').innerHTML = `t = <b>${t.toFixed(1)} ms</b> after the stimulus · ${info.join(' · ')}<br>Ghosts every 8 ms. C-start: latency ${C.lat} ms, stage 1 ends ${C.s1} ms, stage 2 ends ${C.s2} ms. 10 cm fish.`;
+  }
+  $('cs-t').oninput = () => { t = +$('cs-t').value / 10; play = false; $('cs-play').setAttribute('aria-pressed', 'false'); draw(); };
+  $('cs-play').onclick = () => { play = !play; $('cs-play').setAttribute('aria-pressed', String(play)); if (play && t >= 119) t = 0; };
+  draw();
+  if (!REDUCE) { let last = performance.now(); const loop = now => { const dt = (now - last) / 1000; last = now; if (play) { t += dt * 20; if (t > 120) { t = 120; play = false; $('cs-play').setAttribute('aria-pressed', 'false'); } $('cs-t').value = Math.round(t * 10); draw(); } requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+
+  // protean escapes
+  const px = $('prcv').getContext('2d');
+  function run() {
+    const rnd = rng(55), TOL = 30, out = {};
+    for (const kind of ['fixed', 'varied']) {
+      const counts = new Array(12).fill(0); let hits = 0; const esc = [], aims = [];
+      for (let i = 0; i < 300; i++) {
+        let a; if (kind === 'fixed') a = 150; else { const side = rnd() < 0.5 ? 1 : -1, mode = rnd() < 0.5 ? 115 : 165; a = side * (mode + (rnd() - 0.5) * 30); }
+        let best = 0; counts.forEach((c, b) => { if (c > counts[best]) best = b; }); const aim = i < 3 ? (rnd() - 0.5) * 360 : best * 30 - 180 + 15;
+        if (Math.abs(wrapA((a - aim) * Math.PI / 180)) * 180 / Math.PI < TOL) hits++;
+        counts[Math.floor(((a + 180) % 360 + 360) % 360 / 30)]++; esc.push(a); aims.push(aim);
+      }
+      out[kind] = { hits, esc, aims };
+    }
+    const Wp = 1000, Hp = 260; frame(px, Wp, Hp);
+    [['fixed', 250, 'Always 150°'], ['varied', 750, 'Two sides × two preferred angles']].forEach(([k, cx, label]) => {
+      const o = out[k], cy = 140, r = 95;
+      px.strokeStyle = GRID; px.beginPath(); px.arc(cx, cy, r, 0, TAU); px.stroke();
+      px.fillStyle = HOT; px.beginPath(); px.moveTo(cx + r + 14, cy); px.lineTo(cx + r + 30, cy - 7); px.lineTo(cx + r + 30, cy + 7); px.fill(); text(px, 'threat', cx + r + 22, cy + 18, { align: 'center', size: 10.5, color: HOT });
+      o.esc.forEach(a => { const t = (a + 180) * Math.PI / 180, j = 0.85 + Math.random() * 0.15; px.fillStyle = 'rgba(43,60,209,.35)'; px.beginPath(); px.arc(cx + Math.cos(t) * r * j, cy - Math.sin(t) * r * j, 2.5, 0, TAU); px.fill(); });
+      o.aims.slice(-1).forEach(a => { const t = (a + 180) * Math.PI / 180; px.strokeStyle = HOT; px.lineWidth = 3; px.beginPath(); px.moveTo(cx, cy); px.lineTo(cx + Math.cos(t) * r * 0.8, cy - Math.sin(t) * r * 0.8); px.stroke(); });
+      text(px, `${label} · predator hits ${o.hits}/300 (${(o.hits / 3).toFixed(0)}%)`, cx, 18, { align: 'center', color: INK, weight: 500 });
+    });
+    $('pr-desc').innerHTML = `A strike succeeds if the predator's aim is within 30° of the escape direction. Fixed escape: <b>${(out.fixed.hits / 3).toFixed(0)}%</b> caught · varied escape: <b>${(out.varied.hits / 3).toFixed(0)}%</b> caught. Blue dots are escapes; the red line is the predator's last aim.`;
+  }
+  $('pr-run').onclick = run; run();
+}
+
+/* ------------------------------------------------------------ 8. countershading */
+function counter() {
+  const x = $('ctcv').getContext('2d'), W = 1000, H = 360;
+  const E = th => 0.15 + 0.85 * (1 + Math.cos(th)) / 2;        // light falling on the body at angle th from the top
+  const BG = 0.12, DEEP = 0.04, SURF = 1.0;                       // water radiance: sideways, looking down, looking up
+  const NS = 61, ths = Array.from({ length: NS }, (_, i) => Math.acos(1 - 2 * i / (NS - 1)));   // rows from top to belly
+  let meanE = 0; for (const th of ths) meanE += E(th); meanE /= NS;
+  const albedo = (th, s) => clamp((1 - s) * (BG / meanE) + s * (BG / E(th)), 0.02, 1);
+  const enc = L => Math.round(255 * clamp(L <= 0.0031308 ? 12.92 * L : 1.055 * L ** (1 / 2.4) - 0.055, 0, 1));
+  function draw() {
+    const s = +$('ct-s').value / 100; $('ct-so').textContent = Math.round(s * 100) + '%';
+    frame(x, W, H, `rgb(${enc(BG)},${enc(BG)},${enc(BG)})`);
+    // side view: each row of the fish shows the radiance of the point facing us at that height
+    const fx = 70, fw = 520, fy = 180, fh = 110;
+    for (let r = -fh; r <= fh; r++) {
+      const yv = -r / fh, th = Math.acos(clamp(yv, -1, 1)), L = albedo(th, s) * E(th), c = enc(L);
+      const half = Math.sqrt(Math.max(0, 1 - yv * yv)) * fw / 2;
+      x.fillStyle = `rgb(${c},${c},${c})`; x.fillRect(fx + fw / 2 - half, fy + r, half * 2, 1);
+    }
+    for (let r = -60; r <= 60; r++) { const yv = -r / fh, th = Math.acos(clamp(yv, -1, 1)), c = enc(albedo(th, s) * E(th)), w = 90 * (1 - Math.abs(r) / 60); x.fillStyle = `rgb(${c},${c},${c})`; x.fillRect(fx + fw - 8, fy + r, w, 1); }
+    text(x, 'side view, sun overhead', fx, 18, { color: '#C9CED6', size: 11 });
+    // profile plot
+    const L0 = 690, R0 = 985, T = 30, B = 330, X = v => L0 + v * (R0 - L0), Y = i => T + i / (NS - 1) * (B - T);
+    x.fillStyle = PAPER; x.fillRect(L0 - 30, T - 20, R0 - L0 + 45, B - T + 40);
+    x.strokeStyle = GRID; for (const v of [0, 0.25, 0.5, 0.75, 1]) { x.beginPath(); x.moveTo(X(v), T); x.lineTo(X(v), B); x.stroke(); text(x, v.toFixed(2), X(v), B + 12, { align: 'center', size: 10 }); }
+    const plot = (f, col) => { x.strokeStyle = col; x.lineWidth = 2.5; x.beginPath(); ths.forEach((th, i) => i ? x.lineTo(X(f(th)), Y(i)) : x.moveTo(X(f(th)), Y(i))); x.stroke(); };
+    plot(E, GOLD); plot(th => albedo(th, s), OK); plot(th => albedo(th, s) * E(th), ACC);
+    x.strokeStyle = INK; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(X(BG), T); x.lineTo(X(BG), B); x.stroke(); x.setLineDash([]);
+    text(x, 'back', L0 - 26, T, { size: 10.5 }); text(x, 'belly', L0 - 26, B, { size: 10.5 });
+    legend(x, [['light', GOLD], ['paint', OK], ['seen', ACC], ['water', INK]], L0 - 22, T - 12);
+    // measurements
+    const Ls = ths.map(th => albedo(th, s) * E(th)), mean = Ls.reduce((a, v) => a + v, 0) / NS;
+    const rmsBg = Math.sqrt(Ls.reduce((a, v) => a + (v - BG) ** 2, 0) / NS) / BG, shapeCue = (Math.max(...Ls) - Math.min(...Ls)) / mean;
+    const top = albedo(0, s) * E(0), bot = albedo(Math.PI, s) * E(Math.PI) * 0.15;   // belly seen from below lit only by upwelling light
+    $('ct-desc').innerHTML = `Side view: contrast against the water (RMS) <b>${rmsBg.toFixed(2)}</b> · top-to-belly shading cue <b>${shapeCue.toFixed(2)}</b> (0 = flat)<br>From above, back vs the deep: ${(Math.abs(top - DEEP) / DEEP).toFixed(1)}× brighter than the water · from below, belly vs the surface: <b>${(bot / SURF * 100).toFixed(1)}%</b> of the surface brightness, a dark silhouette whatever the paint`;
+  }
+  $('ct-s').oninput = draw; draw();
+}
+
+/* ------------------------------------------------------------ 9. arena */
+function arena() {
+  const cv = $('arcv'), x = cv.getContext('2d'), W = 1000, H = 500;
+  const cfg = { law: 'pn', pick: 'nearest', preset: 'compact', confuse: true, odd: false };
+  let s = null;
+  const make = (seed = 41) => { const t = makeSchool(seed, W, H); t.mode = 'hunt'; Object.assign(t, { law: cfg.law, pick: cfg.pick, preset: cfg.preset, confuse: cfg.confuse }); if (cfg.odd) for (let i = 0; i < 3; i++) t.P[i].odd = true; t.pred.x = 80; t.pred.y = 80; return t; };
+  const rebuild = () => { s = make(); };
+  seg($('ar-law'), [['pp', 'Pure pursuit'], ['pn', 'Prop. nav.']], cfg.law, v => { cfg.law = v; rebuild(); });
+  seg($('ar-pick'), [['nearest', 'Nearest'], ['random', 'Random'], ['straggler', 'Straggler'], ['odd', 'Odd one']], cfg.pick, v => { cfg.pick = v; rebuild(); });
+  seg($('ar-pre'), Object.entries(PRE), cfg.preset, v => { cfg.preset = v; rebuild(); });
+  $('ar-conf').onchange = () => { cfg.confuse = $('ar-conf').checked; rebuild(); };
+  $('ar-odd').onchange = () => { cfg.odd = $('ar-odd').checked; rebuild(); };
+  const rows = [];
+  $('ar-run').onclick = () => {
+    $('ar-run').disabled = true; $('ar-run').textContent = 'Running…';
+    setTimeout(() => {
+      const t = make(97), dt = 1 / 30;
+      for (let i = 0; i < 300 * 30; i++) schoolStep(t, dt);
+      const oddCaught = t.oddCaught || 0;
+      rows.unshift(`<tr><td>${{ pp: 'Pure pursuit', pn: 'Prop. nav.' }[cfg.law]}</td><td>${cfg.pick}</td><td>${PRE[cfg.preset]}</td><td>${cfg.confuse ? 'yes' : 'no'}</td><td>${cfg.odd ? `${oddCaught} of ${t.catches}` : '—'}</td><td><b>${(t.catches / 5).toFixed(1)}</b></td></tr>`);
+      $('ar-table').innerHTML = `<thead><tr><th>Steering</th><th>Picks</th><th>School</th><th>Confusable</th><th>Odd fish caught</th><th>Catches / min</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+      $('ar-run').disabled = false; $('ar-run').textContent = 'Run 5 simulated minutes';
+    }, 30);
+  };
+  $('ar-table').innerHTML = '<tbody><tr><td>No runs yet.</td></tr></tbody>';
+  rebuild();
+  let acc = 0;
+  runner(cv, dt => {
+    if (dt > 0) { const n = Math.ceil(dt / (1 / 60)); for (let i = 0; i < n; i++) schoolStep(s, dt / n); }
+    drawSchool(x, s);
+    if ((acc += dt) > 0.3 || dt === 0) { acc = 0; $('ar-desc').innerHTML = `Live: <b>${s.catches}</b> catches in ${s.t.toFixed(0)} s (${s.t > 5 ? (s.catches / s.t * 60).toFixed(1) : '—'} / min)`; }
+  }, 8);
+}
+
+/* ------------------------------------------------------------ boot */
+try { await Promise.all([document.fonts.load('600 20px "Bricolage Grotesque"'), document.fonts.load('500 13px "JetBrains Mono"')]); } catch (e) { /* fall back to system fonts */ }
+for (const f of [levy, pursuit, camo, herd, confusion, escape, cstart, counter, arena]) {
+  try { f(); } catch (e) { console.error(f.name, e); }
+}
+</script>
+</body>
+</html>
