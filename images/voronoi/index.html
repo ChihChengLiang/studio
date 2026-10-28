@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cells From Seeds</title>
+<meta name="description" content="Voronoi diagrams beyond maps: growth from seeds, distance metrics, territories that settle into hexagons, Lloyd relaxation and blue noise, stippling and mosaics, Worley textures, fracture, and the Delaunay dual, with every claim measured live.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. Sections are static HTML; every canvas is drawn by the script at the bottom (2D canvas only). */
+:root{
+  --bg:#EDEFF4; --surface:#F8F9FC; --fg:#11141C; --muted:#586072; --line:#CDD2DE; --accent:#2B3CD1; --accent-fg:#FFFFFF; --stage:#F6F3EC;
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#0B0D12;--surface:#12151D;--fg:#E6E9F0;--muted:#979EB0;--line:#272C3A;--accent:#8F9BFF;--accent-fg:#0B0D12;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--font-body);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font:700 clamp(34px,6.5vw,58px)/1.02 var(--font-display);letter-spacing:-.025em;text-wrap:balance}
+h2{margin:0;font:600 clamp(22px,3.4vw,28px)/1.15 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+h3{margin:0 0 6px;font:600 16.5px/1.2 var(--font-display);letter-spacing:-.005em}
+p{margin:0}
+.eyebrow{margin:0 0 10px;font:500 12px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{margin:12px 0 0;max-width:66ch;color:var(--muted);font-size:16px}
+.prose{display:flex;flex-direction:column;gap:12px;max-width:70ch;color:var(--muted)}
+.prose b,.prose strong{color:var(--fg);font-weight:600}
+code{font-family:var(--font-mono);font-size:.9em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font:500 13px/1.3 var(--font-mono)}
+.toc a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+
+.demo{display:flex;flex-direction:column;gap:18px;border-top:1px solid var(--line);padding-top:36px;min-width:0}
+.note{margin:0;padding:12px 14px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--muted);max-width:78ch}
+.note b{color:var(--fg);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px 28px}
+.cards>div{min-width:0}
+.cards p{font-size:14px;color:var(--muted)}
+.cards a{font:500 12px/1 var(--font-mono)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+table.plain{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+table.plain th,table.plain td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.plain tr:last-child td{border-bottom:0}
+table.plain th{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+table.plain td{color:var(--muted)}
+table.plain td:first-child{font-weight:600;white-space:nowrap;color:var(--fg)}
+
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px}
+.tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tile{display:flex;flex-direction:column;margin:0;min-width:0}
+.tile canvas{display:block;width:100%;height:auto;aspect-ratio:1;background:var(--stage);border:1px solid var(--line)}
+.tile .tn{font:600 13.5px/1.25 var(--font-display);margin:8px 0 0}
+.tile .ts{font:400 11px/1.35 var(--font-mono);color:var(--accent);margin:3px 0 0}
+.tile .td{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.42}
+
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel canvas{display:block;width:100%;height:auto;background:var(--stage);border:1px solid var(--line);touch-action:none}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.bar input[type=range]{flex:1 1 160px;accent-color:var(--accent);margin:0}
+.bar label,.lbl{font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.bar label.tg{display:flex;align-items:center;gap:6px;cursor:pointer}
+.bar label.tg input{accent-color:var(--accent);margin:0}
+.btn{font:500 13px/1.2 var(--font-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:8px 11px;border-radius:2px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.seg{display:flex;flex-wrap:wrap}
+.seg button{flex:1 1 auto;font:500 12.5px/1.2 var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);padding:7px 9px;border-radius:0;margin:0 -1px -1px 0;cursor:pointer}
+.seg button:hover{border-color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);position:relative;z-index:1}
+.desc{font:400 13px/1.55 var(--font-mono);color:var(--fg);background:var(--surface);border:1px solid var(--line);padding:10px 12px;min-height:3em}
+.desc b{color:var(--accent);font-weight:500}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.ctlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start}
+.group{background:var(--surface);border:1px solid var(--line);padding:13px 15px 12px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;flex-direction:column;gap:5px;min-width:0}
+.row>.lab2{display:flex;justify-content:space-between;gap:10px;font:500 11px/1.2 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.row>.lab2 output{color:var(--fg);letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+.row input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.labout{display:block;width:100%;max-width:520px;aspect-ratio:1;background:var(--stage);border:1px solid var(--line)}
+
+.reading{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.reading b{color:var(--fg);font-weight:600}
+
+@media (max-width:900px){
+  .tiles.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .split{grid-template-columns:minmax(0,1fr)}
+  .desc{font-size:11.5px}
+}
+@media (max-width:560px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">Images · canvas · computational geometry</p>
+  <h1>Cells from seeds</h1>
+  <p class="lede">Scatter some points and give every spot on the plane to whichever point is closest. The regions you get are a Voronoi diagram, and they turn up wherever things grow outward from seeds and stop when they meet: crystal grains, cracked mud, giraffe patches, plant cells, fish territories. This page grows them, warps them, relaxes them into honeycombs, turns them into stipples, mosaics, textures and shattered glass, and checks the geometry that makes them work as it goes.</p>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#borrow">Elements to borrow</a></li>
+    <li><a href="#grow">Growth from seeds</a></li>
+    <li><a href="#metric">Distance changes the map</a></li>
+    <li><a href="#lloyd">Territories and Lloyd</a></li>
+    <li><a href="#mosaic">Stipples and mosaics</a></li>
+    <li><a href="#worley">Worley textures</a></li>
+    <li><a href="#fracture">Fracture</a></li>
+    <li><a href="#delaunay">The Delaunay dual</a></li>
+    <li><a href="#lab">Lab</a></li>
+    <li><a href="#glossary">Glossary and sources</a></li>
+  </ul>
+</header>
+
+<section class="demo" id="borrow" aria-labelledby="borrow-h">
+  <header><p class="eyebrow">Overview</p><h2 id="borrow-h">Elements to borrow</h2></header>
+  <div class="cards">
+    <div><h3>Growth stops where it meets</h3><p>Anything that spreads from seeds at one speed and halts on contact draws straight walls. Change timing or speed and the walls curve. <a href="#grow">Growth</a></p></div>
+    <div><h3>How you travel shapes the map</h3><p>Walking, city blocks and king moves give three different maps of the same towns. <a href="#metric">Metrics</a></p></div>
+    <div><h3>Crowds settle into honeycombs</h3><p>Move each point to the middle of its own cell, repeat, and chaos becomes hexagons. Territorial fish do it. <a href="#lloyd">Lloyd</a></p></div>
+    <div><h3>Tone from dots and glass</h3><p>Weighted cells place dots by darkness; plain cells cut stained glass; their dual makes low-poly art. <a href="#mosaic">Mosaics</a></p></div>
+    <div><h3>Texture from distances</h3><p>Distance to the nearest and second-nearest seed gives stone, scales and caustics. <a href="#worley">Worley</a></p></div>
+    <div><h3>Shattering for free</h3><p>Seeds packed around an impact point give convincing shards. <a href="#fracture">Fracture</a></p></div>
+  </div>
+</section>
+
+<section class="demo" id="grow" aria-labelledby="grow-h">
+  <header><p class="eyebrow">1 · Johnson and Mehl, 1939</p><h2 id="grow-h">Growth from seeds</h2></header>
+  <div class="prose">
+    <p>Start a circle growing from every seed at the same moment and the same speed, and stop each one where it touches another. The boundaries are exactly the perpendicular bisectors between seeds: the Voronoi diagram. That is why metal grains, foam-free cell tissue and crusts of drying mud look like Voronoi cells. Real growth is rarely so even. Seeds that <b>start at different times</b> (crystals nucleating as metal cools, Johnson and Mehl's model) meet along hyperbolas. Seeds that <b>grow at different speeds</b> meet along circles. The measurement compares the final map with the plain Voronoi diagram of the same seeds.</p>
+  </div>
+  <div class="panel">
+    <canvas id="gcv" width="1000" height="460" aria-label="Regions growing from seeds"></canvas>
+    <div class="bar"><label>Growth</label><div class="seg" id="g-mode" role="group" aria-label="Growth rule"></div><button class="btn" id="g-new">New seeds</button></div>
+    <p class="desc" id="g-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="metric" aria-labelledby="metric-h">
+  <header><p class="eyebrow">2 · Distance</p><h2 id="metric-h">Distance changes the map</h2></header>
+  <div class="prose">
+    <p>"Closest" depends on how you move. As the crow flies is the ordinary (Euclidean) distance. In a grid city you walk along blocks, |dx| + |dy| (Manhattan distance), and the walls tilt to 45°. A king on a chessboard moves diagonally for free, max(|dx|, |dy|) (Chebyshev distance), and the regions turn boxy. John Snow's 1854 cholera map made the same point by hand: which water pump was nearest depended on walking routes, not straight lines. Same 24 seeds in all three; the number under each map is the share of ground that changes hands compared with straight-line distance.</p>
+  </div>
+  <div class="tiles" id="m-tiles"></div>
+</section>
+
+<section class="demo" id="lloyd" aria-labelledby="lloyd-h">
+  <header><p class="eyebrow">3 · Lloyd, 1982 · Barlow, 1974</p><h2 id="lloyd-h">Territories and Lloyd relaxation</h2></header>
+  <div class="prose">
+    <p>Male tilapia dig nest pits on the lake floor and defend the ground around them. Each one keeps away from its neighbours, which in effect moves it toward the middle of its own territory, and a crowded breeding ground settles into a near-honeycomb of hexagons (Barlow 1974). The same rule is <b>Lloyd's algorithm</b>: move every seed to the centroid of its cell, recompute, repeat. It converges to a centroidal Voronoi tessellation, the most even way to split a region.</p>
+    <p>Two pieces of maths come for free. Euler's formula forces the <b>average cell to have six sides</b>, however irregular the pattern. And bigger cells tend to have more sides, which botanists noticed in plant tissue long before (Lewis's law). Cells are coloured by side count: blue for fewer than six, cream for six, orange for more. The right-hand chart is the structure factor of the seed positions: random points are flat at 1; relaxed points have almost no energy at long wavelengths, the signature of blue noise.</p>
+  </div>
+  <div class="panel">
+    <canvas id="lcv" width="1000" height="500" aria-label="Cells coloured by number of sides"></canvas>
+    <canvas id="lch" width="1000" height="230" aria-label="Hexagon share over time and the structure factor of the seeds"></canvas>
+    <div class="bar"><button class="btn" id="l-play" aria-pressed="true">Relaxing</button><button class="btn" id="l-new">Scatter again</button></div>
+    <p class="desc" id="l-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="mosaic" aria-labelledby="mosaic-h">
+  <header><p class="eyebrow">4 · Secord, 2002 · Hausner, 2001</p><h2 id="mosaic-h">Stipples and mosaics</h2></header>
+  <div class="prose">
+    <p>Weight Lloyd's centroids by how dark the picture is and the seeds crowd into the shadows while keeping even spacing: <b>weighted Voronoi stippling</b>, which turns a picture into dots like a pen-and-ink illustrator would. Leave the weights out and colour each cell by the picture underneath to get <b>stained glass</b>. Connect neighbouring seeds instead of drawing their cells and you get the Delaunay triangulation, the base of <b>low-poly</b> art. All three start from the same lit sphere. The stipple measurement compares the blurred dots with the blurred picture, iteration by iteration.</p>
+  </div>
+  <div class="tiles four" id="mo-tiles"></div>
+  <p class="desc" id="mo-desc"></p>
+</section>
+
+<section class="demo" id="worley" aria-labelledby="worley-h">
+  <header><p class="eyebrow">5 · Worley, 1996</p><h2 id="worley-h">Worley textures</h2></header>
+  <div class="prose">
+    <p>Steven Worley's cellular texture keeps not the cell but the <b>distances</b>: F1 to the nearest seed, F2 to the second nearest. F1 looks like rounded cells or bubbles; F2 − F1 is zero exactly on the cell walls, so it draws veins and cracks; combined with a little noise and a colour per cell it becomes stone, scales or leather. Move the seeds slowly and F2 − F1 shimmers like light on the floor of a pool. The seeds sit one per grid cell, so the texture tiles and every lookup only checks nine cells.</p>
+  </div>
+  <div class="tiles" id="w-tiles"></div>
+</section>
+
+<section class="demo" id="fracture" aria-labelledby="fracture-h">
+  <header><p class="eyebrow">6 · Visual effects</p><h2 id="fracture-h">Fracture</h2></header>
+  <div class="prose">
+    <p>Effects artists break glass and stone by scattering seeds packed densely around the point of impact and sparsely further out, then cutting the object into their Voronoi cells. The result has many small shards near the hit and a few large ones at the edges, which is roughly what real brittle fracture does. Click the pane to strike it.</p>
+  </div>
+  <div class="panel">
+    <canvas id="fcv" width="1000" height="460" aria-label="A pane of glass; click to shatter it"></canvas>
+    <div class="bar"><button class="btn" id="f-reset">New pane</button><label for="f-n">Shards</label><input type="range" id="f-n" min="12" max="90" value="45"><output id="f-no" class="lbl"></output></div>
+    <p class="desc" id="f-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="delaunay" aria-labelledby="delaunay-h">
+  <header><p class="eyebrow">7 · Delaunay, 1934</p><h2 id="delaunay-h">The Delaunay dual</h2></header>
+  <div class="prose">
+    <p>Join every pair of seeds whose cells share a wall and you get a triangulation with a remarkable property: no seed lies inside any triangle's circumscribed circle. Among all ways to triangulate the points, it also makes the smallest angle as large as possible, so its triangles are the least sliver-like, which is why meshes, terrain models and low-poly art use it. The counts are fixed by Euler's formula: with n points, h of them on the hull, there are exactly 2n − 2 − h triangles and 3n − 3 − h edges. Drag points, click empty space to add one, and hover a triangle to see its empty circle.</p>
+  </div>
+  <div class="panel">
+    <canvas id="dcv" width="1000" height="460" aria-label="Points with their Voronoi cells and Delaunay triangles"></canvas>
+    <div class="bar"><label class="tg"><input type="checkbox" id="d-vor" checked> Voronoi cells</label><label class="tg"><input type="checkbox" id="d-del" checked> Delaunay triangles</label><button class="btn" id="d-new">New points</button></div>
+    <p class="desc" id="d-desc"></p>
+  </div>
+</section>
+
+<section class="demo" id="lab" aria-labelledby="lab-h">
+  <header><p class="eyebrow">8 · Lab</p><h2 id="lab-h">Voronoi lab</h2></header>
+  <div class="split">
+    <div class="panel"><canvas id="lab-cv" class="labout" width="480" height="480" aria-label="Lab output"></canvas><p class="desc" id="lab-desc"></p></div>
+    <div class="ctlgrid">
+      <div class="group">
+        <div class="bar"><label>Seeds</label><div class="seg" id="lb-seeds" role="group" aria-label="Seed layout"></div></div>
+        <div class="row"><div class="lab2"><span>Count</span><output id="lb-no"></output></div><input type="range" id="lb-n" min="8" max="300" value="80"></div>
+        <div class="bar"><label>Distance</label><div class="seg" id="lb-metric" role="group" aria-label="Distance"></div></div>
+        <div class="row"><div class="lab2"><span>Wobbly edges (noise warp)</span><output id="lb-wo"></output></div><input type="range" id="lb-w" min="0" max="40" value="0"></div>
+      </div>
+      <div class="group">
+        <div class="bar"><label>Style</label><div class="seg" id="lb-style" role="group" aria-label="Style"></div></div>
+        <div class="row"><div class="lab2"><span>Wall width</span><output id="lb-bo"></output></div><input type="range" id="lb-b" min="0" max="8" value="2"></div>
+        <div class="bar"><button class="btn" id="lb-new">New seed</button><button class="btn" id="lb-save">Save PNG</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo" id="glossary" aria-labelledby="glossary-h">
+  <header><p class="eyebrow">Reference</p><h2 id="glossary-h">Glossary and sources</h2></header>
+  <div class="tablewrap"><table class="plain">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Voronoi cell</td><td>All points closer to one seed than to any other.</td></tr>
+      <tr><td>Bisector</td><td>The line of points equally far from two seeds; Voronoi walls lie on bisectors.</td></tr>
+      <tr><td>Weighted diagrams</td><td>Additive weights (start times) give hyperbolic walls; multiplicative weights (speeds) give circular walls; power diagrams give straight walls that are not bisectors.</td></tr>
+      <tr><td>Centroidal Voronoi tessellation</td><td>A diagram in which every seed sits at its cell's centroid; the fixed point of Lloyd's algorithm.</td></tr>
+      <tr><td>Blue noise</td><td>A point set or pattern with little energy at long wavelengths: even spacing without a grid.</td></tr>
+      <tr><td>Structure factor</td><td>S(k) = |Σ e^(−ik·x)|² / n: how much a point set varies at wavelength 1/k. Random points give 1.</td></tr>
+      <tr><td>Lewis's law</td><td>In cell tissue, cell area grows roughly linearly with number of sides.</td></tr>
+      <tr><td>F1, F2</td><td>Distance to the nearest and second-nearest seed, the basis of Worley noise.</td></tr>
+      <tr><td>Delaunay triangulation</td><td>The dual of the Voronoi diagram: triangles whose circumcircles contain no other seed.</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="reading">
+    <li><b>Voronoi (1908).</b> Nouvelles applications des paramètres continus à la théorie des formes quadratiques. <i>Journal für die reine und angewandte Mathematik</i> 133–134. <b>Dirichlet (1850)</b> for the two-dimensional case.</li>
+    <li><b>Aurenhammer (1991).</b> Voronoi diagrams: a survey of a fundamental geometric data structure. <i>ACM Computing Surveys</i> 23(3), 345–405. <b>Okabe, Boots, Sugihara and Chiu (2000).</b> <i>Spatial Tessellations</i>, 2nd ed., Wiley.</li>
+    <li><b>Johnson and Mehl (1939).</b> Reaction kinetics in processes of nucleation and growth. <i>Transactions of the AIME</i> 135, 416–442.</li>
+    <li><b>Snow (1855).</b> <i>On the Mode of Communication of Cholera</i>, 2nd ed.</li>
+    <li><b>Barlow (1974).</b> Hexagonal territories. <i>Animal Behaviour</i> 22, 876–878. <b>Lewis (1928).</b> The correlation between cell division and the shapes and sizes of prismatic cells in the epidermis of <i>Cucumis</i>. <i>Anatomical Record</i> 38, 341–376.</li>
+    <li><b>Lloyd (1982).</b> Least squares quantization in PCM. <i>IEEE Transactions on Information Theory</i> 28(2), 129–137. <b>Du, Faber and Gunzburger (1999).</b> Centroidal Voronoi tessellations: applications and algorithms. <i>SIAM Review</i> 41(4), 637–676.</li>
+    <li><b>Secord (2002).</b> Weighted Voronoi stippling. <i>NPAR 2002</i>, 37–43. <b>Hausner (2001).</b> Simulating decorative mosaics. <i>SIGGRAPH 2001</i>, 573–580.</li>
+    <li><b>Worley (1996).</b> A cellular texture basis function. <i>SIGGRAPH 1996</i>, 291–294.</li>
+    <li><b>Delaunay (1934).</b> Sur la sphère vide. <i>Bulletin de l'Académie des Sciences de l'URSS</i> 6, 793–800. <b>Bowyer (1981)</b> and <b>Watson (1981)</b>, <i>The Computer Journal</i> 24(2), the incremental algorithm used here.</li>
+  </ol>
+  <p class="note">All drawings and code on this page are original. Related pages: blue noise and stippling in the <a href="../halftone-dithering/">halftone notebook</a>, the domain of danger in <a href="../../games/predator-prey/">hunters and the hunted</a>, and the noise used for wobbly walls in <a href="../noise/">randomness with a shape</a>.</p>
+</section>
+
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PAPER = '#F6F3EC', INK = '#1B1F2A', GRID = '#DDD7CA', MUTED = '#7A7F8C', ACC = '#2B3CD1', HOT = '#D2452F', OK = '#16856F', GOLD = '#C98A00';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function text(x, t, px, py, { align = 'left', size = 12, color = MUTED, base = 'middle', weight = 400 } = {}) { x.fillStyle = color; x.font = `${weight} ${size}px ${MONO}`; x.textAlign = align; x.textBaseline = base; x.fillText(t, px, py); }
+function legend(x, items, px, py) { for (const [lab, col] of items) { x.fillStyle = col; x.fillRect(px, py - 5, 10, 10); text(x, lab, px + 15, py, { size: 11, color: INK }); x.font = `400 11px ${MONO}`; px += x.measureText(lab).width + 34; } }
+function frame(x, W, H, bg = PAPER) { x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = bg; x.fillRect(0, 0, W, H); }
+function seg(host, items, cur, onPick) {
+  host.textContent = '';
+  return items.map(([v, lab]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = lab; b.setAttribute('aria-pressed', String(v === cur)); b.onclick = () => { host.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b))); onPick(v); }; host.append(b); return b; });
+}
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function tile(host, name, sub = '', desc = '', w = 320, h = 320) {
+  const f = document.createElement('figure'); f.className = 'tile'; const c = mk(w, h); c.setAttribute('aria-label', name);
+  const n = document.createElement('p'); n.className = 'tn'; n.textContent = name;
+  const s = document.createElement('p'); s.className = 'ts'; s.textContent = sub;
+  const d = document.createElement('p'); d.className = 'td'; d.textContent = desc;
+  f.append(c, n, s); if (desc) f.append(d); host.append(f);
+  return { c, ctx: c.getContext('2d'), sub: s };
+}
+function runner(el, tick, settle = 3) {
+  let raf = 0, last = 0;
+  const loop = t => { const dt = Math.min(0.05, (t - last) / 1000); last = t; tick(dt); raf = requestAnimationFrame(loop); };
+  if (REDUCE) { for (let i = 0; i < settle * 60; i++) tick(1 / 60, true); tick(0); return; }
+  new IntersectionObserver(([e]) => { cancelAnimationFrame(raf); if (e.isIntersecting) { last = performance.now(); raf = requestAnimationFrame(loop); } }).observe(el);
+  tick(0);
+}
+function canvasPoint(cv, e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+/* a soft colour per cell: golden-angle hues */
+function cellColor(i, s = 0.42, l = 0.78) { const h = (i * 137.508) % 360; const f = n => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return [f(0), f(8), f(4)]; }
+
+/* ------------------------------------------------------------ geometry */
+function clipPoly(poly, a, b, c) {   // keep the part where a x + b y <= c
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const P = poly[i], Q = poly[(i + 1) % poly.length], dp = a * P[0] + b * P[1] - c, dq = a * Q[0] + b * Q[1] - c;
+    if (dp <= 0) out.push(P);
+    if ((dp < 0 && dq > 0) || (dp > 0 && dq < 0)) { const t = dp / (dp - dq); out.push([P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])]); }
+  }
+  return out;
+}
+/* every cell as a polygon, by clipping the frame with the bisector against each other seed */
+function cellPolys(S, x0, y0, x1, y1) {
+  return S.map((s, i) => {
+    let poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    const order = S.map((t, j) => [(t[0] - s[0]) ** 2 + (t[1] - s[1]) ** 2, j]).sort((p, q) => p[0] - q[0]);
+    for (const [d2, j] of order) {
+      if (j === i) continue;
+      let r2 = 0; for (const p of poly) r2 = Math.max(r2, (p[0] - s[0]) ** 2 + (p[1] - s[1]) ** 2);
+      if (d2 > 4 * r2) break;   // this seed and every later one are too far to cut the cell
+      const t = S[j]; poly = clipPoly(poly, t[0] - s[0], t[1] - s[1], (t[0] * t[0] + t[1] * t[1] - s[0] * s[0] - s[1] * s[1]) / 2);
+      if (poly.length < 3) break;
+    }
+    return poly;
+  });
+}
+function areaOf(p) { let a = 0; for (let i = 0; i < p.length; i++) { const P = p[i], Q = p[(i + 1) % p.length]; a += P[0] * Q[1] - Q[0] * P[1]; } return a / 2; }
+function centroidOf(p) { let a = 0, cx = 0, cy = 0; for (let i = 0; i < p.length; i++) { const P = p[i], Q = p[(i + 1) % p.length], c = P[0] * Q[1] - Q[0] * P[1]; a += c; cx += (P[0] + Q[0]) * c; cy += (P[1] + Q[1]) * c; } return a ? [cx / (3 * a), cy / (3 * a)] : p[0]; }
+const onFrame = (p, x0, y0, x1, y1) => Math.abs(p[0] - x0) < 1e-6 || Math.abs(p[0] - x1) < 1e-6 || Math.abs(p[1] - y0) < 1e-6 || Math.abs(p[1] - y1) < 1e-6;
+function tracePoly(x, p) { x.beginPath(); p.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); }
+
+/* Delaunay triangulation by Bowyer–Watson */
+function circum(a, b, c) {
+  const d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
+  if (Math.abs(d) < 1e-12) return { x: 0, y: 0, r2: Infinity };
+  const A = a[0] * a[0] + a[1] * a[1], B = b[0] * b[0] + b[1] * b[1], C = c[0] * c[0] + c[1] * c[1];
+  const x = (A * (b[1] - c[1]) + B * (c[1] - a[1]) + C * (a[1] - b[1])) / d, y = (A * (c[0] - b[0]) + B * (a[0] - c[0]) + C * (b[0] - a[0])) / d;
+  return { x, y, r2: (a[0] - x) ** 2 + (a[1] - y) ** 2 };
+}
+function delaunay(P) {
+  const n = P.length; let mx = Infinity, my = Infinity, Mx = -Infinity, My = -Infinity;
+  for (const p of P) { mx = Math.min(mx, p[0]); my = Math.min(my, p[1]); Mx = Math.max(Mx, p[0]); My = Math.max(My, p[1]); }
+  const d = Math.max(Mx - mx, My - my) * 20, cx = (mx + Mx) / 2, cy = (my + My) / 2;
+  const pts = [...P, [cx - d, cy - d], [cx + d, cy - d], [cx, cy + d]];
+  let tris = [{ v: [n, n + 1, n + 2], ...circum(pts[n], pts[n + 1], pts[n + 2]) }];
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], bad = [], keep = [];
+    for (const t of tris) ((p[0] - t.x) ** 2 + (p[1] - t.y) ** 2 < t.r2 ? bad : keep).push(t);
+    const edges = new Map();
+    for (const t of bad) for (let k = 0; k < 3; k++) { const a = t.v[k], b = t.v[(k + 1) % 3], key = a < b ? a + ',' + b : b + ',' + a; edges.set(key, edges.has(key) ? null : [a, b]); }
+    tris = keep;
+    for (const e of edges.values()) if (e) tris.push({ v: [e[0], e[1], i], ...circum(pts[e[0]], pts[e[1]], p) });
+  }
+  return tris.filter(t => t.v.every(k => k < n));
+}
+function hullCount(P) {
+  const s = P.map((p, i) => [p[0], p[1], i]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of s) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (const p of [...s].reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+  return lo.length + up.length - 2;
+}
+
+/* nearest seed for every pixel, with a bucket grid so thousands of seeds stay fast (straight-line distance) */
+function nearestMap(S, W, H) {
+  const n = S.length, G = Math.max(4, Math.sqrt(W * H / n)), gw = Math.ceil(W / G), gh = Math.ceil(H / G), bk = Array.from({ length: gw * gh }, () => []);
+  S.forEach((s, i) => bk[clamp(Math.floor(s[1] / G), 0, gh - 1) * gw + clamp(Math.floor(s[0] / G), 0, gw - 1)].push(i));
+  const lab = new Int32Array(W * H), d1 = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const px = x + 0.5, py = y + 0.5, cx = Math.floor(px / G), cy = Math.floor(py / G); let best = -1, bd = Infinity;
+    for (let r = 0; r < Math.max(gw, gh); r++) {
+      for (let j = cy - r; j <= cy + r; j++) { if (j < 0 || j >= gh) continue; for (let i = cx - r; i <= cx + r; i++) { if (i < 0 || i >= gw || (Math.abs(i - cx) !== r && Math.abs(j - cy) !== r)) continue; for (const k of bk[j * gw + i]) { const d = (S[k][0] - px) ** 2 + (S[k][1] - py) ** 2; if (d < bd) { bd = d; best = k; } } } }
+      if (best >= 0 && Math.sqrt(bd) <= r * G) break;
+    }
+    lab[y * W + x] = best; d1[y * W + x] = Math.sqrt(bd);
+  }
+  return { lab, d1 };
+}
+function drawLabels(x, lab, W, H, color, wall = [40, 44, 54], wallOn = true) {
+  const id = x.createImageData(W, H);
+  for (let p = 0; p < W * H; p++) {
+    const l = lab[p], edge = wallOn && ((p % W < W - 1 && lab[p + 1] !== l) || (p + W < W * H && lab[p + W] !== l));
+    const c = edge ? wall : color(l, p); id.data[p * 4] = c[0]; id.data[p * 4 + 1] = c[1]; id.data[p * 4 + 2] = c[2]; id.data[p * 4 + 3] = 255;
+  }
+  x.putImageData(id, 0, 0);
+}
+
+/* ------------------------------------------------------------ 1. growth */
+function growth() {
+  const cv = $('gcv'), x = cv.getContext('2d'), W = 500, H = 230, N = 26, off = mk(W, H), ox = off.getContext('2d');
+  let mode = 'equal', seed = 4, S = [], T = 0, tmax = 1, arr = null, lab = null, vor = null, hold = 0, diff = 0;
+  const COLS = Array.from({ length: N }, (_, i) => cellColor(i)), WALL = [40, 44, 54], BLANK = [236, 240, 244];
+  function build() {
+    const r = rng(seed); S = Array.from({ length: N }, () => ({ x: 10 + r() * (W - 20), y: 10 + r() * (H - 20), t0: mode === 'stagger' ? r() * 1.6 : 0, v: mode === 'speed' ? 30 + r() * 70 : 55 }));
+    arr = new Float32Array(W * H); lab = new Int16Array(W * H); vor = new Int16Array(W * H); tmax = 0; diff = 0;
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      let best = Infinity, bl = 0, bd = Infinity, vl = 0;
+      S.forEach((s, i) => { const d = Math.hypot(s.x - xx, s.y - y), t = s.t0 + d / s.v; if (t < best) { best = t; bl = i; } if (d < bd) { bd = d; vl = i; } });
+      const p = y * W + xx; arr[p] = best; lab[p] = bl; vor[p] = vl; tmax = Math.max(tmax, best); if (bl !== vl) diff++;
+    }
+    T = 0; hold = 0;
+  }
+  function draw() {
+    const id = ox.createImageData(W, H);
+    for (let p = 0; p < W * H; p++) {
+      const on = arr[p] <= T, l = lab[p], o = p * 4;
+      const edge = on && ((p % W < W - 1 && arr[p + 1] <= T && lab[p + 1] !== l) || (p + W < W * H && arr[p + W] <= T && lab[p + W] !== l));
+      const c = edge ? WALL : on ? COLS[l] : BLANK;
+      id.data[o] = c[0]; id.data[o + 1] = c[1]; id.data[o + 2] = c[2]; id.data[o + 3] = 255;
+    }
+    ox.putImageData(id, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(off, 0, 0, 1000, 460);
+    for (const s of S) { x.fillStyle = T >= s.t0 ? INK : 'rgba(27,31,42,.25)'; x.beginPath(); x.arc(s.x * 2, s.y * 2, 4, 0, TAU); x.fill(); }
+    const kind = { equal: 'same start, same speed', stagger: 'different start times', speed: 'different speeds' }[mode], wall = { equal: 'straight bisectors', stagger: 'hyperbolas', speed: 'circles' }[mode];
+    $('g-desc').innerHTML = `${kind} · t = ${T.toFixed(1)} s of ${tmax.toFixed(1)} · walls are ${wall}<br>Final map differs from the plain Voronoi diagram on <b>${(diff / (W * H) * 100).toFixed(1)}%</b> of the ground`;
+  }
+  function tick(dt) { if (T < tmax) T = Math.min(tmax, T + dt * tmax / 6); else if ((hold += dt) > 2) { T = 0; hold = 0; } draw(); }
+  seg($('g-mode'), [['equal', 'Equal'], ['stagger', 'Staggered starts'], ['speed', 'Different speeds']], mode, v => { mode = v; build(); });
+  $('g-new').onclick = () => { seed++; build(); };
+  build(); if (REDUCE) T = tmax; runner(cv, tick, 0);
+}
+
+/* ------------------------------------------------------------ 2. metrics */
+function metrics() {
+  const n = 320, r = rng(12), S = Array.from({ length: 24 }, () => [10 + r() * (n - 20), 10 + r() * (n - 20)]);
+  const M = { e: ['As the crow flies', (dx, dy) => dx * dx + dy * dy, 'Euclidean: walls are perpendicular bisectors.'], m: ['City blocks', (dx, dy) => Math.abs(dx) + Math.abs(dy), 'Manhattan: |dx| + |dy|. Walls run at 0°, 45° and 90°.'], c: ['King moves', (dx, dy) => Math.max(Math.abs(dx), Math.abs(dy)), 'Chebyshev: max(|dx|, |dy|). Boxy regions.'] };
+  const labs = {};
+  for (const [k, [name, d, desc]] of Object.entries(M)) {
+    const lab = new Int32Array(n * n);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { let b = 0, bd = Infinity; for (let i = 0; i < S.length; i++) { const v = d(S[i][0] - x - 0.5, S[i][1] - y - 0.5); if (v < bd) { bd = v; b = i; } } lab[y * n + x] = b; }
+    labs[k] = lab;
+    const t = tile($('m-tiles'), name, '', desc, n, n);
+    drawLabels(t.ctx, lab, n, n, l => cellColor(l));
+    t.ctx.fillStyle = INK; for (const s of S) { t.ctx.beginPath(); t.ctx.arc(s[0], s[1], 3, 0, TAU); t.ctx.fill(); }
+    if (k === 'e') t.sub.textContent = 'reference'; else { let d = 0; for (let p = 0; p < n * n; p++) if (lab[p] !== labs.e[p]) d++; t.sub.textContent = `${(d / (n * n) * 100).toFixed(1)}% of the ground changes hands`; }
+  }
+}
+
+/* ------------------------------------------------------------ 3. Lloyd */
+function lloyd() {
+  const cv = $('lcv'), x = cv.getContext('2d'), cx2 = $('lch').getContext('2d'), W = 1000, H = 500, N = 140;
+  let S = [], polys = [], playing = !REDUCE, iter = 0, hist = [], seed = 3, S0 = null;
+  function scatter() { const r = rng(seed++); S = Array.from({ length: N }, () => [r() * W, r() * H]); S0 = S.map(p => [...p]); iter = 0; hist = []; polys = cellPolys(S, 0, 0, W, H); SK0 = sk(S0); SK1 = SK0; record(); }
+  function sides(p) { let k = 0; for (let i = 0; i < p.length; i++) { const P = p[i], Q = p[(i + 1) % p.length]; const both = (a, b) => (Math.abs(P[a] - b) < 1e-6 && Math.abs(Q[a] - b) < 1e-6); if (both(0, 0) || both(0, W) || both(1, 0) || both(1, H)) continue; k++; } return k; }
+  function interior() { return polys.map((p, i) => ({ i, p, n: sides(p), a: areaOf(p), border: p.some(q => onFrame(q, 0, 0, W, H)) })).filter(c => !c.border); }
+  // structure factor on wavevectors that fit the frame exactly (whole cycles across W and H), averaged in bins of 2 cycles per 1000 px
+  const KV = []; for (let m = -60; m <= 60; m++) for (let l = 0; l <= 30; l++) { if (l === 0 && m <= 0) continue; const k = 1000 * Math.hypot(m / W, l / H); if (k <= 60) KV.push([TAU * m / W, TAU * l / H, k]); }
+  function sk(P) {
+    const sum = new Float64Array(31), cnt = new Uint32Array(31);
+    for (const [kx, ky, k] of KV) { let re = 0, im = 0; for (const [px, py] of P) { const ph = kx * px + ky * py; re += Math.cos(ph); im += Math.sin(ph); } const b = Math.min(30, Math.floor(k / 2)); sum[b] += (re * re + im * im) / P.length; cnt[b]++; }
+    return Array.from(sum, (v, b) => [b * 2 + 1, cnt[b] ? v / cnt[b] : NaN]).filter(q => isFinite(q[1]));
+  }
+  let SK0 = null, SK1 = null;
+  function record() {
+    const c = interior(), hex = c.filter(q => q.n === 6).length / c.length, mean = c.reduce((s, q) => s + q.n, 0) / c.length;
+    const am = c.reduce((s, q) => s + q.a, 0) / c.length, cv2 = Math.sqrt(c.reduce((s, q) => s + (q.a - am) ** 2, 0) / c.length) / am;
+    const byN = {}; for (const q of c) (byN[q.n] = byN[q.n] || []).push(q.a / am);
+    hist.push({ iter, hex, mean, cv: cv2, byN });
+  }
+  function draw() {
+    frame(x, W, H);
+    const COL = { 3: '#7FA6D6', 4: '#8FB3D9', 5: '#BFD3E6', 6: '#F3EEE3', 7: '#F2C9A8', 8: '#E39C7A', 9: '#D9785A' };
+    polys.forEach(p => { const border = p.some(q => onFrame(q, 0, 0, W, H)); tracePoly(x, p); x.fillStyle = border ? '#E4E6EA' : (COL[Math.min(9, Math.max(3, sides(p)))]); x.fill(); x.strokeStyle = '#4A505E'; x.lineWidth = 1.2; x.stroke(); });
+    x.fillStyle = INK; for (const [a, b] of S) { x.beginPath(); x.arc(a, b, 2.4, 0, TAU); x.fill(); }
+    // charts: hexagon share over time, and the structure factor now vs the start
+    const Wc = 1000, Hc = 230; frame(cx2, Wc, Hc);
+    const L = 50, R = 470, T = 26, B = 32, X = i => L + i / Math.max(40, iter) * (R - L), Y = v => Hc - B - v * (Hc - T - B);
+    cx2.strokeStyle = GRID; for (const v of [0, 0.25, 0.5, 0.75, 1]) { cx2.beginPath(); cx2.moveTo(L, Y(v)); cx2.lineTo(R, Y(v)); cx2.stroke(); text(cx2, (v * 100) + '%', L - 6, Y(v), { align: 'right', size: 10.5 }); }
+    cx2.strokeStyle = ACC; cx2.lineWidth = 2.5; cx2.beginPath(); hist.forEach((h, i) => i ? cx2.lineTo(X(h.iter), Y(h.hex)) : cx2.moveTo(X(h.iter), Y(h.hex))); cx2.stroke();
+    text(cx2, 'six-sided cells (interior) by iteration', L, 12, { size: 11 }); text(cx2, 'iterations →', R, Hc - 10, { align: 'right', size: 11 });
+    const L2 = 540, R2 = 985, s0 = SK0, s1 = SK1, smax = Math.max(2, ...s1.map(q => q[1]), ...s0.map(q => q[1])), X2 = k => L2 + (k - 1) / 60 * (R2 - L2), Y2 = v => Hc - B - clamp(v / smax, 0, 1) * (Hc - T - B);
+    cx2.strokeStyle = GRID; cx2.beginPath(); cx2.moveTo(L2, Y2(1)); cx2.lineTo(R2, Y2(1)); cx2.stroke(); text(cx2, '1', L2 - 6, Y2(1), { align: 'right', size: 10.5 });
+    for (const [s, col] of [[s0, MUTED], [s1, HOT]]) { cx2.strokeStyle = col; cx2.lineWidth = 2; cx2.beginPath(); s.forEach(([k, v], i) => i ? cx2.lineTo(X2(k), Y2(v)) : cx2.moveTo(X2(k), Y2(v))); cx2.stroke(); }
+    legend(cx2, [['structure factor at the start', MUTED], ['now', HOT]], L2, 12); text(cx2, 'wavenumber, cycles per 1000 px →', R2, Hc - 10, { align: 'right', size: 11 });
+    const h = hist[hist.length - 1], lows = s1.filter(q => q[0] <= 9), low = lows.reduce((a, q) => a + q[1], 0) / lows.length;
+    const lw = n => h.byN[n] && h.byN[n].length > 2 ? (h.byN[n].reduce((a, v) => a + v, 0) / h.byN[n].length).toFixed(2) : '—';
+    $('l-desc').innerHTML = `Iteration ${iter} · six-sided <b>${(h.hex * 100).toFixed(0)}%</b> · mean sides <b>${h.mean.toFixed(2)}</b> (Euler: 6 for a large pattern) · cell area spread (CV) ${h.cv.toFixed(2)}<br>Lewis's law, mean area ÷ overall mean: 5 sides ${lw(5)} · 6 sides ${lw(6)} · 7 sides ${lw(7)} · long-wavelength structure factor (k < 10) <b>${low.toFixed(2)}</b> (random ≈ 1)`;
+  }
+  let acc = 0;
+  function tick(dt) {
+    if (playing && dt > 0 && (acc += dt) > 0.12 && iter < 120) { acc = 0; S = polys.map((p, i) => p.length >= 3 ? centroidOf(p) : S[i]); polys = cellPolys(S, 0, 0, W, H); iter++; record(); if (iter % 3 === 0) SK1 = sk(S); }
+    draw();
+  }
+  $('l-play').onclick = () => { playing = !playing; $('l-play').setAttribute('aria-pressed', String(playing)); $('l-play').textContent = playing ? 'Relaxing' : 'Paused'; };
+  $('l-new').onclick = scatter;
+  scatter();
+  if (REDUCE) { for (let i = 0; i < 40; i++) { S = polys.map((p, k) => p.length >= 3 ? centroidOf(p) : S[k]); polys = cellPolys(S, 0, 0, W, H); iter++; record(); } SK1 = sk(S); }
+  runner(cv, tick, 0);
+}
+
+/* ------------------------------------------------------------ 4. stipples and mosaics */
+function drawSphere(x, n) {
+  const g = x.createLinearGradient(0, 0, 0, n); g.addColorStop(0, '#9fc9c4'); g.addColorStop(1, '#efe6d2'); x.fillStyle = g; x.fillRect(0, 0, n, n);
+  x.fillStyle = 'rgba(40,45,60,.35)'; x.beginPath(); x.ellipse(n * 0.56, n * 0.82, n * 0.3, n * 0.07, 0, 0, TAU); x.fill();
+  const s = x.createRadialGradient(n * 0.4, n * 0.36, n * 0.03, n * 0.5, n * 0.5, n * 0.33); s.addColorStop(0, '#ffe2b8'); s.addColorStop(0.35, '#ee8a3c'); s.addColorStop(0.8, '#7a2e14'); s.addColorStop(1, '#3c160b');
+  x.fillStyle = s; x.beginPath(); x.arc(n * 0.5, n * 0.5, n * 0.3, 0, TAU); x.fill();
+}
+function mosaics() {
+  const host = $('mo-tiles'), N = 480;
+  const src = tile(host, 'Source', 'a lit sphere', '', N, N); drawSphere(src.ctx, N);
+  const img = src.ctx.getImageData(0, 0, N, N).data, at = (px, py) => { const i = (clamp(Math.floor(py), 0, N - 1) * N + clamp(Math.floor(px), 0, N - 1)) * 4; return [img[i], img[i + 1], img[i + 2]]; };
+  const lum = (px, py) => { const c = at(px, py); return (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255; };
+  // stippling at half resolution for the density, dots drawn full size
+  const n2 = 240, dark = new Float32Array(n2 * n2); for (let y = 0; y < n2; y++) for (let x = 0; x < n2; x++) dark[y * n2 + x] = (1 - lum(x * 2 + 1, y * 2 + 1)) ** 1.6;
+  const st = tile(host, 'Weighted Voronoi stippling', '', '', N, N), K = 2200, r = rng(8);
+  let P = []; while (P.length < K) { const px = r() * n2, py = r() * n2; if (r() < dark[Math.floor(py) * n2 + Math.floor(px)]) P.push([px, py]); }
+  const blurBox = (a, n, rad) => { const t = new Float32Array(n * n), o = new Float32Array(n * n); for (let y = 0; y < n; y++) { let s = 0; for (let x = -rad; x <= rad; x++) s += a[y * n + clamp(x, 0, n - 1)]; for (let x = 0; x < n; x++) { t[y * n + x] = s / (2 * rad + 1); s += a[y * n + Math.min(n - 1, x + rad + 1)] - a[y * n + Math.max(0, x - rad)]; } } for (let x = 0; x < n; x++) { let s = 0; for (let y = -rad; y <= rad; y++) s += t[clamp(y, 0, n - 1) * n + x]; for (let y = 0; y < n; y++) { o[y * n + x] = s / (2 * rad + 1); s += t[Math.min(n - 1, y + rad + 1) * n + x] - t[Math.max(0, y - rad) * n + x]; } } return o; };
+  const target = blurBox(blurBox(dark, n2, 3), n2, 3);
+  function err() { const d = new Float32Array(n2 * n2); for (const [px, py] of P) d[clamp(Math.floor(py), 0, n2 - 1) * n2 + clamp(Math.floor(px), 0, n2 - 1)] += 1; const b = blurBox(blurBox(d, n2, 3), n2, 3); let sa = 0, sb = 0; for (let i = 0; i < b.length; i++) { sa += b[i]; sb += target[i]; } let e = 0, t2 = 0; for (let i = 0; i < b.length; i++) { const u = b[i] / sa, v = target[i] / sb; e += (u - v) ** 2; t2 += v * v; } return Math.sqrt(e / t2); }
+  function drawSt() { const x = st.ctx; x.fillStyle = '#fbf8f1'; x.fillRect(0, 0, N, N); x.fillStyle = INK; for (const [px, py] of P) { x.beginPath(); x.arc(px * 2, py * 2, 1.7, 0, TAU); x.fill(); } }
+  const errs = [err()]; let it = 0; drawSt();
+  const stepSt = () => {
+    const { lab } = nearestMap(P, n2, n2), w = new Float64Array(K), sx = new Float64Array(K), sy = new Float64Array(K);
+    for (let p = 0; p < n2 * n2; p++) { const l = lab[p], d = dark[p] + 1e-4; w[l] += d; sx[l] += d * (p % n2 + 0.5); sy[l] += d * (Math.floor(p / n2) + 0.5); }
+    P = P.map((q, i) => w[i] > 0 ? [sx[i] / w[i], sy[i] / w[i]] : q); it++; errs.push(err()); drawSt();
+    st.sub.textContent = `${K} dots · iteration ${it} · tone error ${errs[it].toFixed(3)}`;
+    report();
+    if (it < 24) setTimeout(stepSt, 30);
+  };
+  // stained glass: relaxed cells coloured by the average of the picture beneath
+  const sg = tile(host, 'Stained glass', '', '', N, N), r2 = rng(19);
+  let G = Array.from({ length: 300 }, () => [r2() * N, r2() * N]);
+  for (let k = 0; k < 6; k++) G = cellPolys(G, 0, 0, N, N).map((p, i) => p.length >= 3 ? centroidOf(p) : G[i]);
+  { const { lab } = nearestMap(G, N, N), sum = G.map(() => [0, 0, 0, 0]); for (let p = 0; p < N * N; p++) { const c = at(p % N, p / N); const s = sum[lab[p]]; s[0] += c[0]; s[1] += c[1]; s[2] += c[2]; s[3]++; }
+    const id = sg.ctx.createImageData(N, N);
+    for (let p = 0; p < N * N; p++) { const l = lab[p], s = sum[l], x0 = p % N; let edge = false; for (const q of [p + 1, p - 1, p + N, p - N, p + 2, p + 2 * N]) if (q >= 0 && q < N * N && Math.abs((q % N) - x0) <= 2 && lab[q] !== l) edge = true; const o = p * 4; if (edge) { id.data[o] = 34; id.data[o + 1] = 32; id.data[o + 2] = 36; } else { id.data[o] = s[0] / s[3]; id.data[o + 1] = s[1] / s[3]; id.data[o + 2] = s[2] / s[3]; } id.data[o + 3] = 255; }
+    sg.ctx.putImageData(id, 0, 0); sg.sub.textContent = '300 cells · 6 Lloyd iterations · colour = mean beneath'; }
+  // low-poly: Delaunay of points that favour edges in the picture
+  const lp = tile(host, 'Low-poly (Delaunay)', '', '', N, N), r3 = rng(23), pts = [[0, 0], [N, 0], [0, N], [N, N]];
+  for (let i = 1; i < 8; i++) pts.push([i * N / 8, 0], [i * N / 8, N], [0, i * N / 8], [N, i * N / 8]);
+  while (pts.length < 420) { const px = 1 + r3() * (N - 2), py = 1 + r3() * (N - 2), gx = lum(px + 2, py) - lum(px - 2, py), gy = lum(px, py + 2) - lum(px, py - 2), g = Math.min(1, Math.hypot(gx, gy) * 12); if (r3() < 0.08 + g) pts.push([px, py]); }
+  const tris = delaunay(pts);
+  for (const t of tris) { const [a, b, c] = t.v.map(k => pts[k]), cx = (a[0] + b[0] + c[0]) / 3, cy = (a[1] + b[1] + c[1]) / 3, col = at(cx, cy); lp.ctx.fillStyle = `rgb(${col.join(',')})`; lp.ctx.strokeStyle = lp.ctx.fillStyle; lp.ctx.lineWidth = 0.6; lp.ctx.beginPath(); lp.ctx.moveTo(...a); lp.ctx.lineTo(...b); lp.ctx.lineTo(...c); lp.ctx.closePath(); lp.ctx.fill(); lp.ctx.stroke(); }
+  lp.sub.textContent = `${pts.length} points, denser on edges · ${tris.length} triangles`;
+  function report() { $('mo-desc').innerHTML = `Stipple tone error (blurred dots vs blurred picture, relative RMS): start <b>${errs[0].toFixed(3)}</b> → now <b>${errs[errs.length - 1].toFixed(3)}</b> after ${errs.length - 1} weighted Lloyd iterations`; }
+  report(); setTimeout(stepSt, 300);
+}
+
+/* ------------------------------------------------------------ 5. Worley */
+function worley() {
+  const n = 256, C = 6, r = rng(31), base = Array.from({ length: C * C }, () => [r(), r(), r() * TAU, 0.6 + r() * 0.8]), tint = base.map((_, i) => cellColor(i, 0.35, 0.62));
+  function F(px, py, t = 0) {   // px, py in cell units; tiles with period C
+    const ix = Math.floor(px), iy = Math.floor(py); let f1 = Infinity, f2 = Infinity, id = 0;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const cx = ix + i, cy = iy + j, k = (((cy % C) + C) % C) * C + (((cx % C) + C) % C), b = base[k];
+      const sx = cx + b[0] + (t ? 0.22 * Math.cos(t * b[3] + b[2]) : 0), sy = cy + b[1] + (t ? 0.22 * Math.sin(t * b[3] + b[2]) : 0), d = Math.hypot(sx - px, sy - py);
+      if (d < f1) { f2 = f1; f1 = d; id = k; } else if (d < f2) f2 = d;
+    }
+    return [f1, f2, id];
+  }
+  const KINDS = [
+    ['F1', 'distance to the nearest seed', (f1) => { const v = clamp(f1 / 1.1, 0, 1) * 255; return [v, v, v]; }],
+    ['F2', 'distance to the second nearest', (f1, f2) => { const v = clamp(f2 / 1.5, 0, 1) * 255; return [v, v, v]; }],
+    ['F2 − F1', 'zero on every wall: veins and cracks', (f1, f2) => { const v = clamp((f2 - f1) * 2.2, 0, 1) * 255; return [v, v, v]; }],
+    ['Stone', 'a tint per cell, darkened toward the walls', (f1, f2, id) => { const k = clamp((f2 - f1) * 6, 0, 1), c = tint[id]; return c.map(v => v * (0.35 + 0.65 * k) * (1 - 0.25 * f1)); }],
+    ['Scales', 'F1 shading with a rim, per cell', (f1, f2, id) => { const k = clamp(1 - f1 * 1.2, 0, 1), rim = clamp((f2 - f1) * 8, 0, 1), c = [90 + 40 * (id % 3), 140 + 30 * (id % 2), 110]; return c.map(v => v * (0.45 + 0.55 * k) * (0.5 + 0.5 * rim)); }],
+    ['Caustics', 'F2 − F1 of slowly moving seeds, inverted and sharpened', null],
+  ];
+  let caustic = null;
+  for (const [name, desc, fn] of KINDS) {
+    const t = tile($('w-tiles'), name, '', desc, n, n);
+    if (!fn) { caustic = t; continue; }
+    const id = t.ctx.createImageData(n, n); let sum = 0;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const [f1, f2, k] = F(x / n * C, y / n * C), c = fn(f1, f2, k), o = (y * n + x) * 4; sum += f1; id.data[o] = c[0]; id.data[o + 1] = c[1]; id.data[o + 2] = c[2]; id.data[o + 3] = 255; }
+    t.ctx.putImageData(id, 0, 0);
+    if (name === 'F1') t.sub.textContent = `mean F1 = ${(sum / (n * n)).toFixed(3)} cells · fully random seeds would give 0.500`;
+    else t.sub.textContent = '6 × 6 cells, tiles seamlessly';
+  }
+  const cn = 160, cid = caustic.ctx.createImageData(cn, cn), off = mk(cn, cn), ox = off.getContext('2d'); caustic.sub.textContent = 'animated · 6 × 6 cells';
+  runner(caustic.c, (dt) => {
+    const t = performance.now() / 1000;
+    for (let y = 0; y < cn; y++) for (let x = 0; x < cn; x++) { const [f1, f2] = F(x / cn * C, y / cn * C, t + 1), v = clamp(1 - (f2 - f1) * 3.2, 0, 1) ** 6, o = (y * cn + x) * 4; cid.data[o] = 20 + 200 * v; cid.data[o + 1] = 90 + 160 * v; cid.data[o + 2] = 120 + 135 * v; cid.data[o + 3] = 255; }
+    ox.putImageData(cid, 0, 0); caustic.ctx.imageSmoothingQuality = 'high'; caustic.ctx.drawImage(off, 0, 0, n, n);
+  }, 0);
+}
+
+/* ------------------------------------------------------------ 6. fracture */
+function fracture() {
+  const cv = $('fcv'), x = cv.getContext('2d'), W = 1000, H = 460, PX = 150, PY = 50, PW = 700, PH = 360;
+  let shards = null, t = 0, K = 45, hitAt = null, seed = 1;
+  function shatter(hx, hy) {
+    const r = rng(seed++), S = [];
+    for (let i = 0; i < K; i++) { const a = r() * TAU, rad = 330 * r() ** 1.9 + 4; S.push([clamp(hx + Math.cos(a) * rad, PX + 1, PX + PW - 1), clamp(hy + Math.sin(a) * rad, PY + 1, PY + PH - 1)]); }
+    const polys = cellPolys(S, PX, PY, PX + PW, PY + PH);
+    shards = polys.filter(p => p.length >= 3).map(p => { const c = centroidOf(p), dx = c[0] - hx, dy = c[1] - hy, d = Math.hypot(dx, dy) || 1, sp = 260 / (1 + d / 70); return { p: p.map(q => [q[0] - c[0], q[1] - c[1]]), c, a: 0, vx: dx / d * sp + (r() - 0.5) * 30, vy: dy / d * sp - 60 * r(), w: (r() - 0.5) * 4 / (1 + d / 120), area: Math.abs(areaOf(p)), d }; });
+    hitAt = [hx, hy]; t = 0;
+    const near = shards.filter(s => s.d < 110).map(s => s.area), far = shards.filter(s => s.d > 220).map(s => s.area), med = a => a.length ? [...a].sort((u, v) => u - v)[a.length >> 1] : NaN;
+    $('f-desc').innerHTML = `${shards.length} shards · median area within 110 px of the impact <b>${med(near).toFixed(0)} px²</b> (${near.length} shards) · beyond 220 px <b>${med(far).toFixed(0)} px²</b> (${far.length} shards)`;
+  }
+  function tick(dt) {
+    frame(x, W, H, '#E9EDF1');
+    if (!shards) {
+      x.fillStyle = 'rgba(170,205,225,.55)'; x.fillRect(PX, PY, PW, PH); x.strokeStyle = '#8AA4B5'; x.lineWidth = 3; x.strokeRect(PX, PY, PW, PH);
+      text(x, 'click the pane to strike it', W / 2, H / 2, { align: 'center', color: INK, size: 14 }); return;
+    }
+    if (dt > 0) t += dt;
+    const fly = Math.max(0, t - 0.35);   // cracks first, then the pieces move
+    for (const s of shards) {
+      const cx = s.c[0] + s.vx * fly, cy = s.c[1] + s.vy * fly + 260 * fly * fly, a = s.w * fly;
+      x.save(); x.translate(cx, cy); x.rotate(a); tracePoly(x, s.p); x.fillStyle = 'rgba(170,205,225,.6)'; x.fill(); x.strokeStyle = '#5E7C8F'; x.lineWidth = 1.2; x.stroke(); x.restore();
+    }
+    if (t < 0.35) { x.fillStyle = 'rgba(255,255,255,.8)'; x.beginPath(); x.arc(hitAt[0], hitAt[1], 6 + t * 30, 0, TAU); x.fill(); }
+    if (t > 3.2) { t = 0; }
+  }
+  cv.addEventListener('pointerdown', e => { const [px, py] = canvasPoint(cv, e); if (px > PX && px < PX + PW && py > PY && py < PY + PH) shatter(px, py); });
+  $('f-reset').onclick = () => { shards = null; $('f-desc').innerHTML = 'Click the pane.'; };
+  $('f-n').oninput = () => { K = +$('f-n').value; $('f-no').textContent = K; };
+  $('f-no').textContent = K; shatter(PX + PW * 0.42, PY + PH * 0.45);
+  runner(cv, tick, 0.6);
+}
+
+/* ------------------------------------------------------------ 7. Delaunay */
+function delaunaySection() {
+  const cv = $('dcv'), x = cv.getContext('2d'), W = 1000, H = 460;
+  let P = [], seed = 5, drag = -1, hover = null, tris = [];
+  function fresh() { const r = rng(seed++); P = Array.from({ length: 34 }, () => [40 + r() * (W - 80), 30 + r() * (H - 60)]); update(); }
+  function update() {
+    tris = delaunay(P);
+    const h = hullCount(P), edges = new Set(); for (const t of tris) for (let k = 0; k < 3; k++) { const a = t.v[k], b = t.v[(k + 1) % 3]; edges.add(a < b ? a + ',' + b : b + ',' + a); }
+    let viol = 0, minA = 180, angs = 0, cnt = 0;
+    for (const t of tris) { for (let i = 0; i < P.length; i++) if (!t.v.includes(i) && (P[i][0] - t.x) ** 2 + (P[i][1] - t.y) ** 2 < t.r2 * (1 - 1e-9)) viol++;
+      const [a, b, c] = t.v.map(k => P[k]); for (const [p, q, s] of [[a, b, c], [b, c, a], [c, a, b]]) { const v1 = [q[0] - p[0], q[1] - p[1]], v2 = [s[0] - p[0], s[1] - p[1]], ang = Math.acos(clamp((v1[0] * v2[0] + v1[1] * v2[1]) / Math.hypot(...v1) / Math.hypot(...v2), -1, 1)) * 180 / Math.PI; minA = Math.min(minA, ang); } }
+    const n = P.length;
+    $('d-desc').innerHTML = `n = ${n} points, h = ${h} on the hull · triangles <b>${tris.length}</b> (2n − 2 − h = ${2 * n - 2 - h}) · edges <b>${edges.size}</b> (3n − 3 − h = ${3 * n - 3 - h})<br>Points inside some triangle's circumcircle: <b>${viol}</b> · smallest angle ${minA.toFixed(1)}°`;
+    draw();
+  }
+  function draw() {
+    frame(x, W, H);
+    if ($('d-vor').checked) { const polys = cellPolys(P, 0, 0, W, H); polys.forEach((p, i) => { tracePoly(x, p); const c = cellColor(i, 0.3, 0.88); x.fillStyle = `rgb(${c.join(',')})`; x.fill(); x.strokeStyle = 'rgba(43,60,209,.55)'; x.lineWidth = 1.5; x.stroke(); }); }
+    if ($('d-del').checked) { x.strokeStyle = HOT; x.lineWidth = 1.4; for (const t of tris) { const [a, b, c] = t.v.map(k => P[k]); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.lineTo(...c); x.closePath(); x.stroke(); } }
+    if (hover) { x.fillStyle = 'rgba(210,69,47,.15)'; const [a, b, c] = hover.v.map(k => P[k]); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.lineTo(...c); x.closePath(); x.fill(); x.strokeStyle = HOT; x.setLineDash([5, 4]); x.lineWidth = 1.5; x.beginPath(); x.arc(hover.x, hover.y, Math.sqrt(hover.r2), 0, TAU); x.stroke(); x.setLineDash([]); x.fillStyle = HOT; x.beginPath(); x.arc(hover.x, hover.y, 3, 0, TAU); x.fill(); }
+    x.fillStyle = INK; for (const [a, b] of P) { x.beginPath(); x.arc(a, b, 4.5, 0, TAU); x.fill(); }
+    legend(x, [['Voronoi walls', 'rgba(43,60,209,.8)'], ['Delaunay edges', HOT]], 12, 14);
+  }
+  const inTri = (p, t) => { const [a, b, c] = t.v.map(k => P[k]), s = (u, v, w) => (v[0] - u[0]) * (w[1] - u[1]) - (v[1] - u[1]) * (w[0] - u[0]), d1 = s(a, b, p), d2 = s(b, c, p), d3 = s(c, a, p); return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)); };
+  cv.addEventListener('pointerdown', e => { const p = canvasPoint(cv, e); drag = P.findIndex(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 12); if (drag < 0 && P.length < 120) { P.push(p); drag = P.length - 1; update(); } cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => { const p = canvasPoint(cv, e); if (drag >= 0) { P[drag] = [clamp(p[0], 2, W - 2), clamp(p[1], 2, H - 2)]; hover = null; update(); } else { hover = tris.find(t => inTri(p, t)) || null; draw(); } });
+  cv.addEventListener('pointerup', () => { drag = -1; });
+  cv.addEventListener('pointerleave', () => { hover = null; draw(); });
+  $('d-vor').onchange = draw; $('d-del').onchange = draw; $('d-new').onclick = fresh;
+  fresh();
+}
+
+/* ------------------------------------------------------------ 8. lab */
+function lab() {
+  const cv = $('lab-cv'), x = cv.getContext('2d'), N = 480;
+  const S = { seeds: 'relaxed', n: 80, metric: 'e', w: 0, style: 'flat', b: 2, seed: 7 };
+  // a small gradient noise for wobbly walls
+  const perm = (() => { const r = rng(99), p = Array.from({ length: 256 }, (_, i) => i); for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return [...p, ...p]; })();
+  const fade = t => t * t * t * (t * (t * 6 - 15) + 10), G8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [.707, .707], [-.707, .707], [.707, -.707], [-.707, -.707]];
+  const noise = (px, py) => { const X = Math.floor(px), Y = Math.floor(py), xf = px - X, yf = py - Y, xi = X & 255, yi = Y & 255, g = (i, j, dx, dy) => { const v = G8[perm[perm[xi + i] + yi + j] & 7]; return v[0] * dx + v[1] * dy; }, u = fade(xf), v = fade(yf); return lerp(lerp(g(0, 0, xf, yf), g(1, 0, xf - 1, yf), u), lerp(g(0, 1, xf, yf - 1), g(1, 1, xf - 1, yf - 1), u), v) * 1.4; };
+  const sphere = mk(N, N); drawSphere(sphere.getContext('2d'), N); const sImg = sphere.getContext('2d').getImageData(0, 0, N, N).data;
+  function seeds() {
+    const r = rng(S.seed), n = S.n; let P;
+    if (S.seeds === 'grid') { const k = Math.round(Math.sqrt(n)); P = []; for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) P.push([(i + 0.5 + (r() - 0.5) * 0.6) * N / k, (j + 0.5 + (r() - 0.5) * 0.6) * N / k]); }
+    else if (S.seeds === 'cluster') { P = []; const C = Array.from({ length: 5 }, () => [N * (0.15 + 0.7 * r()), N * (0.15 + 0.7 * r())]); while (P.length < n) { const c = C[Math.floor(r() * 5)], a = r() * TAU, d = 70 * Math.sqrt(-2 * Math.log(1 - r() * 0.999)) * 0.5; P.push([clamp(c[0] + Math.cos(a) * d, 1, N - 1), clamp(c[1] + Math.sin(a) * d, 1, N - 1)]); } }
+    else { P = Array.from({ length: n }, () => [r() * N, r() * N]); if (S.seeds === 'relaxed') for (let k = 0; k < 8; k++) P = cellPolys(P, 0, 0, N, N).map((p, i) => p.length >= 3 ? centroidOf(p) : P[i]); }
+    return P;
+  }
+  const DIST = { e: (dx, dy) => Math.hypot(dx, dy), m: (dx, dy) => Math.abs(dx) + Math.abs(dy), c: (dx, dy) => Math.max(Math.abs(dx), Math.abs(dy)) };
+  function render() {
+    const P = seeds(), d = DIST[S.metric], n = P.length, lab = new Int32Array(N * N), f1 = new Float32Array(N * N), f2 = new Float32Array(N * N), k = S.w * 1.2;
+    for (let y = 0; y < N; y++) for (let xx = 0; xx < N; xx++) {
+      const px = xx + (k ? k * noise(xx / 60, y / 60) : 0), py = y + (k ? k * noise(xx / 60 + 31.7, y / 60 + 17.3) : 0); let a = Infinity, b = Infinity, l = 0;
+      for (let i = 0; i < n; i++) { const v = d(P[i][0] - px, P[i][1] - py); if (v < a) { b = a; a = v; l = i; } else if (v < b) b = v; }
+      const o = y * N + xx; lab[o] = l; f1[o] = a; f2[o] = b;
+    }
+    const spacing = Math.sqrt(N * N / n), sums = S.style === 'glass' ? P.map(() => [0, 0, 0, 0]) : null;
+    if (sums) for (let p = 0; p < N * N; p++) { const s = sums[lab[p]]; s[0] += sImg[p * 4]; s[1] += sImg[p * 4 + 1]; s[2] += sImg[p * 4 + 2]; s[3]++; }
+    const id = x.createImageData(N, N);
+    for (let p = 0; p < N * N; p++) {
+      const l = lab[p], wall = S.b > 0 && (f2[p] - f1[p]) < S.b * (S.metric === 'e' ? 1 : 1.4); let c;
+      if (S.style === 'flat') c = cellColor(l);
+      else if (S.style === 'shade') { const v = clamp(1 - f1[p] / spacing, 0, 1), base = cellColor(l, 0.45, 0.6); c = base.map(q => q * (0.4 + 0.75 * v)); }
+      else if (S.style === 'veins') { const v = clamp((f2[p] - f1[p]) / (spacing * 0.35), 0, 1) ** 0.6; c = [20 + 225 * v, 24 + 216 * v, 34 + 200 * v]; }
+      else { const s = sums[l]; c = [s[0] / s[3], s[1] / s[3], s[2] / s[3]]; }
+      if (wall && S.style !== 'veins') c = [34, 34, 40];
+      id.data[p * 4] = c[0]; id.data[p * 4 + 1] = c[1]; id.data[p * 4 + 2] = c[2]; id.data[p * 4 + 3] = 255;
+    }
+    x.putImageData(id, 0, 0);
+    ['no', 'wo', 'bo'].forEach((q, i) => $('lb-' + q).textContent = [n, S.w, S.b][i]);
+    $('lab-desc').innerHTML = `${n} seeds (${S.seeds}) · ${{ e: 'Euclidean', m: 'Manhattan', c: 'Chebyshev' }[S.metric]} distance · ${S.w ? `walls warped by noise, amplitude ${(k).toFixed(0)} px` : 'straight walls'}`;
+  }
+  const re = () => { clearTimeout(re.t); re.t = setTimeout(render, 80); };
+  seg($('lb-seeds'), [['random', 'Random'], ['relaxed', 'Relaxed'], ['grid', 'Jittered grid'], ['cluster', 'Clustered']], S.seeds, v => { S.seeds = v; re(); });
+  seg($('lb-metric'), [['e', 'Euclidean'], ['m', 'Manhattan'], ['c', 'Chebyshev']], S.metric, v => { S.metric = v; re(); });
+  seg($('lb-style'), [['flat', 'Flat'], ['shade', 'Shaded F1'], ['veins', 'F2 − F1'], ['glass', 'Stained glass']], S.style, v => { S.style = v; re(); });
+  $('lb-n').oninput = () => { S.n = +$('lb-n').value; re(); }; $('lb-w').oninput = () => { S.w = +$('lb-w').value; re(); }; $('lb-b').oninput = () => { S.b = +$('lb-b').value; re(); };
+  $('lb-new').onclick = () => { S.seed++; re(); };
+  $('lb-save').onclick = () => cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'voronoi.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  render();
+}
+
+/* ------------------------------------------------------------ boot */
+try { await Promise.all([document.fonts.load('600 20px "Bricolage Grotesque"'), document.fonts.load('500 13px "JetBrains Mono"')]); } catch (e) { /* fall back to system fonts */ }
+for (const f of [growth, metrics, lloyd, mosaics, worley, fracture, delaunaySection, lab]) {
+  try { f(); } catch (e) { console.error(f.name, e); }
+}
+</script>
+</body>
+</html>
