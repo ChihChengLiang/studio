@@ -49,6 +49,13 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);verti
 th{font:500 11px var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 td:first-child{font-family:var(--font-mono);white-space:nowrap}
 .tablewrap{overflow-x:auto}
+.study{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;max-width:900px}
+.study img,.study canvas{display:block;width:100%;height:auto;aspect-ratio:3/4;background:var(--paper)}
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:18px;max-width:900px}
+.steps figure canvas{aspect-ratio:3/4;height:auto}
+button{font:500 13px var(--font-mono);color:var(--bg);background:var(--accent);border:1px solid var(--accent);padding:8px 14px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+td.num{font-family:var(--font-mono);text-align:right;white-space:nowrap}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -58,7 +65,7 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
     <a class="back" href="../../">← Studio</a>
     <p class="eyebrow">Images · generative drawing</p>
     <h1>p5.brush gallery</h1>
-    <p class="lede">What <a href="https://github.com/acamposuribe/p5.brush">p5.brush</a> can draw: every built-in brush, plus the stroke, fill, hatch, vector-field and custom-brush operations. All tiles are drawn live by the library, and each one shows the code that made it.</p>
+    <p class="lede">What <a href="https://github.com/acamposuribe/p5.brush">p5.brush</a> can draw: every built-in brush, plus the stroke, fill, hatch, vector-field and custom-brush operations. All tiles are drawn live by version 3.0.0, and each one shows the code that made it. At the end, a heron drawn from a photo, and a bench of 3.0 against 2.2.</p>
     <ul class="toc">
       <li><a href="#brushes">Brushes</a></li>
       <li><a href="#strokes">Stroke ops</a></li>
@@ -67,6 +74,8 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
       <li><a href="#fields">Vector fields</a></li>
       <li><a href="#prims">Primitives</a></li>
       <li><a href="#custom">Custom brushes</a></li>
+      <li><a href="#heron">A heron study</a></li>
+      <li><a href="#bench">2.2 vs 3.0</a></li>
       <li><a href="#ref">Cheat sheet</a></li>
     </ul>
     <p class="status" id="status" style="margin-top:14px">Loading p5.brush…</p>
@@ -95,6 +104,28 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
     <p class="intro"><code>brush.add(name, params)</code> defines a brush. Types are <code>default</code>, <code>spray</code>, <code>marker</code>, <code>custom</code> (draw the tip) and <code>image</code> (a photo as the tip, not shown here).</p>
     <div class="grid" id="g-custom"></div></section>
 
+  <section id="heron"><h2>A heron study</h2>
+    <p class="intro" id="heron-intro">A drawing made from a photo of a night heron, in three passes. Loose watercolour dabs lay in the colour. Pencil strokes then build the tone, denser where the photo is darker and turned to follow the local grain of the image. Ink ticks go last, on the strongest edges. Every mark is placed by reading the photo, and none is traced by hand. The one hand-made choice is a soft oval of focus around the bird: away from it the marks thin out and the colour fades toward the paper, the way a sketch leaves its edges unfinished.</p>
+    <div class="study">
+      <figure><img src="../pixel-sprites/references/night-heron-photo.jpg" alt="Photo of a night heron standing beside a brick wall and a pebble-dash pillar" width="750" height="1000"><figcaption><b>Photo</b><span>The reference, 750 × 1000.</span></figcaption></figure>
+      <figure><canvas id="heron-cv" width="900" height="1200" aria-label="p5.brush drawing of the heron"></canvas><figcaption><b>p5.brush 3.0.0</b><span id="heron-cap">Drawing…</span></figcaption></figure>
+    </div>
+    <div class="steps" id="heron-steps"></div>
+  </section>
+
+  <section id="bench"><h2>2.2 vs 3.0</h2>
+    <p class="intro">p5.brush 3.0.0 (28 October 2026) moved every brush onto the GPU and says strokes and hatching are about 10× faster, <code>mass()</code> about 15×, many small fills about 5× and washes about 3.5× (measured by its author on an Apple M4). This bench loads 2.2.3 and 3.0.0 side by side and runs the same seeded work through both on your machine. Each test draws into a 900 × 1200 canvas, waits for the GPU to finish, and reports the median of five runs. The two versions take turns.</p>
+    <p><button type="button" id="bench-go">Run the benchmark</button> <span class="status" id="bench-status"></span></p>
+    <div class="tablewrap"><table id="bench-table" hidden>
+      <thead><tr><th>Test</th><th>Work</th><th>2.2.3</th><th>3.0.0</th><th>Speed-up</th></tr></thead>
+      <tbody></tbody></table></div>
+    <p class="intro" id="bench-notes" style="margin-top:16px">Two things this bench turned up. First, <b>3.0 batches strokes until the brush, colour or weight changes</b>, and each change costs about the same in both versions. The heron's first plan gave every stroke its own colour, and the speed-up vanished. Rounding colours to a few dozen pencils and drawing each pencil's strokes together brings it back, which is what the <i>grouped</i> and <i>ungrouped</i> rows compare. Second, <b><code>scaleBrushes(n)</code> multiplies the current scale</b> and doesn't set it. Call it once per page: calling it before every drawing grows the brushes until the marks vanish.</p>
+    <div class="study" id="bench-pair" hidden>
+      <figure><canvas id="bench-v2" width="900" height="1200" aria-label="Heron drawn by 2.2.3"></canvas><figcaption><b>Heron with 2.2.3</b><span>Same marks, old renderer.</span></figcaption></figure>
+      <figure><canvas id="bench-v3" width="900" height="1200" aria-label="Heron drawn by 3.0.0"></canvas><figcaption><b>Heron with 3.0.0</b><span>Same marks, new renderer.</span></figcaption></figure>
+    </div>
+  </section>
+
   <section id="ref"><h2>Cheat sheet</h2>
     <p class="intro">Condensed from the official p5.brush <code>llms.txt</code>. Shown here for the standalone build. In the p5 build, use p5's own transforms, seeding and frame handling.</p>
     <div class="tablewrap"><table>
@@ -115,7 +146,7 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
   </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/p5.brush@2.2.3/dist/brush.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5.brush@3.0.0/dist/brush.js"></script>
 <script>
 (function () {
   var W = 320, H = 240;
@@ -181,7 +212,7 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
         job.cv.parentNode.querySelector('figcaption span').textContent = 'Could not draw: ' + e.message;
       }
       drawn++;
-      $('status').textContent = drawn < total ? 'Drew ' + drawn + ' of ' + total + ' samples. The rest draw as you scroll.' : 'All ' + total + ' samples drawn with p5.brush 2.2.3.';
+      $('status').textContent = drawn < total ? 'Drew ' + drawn + ' of ' + total + ' samples. The rest draw as you scroll.' : 'All ' + total + ' samples drawn with p5.brush 3.0.0.';
       running = false;
       pump();
     }, 0);
@@ -276,6 +307,15 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
     brush.noStroke(); brush.fill('#b9770e', 140); brush.fillTexture(0.6, 0.6, false);
     brush.rect(60, 50, 200, 140);
   });
+  tile('g-fills', 'split (3.0)', 'A fourth fillTexture value separates the paint into warm and cool pigments, from 0 to 1.', function () {
+    brush.noStroke(); brush.fill('#2874a6', 150); brush.fillTexture(0.5, 0.4, true, 0.9);
+    brush.circle(160, 120, 75, 0.3);
+  });
+  tile('g-fills', 'bleeding together (3.0)', 'Fills drawn in the same frame run into each other where they touch.', function () {
+    brush.noStroke();
+    brush.fill('#c0392b', 140); brush.rect(40, 50, 130, 140);
+    brush.fill('#f1c40f', 140); brush.rect(160, 50, 120, 140);
+  });
   tile('g-fills', 'wash', 'Fast solid fill, no watercolor simulation.', function () {
     brush.noStroke(); brush.wash('#7d3c98', 160);
     brush.circle(160, 120, 70, 0.2);
@@ -328,6 +368,10 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
       brush.noStroke(); brush.mass(bn, '#b03a2e', { strength: 0.8, precision: 0.6 });
       brush.circle(160, 120, 75, 0.2);
     });
+  });
+  tile('g-hatch', 'mass scribble (3.0)', 'Experimental: short hand-like gestures instead of sweeping arcs.', function () {
+    brush.noStroke(); brush.mass('HB', '#2a2622', { style: 'scribble', length: 40, follow: 0.3 });
+    brush.circle(160, 120, 75, 0.2);
   });
   tile('g-hatch', 'mass options', 'precision 0.9, strength 1, outline on.', function () {
     brush.mass('crayon', '#1f618d', { precision: 0.9, strength: 1, outline: true });
@@ -410,6 +454,216 @@ td:first-child{font-family:var(--font-mono);white-space:nowrap}
     });
   });
 })();
+</script>
+<script type="module">
+// The heron study and the 2.2 vs 3.0 bench. Each library version is its own ES module, so both can live on one page.
+// The query string gives the bench its own module instance, separate from the study's.
+const CDN = (v, tag = '') => `https://cdn.jsdelivr.net/npm/p5.brush@${v}/dist/brush.esm.js${tag}`;
+const $ = id => document.getElementById(id);
+const now = () => performance.now();
+function rng(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+
+// Wait for the GPU: reading one pixel back cannot finish before the queued draws do.
+const probe = document.createElement('canvas'); probe.width = probe.height = 1;
+const pctx = probe.getContext('2d', { willReadFrequently: true });
+function sync(cv) { pctx.drawImage(cv, 0, 0, 1, 1, 0, 0, 1, 1); pctx.getImageData(0, 0, 1, 1); }
+
+// ── Reading the photo: colour, tone, and the direction of the grain ──
+const GW = 225, GH = 300, U = 2;   // analysis grid; one cell is 2 × 2 drawing units of a 450 × 600 page
+function blur(a, w, h, r) {
+  const t = new Float32Array(a.length), o = new Float32Array(a.length);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0, n = 0; for (let k = -r; k <= r; k++) { const xx = x + k; if (xx >= 0 && xx < w) { s += a[y * w + xx]; n++; } } t[y * w + x] = s / n; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0, n = 0; for (let k = -r; k <= r; k++) { const yy = y + k; if (yy >= 0 && yy < h) { s += t[yy * w + x]; n++; } } o[y * w + x] = s / n; }
+  return o;
+}
+function readPhoto(img) {
+  const c = document.createElement('canvas'); c.width = GW; c.height = GH;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, GW, GH);
+  const d = x.getImageData(0, 0, GW, GH).data, N = GW * GH;
+  const R = new Float32Array(N), G = new Float32Array(N), B = new Float32Array(N), L = new Float32Array(N);
+  for (let i = 0; i < N; i++) { R[i] = d[4 * i]; G[i] = d[4 * i + 1]; B[i] = d[4 * i + 2]; L[i] = (0.2126 * R[i] + 0.7152 * G[i] + 0.0722 * B[i]) / 255; }
+  const Ls = blur(L, GW, GH, 1);
+  const gx = new Float32Array(N), gy = new Float32Array(N), mag = new Float32Array(N);
+  for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) {
+    const i = y * GW + x, a = k => Ls[k];
+    gx[i] = (a(i - GW + 1) + 2 * a(i + 1) + a(i + GW + 1)) - (a(i - GW - 1) + 2 * a(i - 1) + a(i + GW - 1));
+    gy[i] = (a(i + GW - 1) + 2 * a(i + GW) + a(i + GW + 1)) - (a(i - GW - 1) + 2 * a(i - GW) + a(i - GW + 1));
+    mag[i] = Math.hypot(gx[i], gy[i]);
+  }
+  // Structure tensor, smoothed: its main axis is the dominant gradient direction nearby, and coherence says how sure it is.
+  const xx = new Float32Array(N), xy = new Float32Array(N), yy = new Float32Array(N);
+  for (let i = 0; i < N; i++) { xx[i] = gx[i] * gx[i]; xy[i] = gx[i] * gy[i]; yy[i] = gy[i] * gy[i]; }
+  const Jxx = blur(xx, GW, GH, 3), Jxy = blur(xy, GW, GH, 3), Jyy = blur(yy, GW, GH, 3);
+  const ang = new Float32Array(N), coh = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    ang[i] = 0.5 * Math.atan2(2 * Jxy[i], Jxx[i] - Jyy[i]) + Math.PI / 2;   // along the grain, across the gradient
+    const tr = Jxx[i] + Jyy[i], dif = Math.hypot(Jxx[i] - Jyy[i], 2 * Jxy[i]);
+    coh[i] = tr > 1e-6 ? dif / tr : 0;
+  }
+  // Average colour over a wider patch, for the washes.
+  const Rb = blur(R, GW, GH, 4), Gb = blur(G, GW, GH, 4), Bb = blur(B, GW, GH, 4), Rm = blur(R, GW, GH, 1), Gm = blur(G, GW, GH, 1), Bm = blur(B, GW, GH, 1);
+  return { R, G, B, L: Ls, Rb, Gb, Bb, Rm, Gm, Bm, gx, gy, mag, ang, coh };
+}
+
+// ── The marks. Planned once from the photo, then drawn by whichever library is passed in. ──
+function planHeron(P) {
+  const r = rng(11), at = (x, y) => Math.min(GH - 1, Math.max(0, y / U | 0)) * GW + Math.min(GW - 1, Math.max(0, x / U | 0));
+  const dabs = [], strokes = [], ticks = [];
+  // Focus: a soft oval around the bird. Detail and colour fall off away from it, the way a sketch leaves its edges to the paper.
+  const focus = (x, y) => { const d = Math.hypot((x - 252) / 120, (y - 300) / 230); return d < 1 ? 1 : Math.exp(-2.2 * (d - 1) * (d - 1)); };
+  // 1 · colour: overlapping irregular dabs on a jittered grid
+  for (let y = 5; y < 600; y += 10) for (let x = 5; x < 450; x += 10) {
+    const px = x + (r() - 0.5) * 8, py = y + (r() - 0.5) * 8, i = at(px, py), f = focus(px, py);
+    if (r() > 0.2 + 0.8 * f * f) continue;   // small and many in focus, few and big outside
+    const lift = 0.04 + 0.45 * (1 - f), m = f > 0.5 ? 1 : 0;   // sharp colour in focus, broad averages outside
+    const cr = m ? P.Rm[i] : P.Rb[i], cg = m ? P.Gm[i] : P.Gb[i], cb = m ? P.Bm[i] : P.Bb[i];
+    dabs.push([px, py, 6 + r() * 3 + 15 * (1 - f), hex(cr + (255 - cr) * lift, cg + (255 - cg) * lift, cb + (255 - cb) * lift), 130 + 80 * f]);
+  }
+  // 2 · tone: pencil strokes, more where it is dark, turned along the grain where the grain is clear
+  for (let y = 0; y < 600; y += 4.2) for (let x = 0; x < 450; x += 4.2) {
+    const px = x + r() * 4.2, py = y + r() * 4.2, i = at(px, py), dark = 1 - P.L[i];
+    const f = focus(px, py);
+    if (r() > (0.12 + 0.88 * f) * Math.pow(dark, 1.4)) continue;
+    const c = P.coh[i], a = c > 0.25 ? P.ang[i] + (r() - 0.5) * 0.3 : -0.85 + (r() - 0.5) * 0.5;
+    const len = (6 + 9 * Math.min(1, c * 1.5) + r() * 4) * (1.4 - 0.5 * f), dx = Math.cos(a) * len / 2, dy = Math.sin(a) * len / 2;
+    const k = 0.3 + 0.2 * (1 - dark), w = 0.55 * (1 - f);   // darkened local colour, washed toward the paper away from focus
+    const q = v => Math.round(v / 20) * 20;   // a box of a few dozen pencils, not one per stroke
+    strokes.push([px - dx, py - dy, px + dx, py + dy, hex(q(P.R[i] * k + 245 * w), q(P.G[i] * k + 240 * w), q(P.B[i] * k + 224 * w)), Math.round((0.8 + dark * 1.1) * (0.6 + 0.4 * f) * 5) / 5]);
+  }
+  // 3 · edges: short ink ticks on gradient maxima
+  let mags = Array.from(P.mag).sort((a, b) => a - b); const thr = mags[Math.floor(mags.length * 0.9)];
+  for (let gy = 2; gy < GH - 2; gy++) for (let gx = 2; gx < GW - 2; gx++) {
+    const i = gy * GW + gx, m = P.mag[i];
+    if (m < thr || r() > 0.7 * focus(gx * U, gy * U)) continue;
+    const ux = P.gx[i] / m, uy = P.gy[i] / m, j1 = at((gx + ux) * U, (gy + uy) * U), j2 = at((gx - ux) * U, (gy - uy) * U);
+    if (m < P.mag[j1] || m < P.mag[j2]) continue;   // not the ridge of the edge
+    const px = gx * U + 1, py = gy * U + 1, a = Math.atan2(uy, ux) + Math.PI / 2, h = 3 + r() * 2.5;
+    ticks.push([px - Math.cos(a) * h, py - Math.sin(a) * h, px + Math.cos(a) * h, py + Math.sin(a) * h]);
+  }
+  // 3.0 batches strokes until the colour or weight changes, so the same marks drawn grouped by pencil are much cheaper.
+  const shuffled = strokes.slice(), key = s => s[4] + s[5];
+  strokes.sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+  return { dabs, strokes, shuffled, ticks, pencils: new Set(strokes.map(key)).size };
+}
+
+// Draw one pass of the plan with library b onto canvas cv (900 × 1200, drawn in 450 × 600 units).
+const PASSES = ['dabs', 'strokes', 'ticks'];
+// At this size the built-in graphite brushes break into stipple, so the tone pass uses a smooth, tapered pencil.
+const PENCIL = { type: 'default', weight: 0.6, scatter: 0.05, sharpness: 0.7, grain: 2, opacity: 150, spacing: 0.15, pressure: [0.5, 1.2, 0.5], noise: 0.3 };
+function drawPass(b, plan, pass) {
+  b.push(); b.translate(-450, -600); b.scale(2);
+  b.noStroke(); b.noFill(); b.noHatch(); b.noField();
+  if (pass === 'dabs') {
+    b.fillBleed(0.2, 'out'); b.fillTexture(0.4, 0.15);
+    for (const [x, y, rad, c, o] of plan.dabs) { b.fill(c, o); b.circle(x, y, rad, 0.55); }
+    b.noFill();
+  } else if (pass === 'strokes') {
+    for (const [x0, y0, x1, y1, c, w] of plan.strokes) { b.set('heron_pencil', c, w); b.line(x0, y0, x1, y1); }
+  } else {
+    b.set('pen', '#211c18', 0.7);
+    for (const [x0, y0, x1, y1] of plan.ticks) b.line(x0, y0, x1, y1);
+  }
+  b.pop();
+}
+// scaleBrushes() multiplies the current scale, so each library instance is scaled exactly once.
+const scaled = new WeakSet();
+function setup(b) { if (!scaled.has(b.load)) { scaled.add(b.load); b.scaleBrushes(4); b.add('heron_pencil', PENCIL); } }
+function heron(b, cv, plan, onPass) {
+  b.load(cv); setup(b); b.seed(7); b.noiseSeed(7); b.clear('#F5F0E0');
+  const t = {};
+  for (const p of PASSES) { const t0 = now(); drawPass(b, plan, p); b.render(); sync(cv); t[p] = now() - t0; onPass && onPass(p, cv); }
+  return t;
+}
+
+const photo = new Image(); photo.src = '../pixel-sprites/references/night-heron-photo.jpg';
+let planP = null;
+async function getPlan() {
+  if (planP) return planP;
+  return planP = (async () => { await photo.decode(); const t0 = now(), P = readPhoto(photo), plan = planHeron(P); plan.ms = now() - t0; return plan; })();
+}
+const libs = {};
+const lib = (v, tag = '') => libs[v + tag] || (libs[v + tag] = import(CDN(v, tag)));
+
+// ── The study ──
+async function study() {
+  try {
+    const [b, plan] = await Promise.all([lib('3.0.0'), getPlan()]);
+    const NAMES = { dabs: ['1 · colour', plan.dabs.length + ' watercolour dabs, each the photo\'s average colour there, lifted toward the paper.'],
+      strokes: ['2 · tone', plan.strokes.length + ' pencil strokes, from a custom tapered brush. Darker places get more of them, and each turns to the local grain.'],
+      ticks: ['3 · edges', plan.ticks.length + ' pen ticks on the ridges of the strongest 10% of edges.'] };
+    const steps = $('heron-steps');
+    const t = heron(b, $('heron-cv'), plan, (p, cv) => {
+      const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = 360; c.height = 480;
+      c.getContext('2d').drawImage(cv, 0, 0, 360, 480); c.setAttribute('aria-label', 'After pass ' + NAMES[p][0]);
+      f.innerHTML = `<figcaption><b>${NAMES[p][0]}</b><span>${NAMES[p][1]}</span></figcaption>`; f.prepend(c); steps.appendChild(f);
+    });
+    $('heron-cap').textContent = `${plan.dabs.length + plan.strokes.length + plan.ticks.length} marks. Reading the photo took ${plan.ms.toFixed(0)} ms; drawing took ${(t.dabs + t.strokes + t.ticks).toFixed(0)} ms (colour ${t.dabs.toFixed(0)}, tone ${t.strokes.toFixed(0)}, edges ${t.ticks.toFixed(0)}).`;
+  } catch (e) { console.error(e); $('heron-cap').textContent = 'Could not draw: ' + e.message; }
+}
+new IntersectionObserver((es, io) => { if (es[0].isIntersecting) { io.disconnect(); study(); } }, { rootMargin: '400px' }).observe($('heron'));
+
+// ── The bench ──
+const TESTS = [
+  ['lines', '300 HB lines', b => { b.set('HB', '#2a2622', 1); for (let i = 0; i < 300; i++) b.line(20 + (i % 30) * 9, 20 + (i / 30 | 0) * 20, 40 + (i % 30) * 9, 200 + (i / 30 | 0) * 2); }],
+  ['splines', '60 charcoal splines', b => { b.set('charcoal', '#2a2622', 1); for (let i = 0; i < 60; i++) b.spline([[20, 20 + i * 3], [100, 60 + i * 2], [200, 30 + i * 3], [300, 80 + i * 2]], 0.8); }],
+  ['hatch', '12 hatched circles', b => { b.set('HB', '#2a2622', 1); b.hatch(5, 45); for (let i = 0; i < 12; i++) b.circle(50 + (i % 4) * 75, 60 + (i / 4 | 0) * 70, 32, 0.2); b.noHatch(); }],
+  ['mass', '4 crayon masses', b => { b.noStroke(); b.mass('crayon', '#b03a2e', { strength: 0.8, precision: 0.6 }); for (let i = 0; i < 4; i++) b.circle(70 + i * 60, 120, 50, 0.2); b.noMass(); }],
+  ['fills', '80 small fills', b => { b.noStroke(); for (let i = 0; i < 80; i++) { b.fill(i % 2 ? '#2874a6' : '#c0392b', 110); b.circle(20 + (i % 10) * 31, 20 + (i / 10 | 0) * 28, 12, 0.3); } b.noFill(); }],
+  ['washes', '20 washes', b => { b.noStroke(); for (let i = 0; i < 20; i++) { b.wash('#7d3c98', 60); b.circle(40 + (i % 5) * 60, 50 + (i / 5 | 0) * 50, 40, 0.2); } b.noWash(); }],
+];
+const median = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
+// Each version keeps to one canvas: switching a library between targets with load() lost its strokes.
+const work = {};
+function timed(b, f) {
+  const cv = work[b.__v]; b.load(cv); setup(b); b.angleMode(b.DEGREES); b.seed(7); b.noiseSeed(7); b.clear('#F5F0E0');
+  const t0 = now(); f(); b.render(); sync(cv); return now() - t0;
+}
+const runTest = (b, fn) => timed(b, () => { b.push(); b.translate(-450, -600); b.scale(2); b.noStroke(); b.noFill(); b.noWash(); b.noHatch(); b.noMass(); b.noField(); fn(b); b.pop(); });
+const tick = () => new Promise(r => setTimeout(r, 30));
+async function bench() {
+  const go = $('bench-go'), st = $('bench-status'); go.disabled = true;
+  try {
+    st.textContent = 'Loading both versions…';
+    const [m2, m3, plan] = await Promise.all([lib('2.2.3', '?bench'), lib('3.0.0', '?bench'), getPlan()]);
+    const b2 = { ...m2, __v: '2.2.3' }, b3 = { ...m3, __v: '3.0.0' };
+    for (const b of [b2, b3]) { const c = document.createElement('canvas'); c.width = 900; c.height = 1200; work[b.__v] = c; b.load(c); }
+    const V = [['2.2.3', b2], ['3.0.0', b3]], R = {};
+    const WORK = { dabs: plan.dabs.length + ' watercolour dabs', strokes: plan.strokes.length + ' pencil strokes, grouped by pencil (' + plan.pencils + ' pencils)', ticks: plan.ticks.length + ' pen ticks' };
+    const all = TESTS.map(t => [t[0], t[1], null]).concat(PASSES.map(p => ['heron ' + p, WORK[p], null]), [['heron strokes, ungrouped', 'the same strokes in planning order', null]]);
+    for (const [name] of all) R[name] = { '2.2.3': [], '3.0.0': [] };
+    for (const [, b] of V) { for (const t of TESTS) runTest(b, t[2]); }   // warm up shaders and caches
+    const RUNS = 5;
+    for (let k = 0; k < RUNS; k++) {
+      for (const [v, b] of (k % 2 ? [...V].reverse() : V)) {
+        for (const t of TESTS) { R[t[0]][v].push(runTest(b, t[2])); }
+        st.textContent = `Run ${k + 1} of ${RUNS}: ${v}…`; await tick();
+        const ht = heron(b, work[v], plan);
+        $(v === '2.2.3' ? 'bench-v2' : 'bench-v3').getContext('2d').drawImage(work[v], 0, 0);
+        for (const p of PASSES) R['heron ' + p][v].push(ht[p]);
+        R['heron strokes, ungrouped'][v].push(timed(b, () => drawPass(b, { strokes: plan.shuffled }, 'strokes')));
+        await tick();
+      }
+    }
+    const tb = $('bench-table').querySelector('tbody'); tb.textContent = '';
+    let s2 = 0, s3 = 0;
+    for (const [name, desc] of all) {
+      const a = median(R[name]['2.2.3']), c = median(R[name]['3.0.0']);
+      if (name.startsWith('heron') && !name.endsWith('ungrouped')) { s2 += a; s3 += c; }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${name}</td><td>${desc}</td><td class="num">${a.toFixed(1)} ms</td><td class="num">${c.toFixed(1)} ms</td><td class="num"><b>${(a / c).toFixed(1)}×</b></td>`;
+      tb.appendChild(tr);
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><b>heron total</b></td><td>${plan.dabs.length + plan.strokes.length + plan.ticks.length} marks</td><td class="num">${s2.toFixed(0)} ms</td><td class="num">${s3.toFixed(0)} ms</td><td class="num"><b>${(s2 / s3).toFixed(1)}×</b></td>`;
+    tb.appendChild(tr);
+    $('bench-table').hidden = false; $('bench-pair').hidden = false;
+    st.textContent = `Done: median of ${RUNS} runs per version, on ${navigator.hardwareConcurrency || '?'} CPU threads.`;
+    window.__bench = Object.fromEntries(all.map(([n]) => [n, [median(R[n]['2.2.3']), median(R[n]['3.0.0'])]]));
+  } catch (e) { console.error(e); st.textContent = 'Bench failed: ' + e.message; }
+  go.disabled = false;
+}
+$('bench-go').onclick = bench;
 </script>
 </body>
 </html>
